@@ -1,0 +1,23 @@
+image: golang:latest
+
+variables:
+  PROJECT_NAME: grafana-datasource
+
+
+stages:
+  - test
+
+before_script:
+  - eval $(ssh-agent -s)
+  - echo "$DEPLOY_SSH_KEY" | tr -d '\r' | ssh-add - > /dev/null
+  - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+  - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+  - git config --global user.name $GITLAB_USER_NAME
+  - git config --global user.email $GITLAB_USER_EMAIL
+  - git remote set-url origin git@gitlab.com:$CI_PROJECT_PATH.git
+  - git config --global url."ssh://git@gitlab.com".insteadOf "https://gitlab.com"
+
+vet:
+  stage: test
+  script:
+    - go vet -v ./pkg/...
