@@ -35,4 +35,5 @@ type Measurement struct {
 	Collector    *Collector
 	DatabaseUUID uuid.UUID
 	Database     *TimeseriesDatabase
+	UoM          string
 }

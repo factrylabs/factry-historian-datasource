@@ -30,3 +30,5 @@ e2e-results/
 .idea
 
 grafana-plugins/*
+.pnpm-store
+node-modules/

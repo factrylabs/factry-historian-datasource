@@ -77,7 +77,7 @@ func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery bac
 			return response
 		}
 
-		response.Frames, response.Error = QueryResultToDataFrame(result)
+		response.Frames, response.Error = QueryResultToDataFrame(nil, result)
 		return response
 
 		// TODO Augment data frames with metadata from measurements?
