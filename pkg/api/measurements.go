@@ -1,17 +1,32 @@
 package api
 
 import (
-	"github.com/pasztorpisti/qs"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 )
 
-func (api *API) GetMeasurements(filter schemas.MeasurementFilter) ([]schemas.Measurement, error) {
+// GetMeasurements calls get measurements in the historian API
+func (api *API) GetMeasurements(query string) ([]schemas.Measurement, error) {
 	measurements := []schemas.Measurement{}
-	params, err := qs.Marshal(filter)
-	if err != nil {
+
+	if err := api.client.Get("/api/measurements?"+query, &measurements); err != nil {
 		return nil, err
 	}
 
-	err = api.client.Get("/api/measurements?"+params, &measurements)
-	return measurements, err
+	return measurements, nil
+}
+
+// GetCollectors calls get collectors in the historian API
+func (api *API) GetCollectors() ([]schemas.Collector, error) {
+	collectors := []schemas.Collector{}
+
+	api.client.Get("/api/collectors", &collectors)
+	return collectors, nil
+}
+
+// GetTimeseriesDatabases calls get timeseries databases in the historian API
+func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
+	timeseriesDatabases := []schemas.TimeseriesDatabase{}
+
+	api.client.Get("/api/timeseries_databases", &timeseriesDatabases)
+	return timeseriesDatabases, nil
 }

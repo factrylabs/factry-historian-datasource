@@ -54,3 +54,12 @@ export interface MeasurementQuery {
   Desc?: boolean
   Join?: boolean
 }
+
+export interface MeasurementFilter {
+  Keyword?: string
+  Database?: string
+  Collector?: string
+  Statuses?: string[]
+  WithBadQualityOnly?: boolean
+  ExcludeCalculations?: boolean
+}

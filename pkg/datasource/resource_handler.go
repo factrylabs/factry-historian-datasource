@@ -3,10 +3,10 @@ package datasource
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 )
 
 // ResourceTypes is a list of resource that can be queried
@@ -46,7 +46,26 @@ func (ds *HistorianDatasource) CallResource(ctx context.Context, req *backend.Ca
 	resourcePath := req.Path
 	switch resourcePath {
 	case ResourceTypeMeasurements:
-		o, err := dsi.API.GetMeasurements(schemas.MeasurementFilter{})
+		url, err := url.Parse(req.URL)
+		if err != nil {
+			return err
+		}
+
+		o, err := dsi.API.GetMeasurements(url.RawQuery)
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, o)
+	case ResourceTypeCollectors:
+		o, err := dsi.API.GetCollectors()
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, o)
+	case ResourceTypeDatabases:
+		o, err := dsi.API.GetTimeseriesDatabases()
 		if err != nil {
 			return err
 		}
