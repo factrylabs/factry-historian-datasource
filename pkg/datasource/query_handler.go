@@ -6,8 +6,9 @@ import (
 	"fmt"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
-	"gitlab.com/factry/historian/historian-server.git/v5/pkg/schemas"
+	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 )
 
 // QueryTypes are a list of query types
@@ -20,23 +21,6 @@ const (
 // Query is a struct which holds the query
 type Query struct {
 	Query json.RawMessage `json:"query"`
-}
-
-// GetMeasurementQuery constructs a query that can be used to query measurement data
-func GetMeasurementQuery(backendQuery backend.DataQuery, query Query) (schemas.Query, error) {
-	measurementQuery := schemas.Query{}
-	err := json.Unmarshal(query.Query, &measurementQuery)
-	if err != nil {
-		return schemas.Query{}, err
-	}
-
-	measurementQuery.Start = backendQuery.TimeRange.From
-	measurementQuery.End = &backendQuery.TimeRange.To
-	if measurementQuery.Aggregation != nil {
-		measurementQuery.Aggregation.Period = backendQuery.Interval.String()
-	}
-	measurementQuery.Limit = int(backendQuery.MaxDataPoints)
-	return measurementQuery, nil
 }
 
 // QueryData handles incoming backend queries
@@ -65,22 +49,29 @@ func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery bac
 
 	switch backendQuery.QueryType {
 	case QueryTypeQuery:
-		query, err := GetMeasurementQuery(backendQuery, query)
+		measurementQuery := schemas.MeasurementQuery{}
+		err := json.Unmarshal(query.Query, &measurementQuery)
 		if err != nil {
 			response.Error = err
 			return response
 		}
 
-		result, err := api.MeasurementQuery(query)
+		measurementQuery.Start = backendQuery.TimeRange.From
+		measurementQuery.End = &backendQuery.TimeRange.To
+		if measurementQuery.Aggregation != nil {
+			measurementQuery.Aggregation.Period = backendQuery.Interval.String()
+		}
+		measurementQuery.Limit = int(backendQuery.MaxDataPoints)
+
+		result, err := api.MeasurementQuery(measurementQuery.ToHistorianQuery())
 		if err != nil {
 			response.Error = err
 			return response
 		}
 
-		response.Frames, response.Error = QueryResultToDataFrame(nil, result)
+		response.Frames, response.Error = QueryResultToDataFrame(measurementQuery.Measurements, result)
+		log.DefaultLogger.Error("Received data frames:", response.Frames)
 		return response
-
-		// TODO Augment data frames with metadata from measurements?
 	case QueryTypeRaw:
 	case QueryTypeEvent:
 	}

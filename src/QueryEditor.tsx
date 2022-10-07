@@ -9,7 +9,7 @@ interface State {
   collectors: Array<SelectableValue<string>>
   databases: Array<SelectableValue<string>>
   filter: MeasurementFilter
-  measurements: Array<SelectableValue<string>>
+  measurements: Array<any>
   assets: Array<CascaderOption>
 }
 
@@ -64,7 +64,6 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   onCollectorChange = (event: SelectableValue<string>) => {
-    console.log(event.value)
     this.setState({ ...this.state, filter: { ...this.state.filter, Collector: event.value } })
   };
 
@@ -87,6 +86,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     const result: Array<SelectableValue<string>> = [];
     const filter = { ...this.state.filter, Keyword: query }
     await this.props.datasource.getMeasurements(filter).then((measurements: any[]) => {
+      this.setState({ ...this.state, measurements: measurements })
       measurements.forEach((measurement: any) => {
         result.push({ label: measurement.Name, value: measurement.UUID, description: '(' + measurement.UoM + ') ' + measurement.Description });
       });
@@ -99,7 +99,7 @@ export class QueryEditor extends PureComponent<Props, State> {
       const { onChange, query } = this.props;
       query.queryType = 'MeasurementQuery';
       query.query = {} as MeasurementQuery;
-      query.query.MeasurementUUIDs = [event.value];
+      query.query.Measurements = [this.state.measurements.find((m) => m.UUID === event.value)];
       onChange(query);
     }
   };
@@ -147,7 +147,7 @@ export class QueryEditor extends PureComponent<Props, State> {
         children?: React.ReactNode;
       }>
   ) {
-    if (props.query.queryType && props.query.query?.MeasurementUUIDs?.length === 1) {
+    if (props.query.queryType && props.query.query?.Measurements?.length === 1) {
       this.props.onRunQuery();
     }
   }

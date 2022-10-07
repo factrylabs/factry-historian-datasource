@@ -42,8 +42,7 @@ export interface Aggregation {
 }
 
 export interface MeasurementQuery {
-  MeasurementUUIDs?: string[]
-  Measurements?: MeasurementByName[]
+  Measurements?: any[]
   Start: Date
   End?: Date
   Tags?: Attributes
