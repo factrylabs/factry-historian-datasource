@@ -30,3 +30,11 @@ func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
 	api.client.Get("/api/timeseries_databases", &timeseriesDatabases)
 	return timeseriesDatabases, nil
 }
+
+// GetAssets calls get assets in the historian API
+func (api *API) GetAssets() ([]schemas.Asset, error) {
+	assets := []schemas.Asset{}
+
+	api.client.Get("/api/assets", &assets)
+	return assets, nil
+}

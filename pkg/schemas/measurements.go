@@ -37,3 +37,12 @@ type Measurement struct {
 	Database     *TimeseriesDatabase
 	UoM          string
 }
+
+type Asset struct {
+	Name        string
+	UUID        uuid.UUID
+	Description string
+	Status      string
+	ParentUUID  *uuid.UUID
+	Parent      *Asset
+}

@@ -59,6 +59,7 @@ export interface MeasurementFilter {
   Keyword?: string
   Database?: string
   Collector?: string
+  Asset?: string
   Statuses?: string[]
   WithBadQualityOnly?: boolean
   ExcludeCalculations?: boolean

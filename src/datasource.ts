@@ -18,4 +18,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   async getTimeseriesDatabases(): Promise<any[]> {
     return this.getResource('databases')
   }
+
+  async getAssets(): Promise<any[]> {
+    return this.getResource('assets')
+  }
 }
