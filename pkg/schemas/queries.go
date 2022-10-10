@@ -20,6 +20,11 @@ type MeasurementQuery struct {
 	Join         bool
 }
 
+type RawQuery struct {
+	Query              string
+	TimeseriesDatabase uuid.UUID
+}
+
 func (query *MeasurementQuery) ToHistorianQuery() historianSchemas.Query {
 	historianQuery := historianSchemas.Query{
 		MeasurementUUIDs: make([]uuid.UUID, len(query.Measurements)),

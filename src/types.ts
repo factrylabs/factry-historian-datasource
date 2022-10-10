@@ -5,7 +5,7 @@ import { DataQuery, DataSourceJsonData } from '@grafana/data';
 export type Attributes = Record<string, any>
 
 export interface Query extends DataQuery {
-  query: MeasurementQuery;
+  query: MeasurementQuery | RawQuery;
 }
 
 export const defaultQuery: Partial<Query> = {
@@ -62,4 +62,9 @@ export interface MeasurementFilter {
   Statuses?: string[]
   WithBadQualityOnly?: boolean
   ExcludeCalculations?: boolean
+}
+
+export interface RawQuery {
+  TimeseriesDatabase: string
+  Query: string
 }

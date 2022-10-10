@@ -1,8 +1,9 @@
 import React, { PureComponent } from 'react';
-import { AsyncSelect, Cascader, RadioButtonGroup, Select, SegmentSection, InlineField, InlineFieldRow, CascaderOption } from '@grafana/ui';
+import { getTemplateSrv } from '@grafana/runtime';
+import { AsyncSelect, Cascader, TextArea, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption } from '@grafana/ui';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import { DataSource } from './datasource';
-import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter } from './types';
+import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery } from './types';
 
 interface State {
   tabIndex: number
@@ -28,6 +29,8 @@ export class QueryEditor extends PureComponent<Props, State> {
     super(props);
     this.loadMeasurementOptions = this.loadMeasurementOptions.bind(this)
     this.onSelectAsset = this.onSelectAsset.bind(this)
+    this.onTimeseriesDatabaseChange = this.onTimeseriesDatabaseChange.bind(this)
+    this.setCurrentQuery = this.setCurrentQuery.bind(this)
   }
 
   state = {
@@ -80,7 +83,7 @@ export class QueryEditor extends PureComponent<Props, State> {
 
   onTimeseriesDatabaseChange = (event: SelectableValue<string>) => {
     this.setState({ ...this.state, filter: { ...this.state.filter, Database: event.value } })
-  };
+  }
 
   async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
     const result: Array<SelectableValue<string>> = [];
@@ -98,8 +101,10 @@ export class QueryEditor extends PureComponent<Props, State> {
     if (event.value) {
       const { onChange, query } = this.props;
       query.queryType = 'MeasurementQuery';
-      query.query = {} as MeasurementQuery;
-      query.query.Measurements = [this.state.measurements.find((m) => m.UUID === event.value)];
+      query.query = {
+        Measurements: [this.state.measurements.find((m) => m.UUID === event.value)],
+        GroupBy: ['status']
+      } as MeasurementQuery;
       onChange(query);
     }
   };
@@ -141,13 +146,28 @@ export class QueryEditor extends PureComponent<Props, State> {
     this.setState({ ...this.state, filter: { ...this.state.filter, Asset: asset } })
   }
 
+  setCurrentQuery(queryString: string) {
+    console.log(queryString)
+    const { onChange, query } = this.props
+    query.queryType = 'RawQuery'
+    if (getTemplateSrv().getVariables().length > 0) {
+      queryString = getTemplateSrv().replace(queryString)
+    }
+    query.query = {
+      TimeseriesDatabase: this.state.filter.Database,
+      Query: queryString,
+    } as RawQuery
+    console.log(query.query)
+    onChange(query)
+  }
+
   onRunQuery(
     props: Readonly<Props> &
       Readonly<{
         children?: React.ReactNode;
       }>
   ) {
-    if (props.query.queryType && props.query.query?.Measurements?.length === 1) {
+    if (props.query.queryType) {
       this.props.onRunQuery();
     }
   }
@@ -157,46 +177,52 @@ export class QueryEditor extends PureComponent<Props, State> {
       {
         title: 'Measurements',
         content: (
-          <SegmentSection label="SELECT" >
-            <InlineField label="Collector" grow tooltip="Specify a collector to work with">
-              <Select
-                value={selectable(this.state.collectors, this.state.filter.Collector)}
-                placeholder="select collector"
-                options={this.state.collectors}
-                onChange={this.onCollectorChange}
-                width={30}
-              />
-            </InlineField>
-            <InlineField label="Database" grow tooltip="Specify a time series database to work with">
-              <Select
-                value={selectable(this.state.databases, this.state.filter.Database)}
-                placeholder="select timeseries database"
-                options={this.state.databases}
-                onChange={this.onTimeseriesDatabaseChange}
-                width={30}
-              />
-            </InlineField>
-            <InlineField label="Measurement" grow tooltip="Specify measurement to work with">
-              <AsyncSelect
-                placeholder="select measurement"
-                loadOptions={this.loadMeasurementOptions}
-                onChange={this.onMeasurementChange}
-                width={30}
-              />
-            </InlineField>
-          </SegmentSection>
+          <div>
+            <InlineFieldRow>
+              <InlineField label="Collector" grow tooltip="Specify a collector to work with">
+                <Select
+                  value={selectable(this.state.collectors, this.state.filter.Collector)}
+                  placeholder="select collector"
+                  options={this.state.collectors}
+                  onChange={this.onCollectorChange}
+                />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField label="Database" grow tooltip="Specify a time series database to work with">
+                <Select
+                  value={selectable(this.state.databases, this.state.filter.Database)}
+                  placeholder="select timeseries database"
+                  options={this.state.databases}
+                  onChange={this.onTimeseriesDatabaseChange}
+                />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField label="Measurement" grow tooltip="Specify measurement to work with">
+                <AsyncSelect
+                  placeholder="select measurement"
+                  loadOptions={this.loadMeasurementOptions}
+                  onChange={this.onMeasurementChange}
+
+                />
+              </InlineField>
+            </InlineFieldRow>
+          </div>
         ),
       },
       {
         title: 'Assets',
         content: (
-          <SegmentSection label="SELECT 2" >
-            <Cascader
-              options={this.state.assets}
-              getSearchableOptions={this.state.assets}
-              displayAllSelectedLevels
-              onSelect={this.onSelectAsset}
-            />
+          <InlineFieldRow>
+            <InlineField label="Asset" grow tooltip="Specify asset to work with">
+              <Cascader
+                options={this.state.assets}
+                getSearchableOptions={this.state.assets}
+                displayAllSelectedLevels
+                onSelect={this.onSelectAsset}
+              />
+            </InlineField>
             <InlineField label="Measurement" grow tooltip="Specify measurement to work with">
               <AsyncSelect
                 placeholder="select measurement"
@@ -205,13 +231,42 @@ export class QueryEditor extends PureComponent<Props, State> {
                 width={30}
               />
             </InlineField>
-          </SegmentSection>
+          </InlineFieldRow>
         ),
+      },
+      {
+        title: 'Raw',
+        content: (
+          <div>
+            <InlineFieldRow>
+              <InlineField label="Database" grow tooltip="Specify a time series database to work with">
+                <Select
+                  value={selectable(this.state.databases, this.state.filter.Database)}
+                  placeholder="select timeseries database"
+                  options={this.state.databases}
+                  onChange={this.onTimeseriesDatabaseChange}
+                />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <TextArea
+                aria-label="query"
+                rows={3}
+                spellCheck={false}
+                placeholder="Raw Query"
+                onBlur={(e) => this.setCurrentQuery(e.currentTarget.value)}
+                onChange={(e) => {
+                  this.setCurrentQuery(e.currentTarget.value);
+                }}
+              />
+            </InlineFieldRow>
+          </div>
+        )
       }
     ]
 
     return (
-      <div className="gf-form">
+      <div>
         <InlineFieldRow>
           <InlineField>
             <RadioButtonGroup
@@ -221,7 +276,15 @@ export class QueryEditor extends PureComponent<Props, State> {
             />
           </InlineField>
         </InlineFieldRow>
-        {tabs[this.state.tabIndex].content}
+        <InlineFieldRow>
+          <InlineField>
+            {tabs[this.state.tabIndex].content}
+          </InlineField>
+        </InlineFieldRow>
+        {/* TODO Display status? */}
+        {/* Depending on content of this.props fill values of input / show correct tab */}
+        {/* select mean(value) as value from "rand float" where $timeFilter GROUP BY $__interval fill(null) order by time desc */}
+        {/* select value from "rand float" where $timeFilter order by time desc */}
       </div>
     );
   }
