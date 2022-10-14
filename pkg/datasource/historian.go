@@ -38,7 +38,7 @@ func NewDatasource() datasource.ServeOpts {
 		IM: im,
 	}
 	return datasource.ServeOpts{
-		// CheckHealthHandler:  host,
+		CheckHealthHandler:  host,
 		QueryDataHandler:    host,
 		CallResourceHandler: host,
 	}
@@ -52,19 +52,16 @@ func getInstance(s backend.DataSourceInstanceSettings) (instancemgmt.Instance, e
 
 	historianPlugin := &HistorianPlugin{}
 	if settings.Token != "" {
-		historianAPI, err := api.NewAPIWithToken(settings.URL, settings.Token)
+		historianPlugin.API, err = api.NewAPIWithToken(settings.URL, settings.Token)
 		if err != nil {
 			return nil, err
 		}
-
-		historianPlugin.API = historianAPI
 	} else {
-		historianAPI, err := api.NewAPIWithUser(settings.URL, settings.Username, settings.Password)
+		historianPlugin.API, err = api.NewAPIWithUser(settings.URL, settings.Username, settings.Password)
 		if err != nil {
 			return nil, err
 		}
-
-		historianPlugin.API = historianAPI
 	}
+
 	return historianPlugin, nil
 }

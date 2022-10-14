@@ -71,7 +71,7 @@ func (ds *HistorianDatasource) CallResource(ctx context.Context, req *backend.Ca
 		}
 
 		return resource.SendJSON(sender, o)
-	case "assets":
+	case ResourceTypeAssets:
 		o, err := dsi.API.GetAssets()
 		if err != nil {
 			return err

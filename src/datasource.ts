@@ -1,14 +1,14 @@
-import { DataSourceInstanceSettings } from '@grafana/data';
-import { DataSourceWithBackend } from '@grafana/runtime';
-import { HistorianDataSourceOptions, MeasurementFilter, Query } from './types';
+import { DataSourceInstanceSettings } from '@grafana/data'
+import { DataSourceWithBackend } from '@grafana/runtime'
+import { HistorianDataSourceOptions, MeasurementFilter, Query } from './types'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>) {
-    super(instanceSettings);
+    super(instanceSettings)
   }
 
   async getMeasurements(filter: MeasurementFilter): Promise<any[]> {
-    return this.getResource('measurements', filter);
+    return this.getResource('measurements', filter)
   }
 
   async getCollectors(): Promise<any[]> {

@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
-  "name": "historian-datasource",
+  "name": "Factry Historian Datasource",
   "id": "factry-historian-datasource",
   "metrics": true,
   "backend": true,
@@ -9,7 +9,7 @@
   "info": {
     "description": "A datasource plugin for Factry Historian",
     "author": {
-      "name": "David Dierickx",
+      "name": "Factry",
       "url": "www.factry.io"
     },
     "keywords": [],
@@ -20,7 +20,7 @@
     "links": [
       {
         "name": "Website",
-        "url": "https://github.com/grafana/grafana-starter-datasource-backend"
+        "url": "https://factry.io"
       },
       {
         "name": "License",

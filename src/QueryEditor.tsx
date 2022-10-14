@@ -1,9 +1,9 @@
-import React, { PureComponent } from 'react';
-import { getTemplateSrv } from '@grafana/runtime';
-import { AsyncSelect, Cascader, TextArea, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption } from '@grafana/ui';
-import { QueryEditorProps, SelectableValue } from '@grafana/data';
-import { DataSource } from './datasource';
-import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery } from './types';
+import React, { PureComponent } from 'react'
+import { getTemplateSrv } from '@grafana/runtime'
+import { AsyncSelect, Cascader, TextArea, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption } from '@grafana/ui'
+import { QueryEditorProps, SelectableValue } from '@grafana/data'
+import { DataSource } from './datasource'
+import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery } from './types'
 
 interface State {
   tabIndex: number
@@ -14,11 +14,11 @@ interface State {
   assets: Array<CascaderOption>
 }
 
-type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>;
+type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
 function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
-    return {};
+    return {}
   }
 
   return store.filter((e) => e.value === value)
@@ -26,7 +26,7 @@ function selectable(store: Array<SelectableValue<string>>, value?: string): Sele
 
 export class QueryEditor extends PureComponent<Props, State> {
   constructor(props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>) {
-    super(props);
+    super(props)
     this.loadMeasurementOptions = this.loadMeasurementOptions.bind(this)
     this.onSelectAsset = this.onSelectAsset.bind(this)
     this.onTimeseriesDatabaseChange = this.onTimeseriesDatabaseChange.bind(this)
@@ -56,12 +56,12 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   getCollectors(): Array<SelectableValue<string>> {
-    const result: Array<SelectableValue<string>> = [{ label: 'All collectors', value: '' }];
+    const result: Array<SelectableValue<string>> = [{ label: 'All collectors', value: '' }]
     this.props.datasource.getCollectors().then((collectors: any[]) => {
       collectors.forEach((collector: any) => {
-        result.push({ label: collector.Name, value: collector.UUID, description: collector.Description });
-      });
-    });
+        result.push({ label: collector.Name, value: collector.UUID, description: collector.Description })
+      })
+    })
 
     return result
   }
@@ -71,12 +71,12 @@ export class QueryEditor extends PureComponent<Props, State> {
   };
 
   getTimeseriesDatabases(): Array<SelectableValue<string>> {
-    const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }];
+    const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
     this.props.datasource.getTimeseriesDatabases().then((timeseriesDatabases: any[]) => {
       timeseriesDatabases.forEach((timeseriesDatabase: any) => {
-        result.push({ label: timeseriesDatabase.Name, value: timeseriesDatabase.UUID, description: timeseriesDatabase.Description });
-      });
-    });
+        result.push({ label: timeseriesDatabase.Name, value: timeseriesDatabase.UUID, description: timeseriesDatabase.Description })
+      })
+    })
 
     return result
   }
@@ -86,26 +86,26 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
-    const result: Array<SelectableValue<string>> = [];
+    const result: Array<SelectableValue<string>> = []
     const filter = { ...this.state.filter, Keyword: query }
     await this.props.datasource.getMeasurements(filter).then((measurements: any[]) => {
       this.setState({ ...this.state, measurements: measurements })
       measurements.forEach((measurement: any) => {
-        result.push({ label: measurement.Name, value: measurement.UUID, description: '(' + measurement.UoM + ') ' + measurement.Description });
-      });
+        result.push({ label: measurement.Name, value: measurement.UUID, description: '(' + measurement.UoM + ') ' + measurement.Description })
+      })
     })
     return result
   }
 
   onMeasurementChange = (event: SelectableValue<string>) => {
     if (event.value) {
-      const { onChange, query } = this.props;
-      query.queryType = 'MeasurementQuery';
+      const { onChange, query } = this.props
+      query.queryType = 'MeasurementQuery'
       query.query = {
         Measurements: [this.state.measurements.find((m) => m.UUID === event.value)],
         GroupBy: ['status']
-      } as MeasurementQuery;
-      onChange(query);
+      } as MeasurementQuery
+      onChange(query)
     }
   };
 
@@ -126,7 +126,7 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   getChildAssets(parent, assets): Array<CascaderOption> {
-    const result: Array<CascaderOption> = [];
+    const result: Array<CascaderOption> = []
 
     assets.filter((asset) => asset.ParentUUID === parent.UUID).forEach((asset) => {
       const cascaderOption: CascaderOption = {
@@ -141,13 +141,10 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   onSelectAsset(asset: string) {
-    // TODO pass an array of assets instead of a single asset, is simpler to implement include children...
-    // OR add an includeChildren option which adds some complexity to the historian but limits the length of the querystring
     this.setState({ ...this.state, filter: { ...this.state.filter, Asset: asset } })
   }
 
   setCurrentQuery(queryString: string) {
-    console.log(queryString)
     const { onChange, query } = this.props
     query.queryType = 'RawQuery'
     if (getTemplateSrv().getVariables().length > 0) {
@@ -157,18 +154,17 @@ export class QueryEditor extends PureComponent<Props, State> {
       TimeseriesDatabase: this.state.filter.Database,
       Query: queryString,
     } as RawQuery
-    console.log(query.query)
     onChange(query)
   }
 
   onRunQuery(
     props: Readonly<Props> &
       Readonly<{
-        children?: React.ReactNode;
+        children?: React.ReactNode
       }>
   ) {
     if (props.query.queryType) {
-      this.props.onRunQuery();
+      this.props.onRunQuery()
     }
   }
 
@@ -281,11 +277,7 @@ export class QueryEditor extends PureComponent<Props, State> {
             {tabs[this.state.tabIndex].content}
           </InlineField>
         </InlineFieldRow>
-        {/* TODO Display status? */}
-        {/* Depending on content of this.props fill values of input / show correct tab */}
-        {/* select mean(value) as value from "rand float" where $timeFilter GROUP BY $__interval fill(null) order by time desc */}
-        {/* select value from "rand float" where $timeFilter order by time desc */}
       </div>
-    );
+    )
   }
 }

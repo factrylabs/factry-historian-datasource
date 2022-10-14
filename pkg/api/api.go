@@ -10,6 +10,7 @@ type API struct {
 	client rest.Client
 }
 
+// NewAPIWithToken creates a new instance of API using a token
 func NewAPIWithToken(url string, token string) (*API, error) {
 	client := rest.New(url)
 	client.SetToken(token)
@@ -17,6 +18,7 @@ func NewAPIWithToken(url string, token string) (*API, error) {
 	return api, nil
 }
 
+// NewAPIWithUser creates a new instance of API using user/password
 func NewAPIWithUser(url string, user string, password string) (*API, error) {
 	client := rest.New(url)
 

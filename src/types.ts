@@ -1,4 +1,4 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataQuery, DataSourceJsonData } from '@grafana/data'
 
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -9,22 +9,22 @@ export interface Query extends DataQuery {
 }
 
 export const defaultQuery: Partial<Query> = {
-};
+}
 
 /**
  * These are options configured for each DataSource instance.
  */
 export interface HistorianDataSourceOptions extends DataSourceJsonData {
-  url: string;
-  username: string;
+  url: string
+  username: string
 }
 
 /**
  * Value that is used in the backend, but never sent over HTTP to the frontend
  */
 export interface HistorianSecureJsonData {
-  token?: string;
-  password?: string;
+  token?: string
+  password?: string
 }
 
 export interface MeasurementByName {
@@ -43,15 +43,9 @@ export interface Aggregation {
 
 export interface MeasurementQuery {
   Measurements?: any[]
-  Start: Date
-  End?: Date
   Tags?: Attributes
   GroupBy?: string[]
-  Limit?: number
-  Offset?: number
   Aggregation?: Aggregation
-  Desc?: boolean
-  Join?: boolean
 }
 
 export interface MeasurementFilter {

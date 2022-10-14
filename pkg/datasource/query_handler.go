@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
@@ -70,14 +71,11 @@ func handleQuery(query Query, backendQuery backend.DataQuery, api *api.API) (dat
 		return nil, err
 	}
 
-	measurementQuery.Start = backendQuery.TimeRange.From
-	measurementQuery.End = &backendQuery.TimeRange.To
 	if measurementQuery.Aggregation != nil {
 		measurementQuery.Aggregation.Period = backendQuery.Interval.String()
 	}
-	measurementQuery.Limit = int(backendQuery.MaxDataPoints)
 
-	result, err := api.MeasurementQuery(measurementQuery.ToHistorianQuery())
+	result, err := api.MeasurementQuery(historianQuery(measurementQuery, backendQuery))
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +85,8 @@ func handleQuery(query Query, backendQuery backend.DataQuery, api *api.API) (dat
 
 func handleRawQuery(query Query, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
 	rawQuery := schemas.RawQuery{}
-	err := json.Unmarshal(query.Query, &rawQuery)
-	if err != nil {
+
+	if err := json.Unmarshal(query.Query, &rawQuery); err != nil {
 		return nil, err
 	}
 
@@ -113,4 +111,22 @@ func fillQueryVariables(query string, databaseType string, backendQuery backend.
 	query = strings.ReplaceAll(query, "$timeFilter", timeFilter)
 	query = strings.ReplaceAll(query, "$__interval", interval)
 	return query
+}
+
+func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQuery) historianSchemas.Query {
+	historianQuery := historianSchemas.Query{
+		MeasurementUUIDs: make([]uuid.UUID, len(query.Measurements)),
+		Start:            backendQuery.TimeRange.From,
+		End:              &backendQuery.TimeRange.To,
+		Tags:             query.Tags,
+		GroupBy:          query.GroupBy,
+		Limit:            int(backendQuery.MaxDataPoints),
+		Aggregation:      query.Aggregation,
+	}
+
+	for i, measurement := range query.Measurements {
+		historianQuery.MeasurementUUIDs[i] = measurement.UUID
+	}
+
+	return historianQuery
 }

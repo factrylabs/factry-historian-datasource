@@ -43,7 +43,7 @@ func LoadSettings(config backend.DataSourceInstanceSettings) (settings Settings,
 	if strings.TrimSpace(settings.QueryTimeout) == "" {
 		settings.QueryTimeout = "60"
 	}
-	settings.Password, _ = config.DecryptedSecureJSONData["password"]
-	settings.Token, _ = config.DecryptedSecureJSONData["token"]
+	settings.Password = config.DecryptedSecureJSONData["password"]
+	settings.Token = config.DecryptedSecureJSONData["token"]
 	return settings, settings.isValid()
 }

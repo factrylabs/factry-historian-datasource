@@ -19,7 +19,10 @@ func (api *API) GetMeasurements(query string) ([]schemas.Measurement, error) {
 func (api *API) GetCollectors() ([]schemas.Collector, error) {
 	collectors := []schemas.Collector{}
 
-	api.client.Get("/api/collectors", &collectors)
+	if err := api.client.Get("/api/collectors", &collectors); err != nil {
+		return nil, err
+	}
+
 	return collectors, nil
 }
 
@@ -27,7 +30,10 @@ func (api *API) GetCollectors() ([]schemas.Collector, error) {
 func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
 	timeseriesDatabases := []schemas.TimeseriesDatabase{}
 
-	api.client.Get("/api/timeseries_databases", &timeseriesDatabases)
+	if err := api.client.Get("/api/timeseries_databases", &timeseriesDatabases); err != nil {
+		return nil, err
+	}
+
 	return timeseriesDatabases, nil
 }
 
@@ -35,6 +41,9 @@ func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
 func (api *API) GetAssets() ([]schemas.Asset, error) {
 	assets := []schemas.Asset{}
 
-	api.client.Get("/api/assets", &assets)
+	if err := api.client.Get("/api/assets", &assets); err != nil {
+		return nil, err
+	}
+
 	return assets, nil
 }

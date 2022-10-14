@@ -1,12 +1,12 @@
-import React, { ChangeEvent, PureComponent } from 'react';
-import { FieldSet, InlineField, InlineFieldRow, Input, SecretInput } from '@grafana/ui';
+import React, { ChangeEvent, PureComponent } from 'react'
+import { FieldSet, InlineField, InlineFieldRow, Input, SecretInput } from '@grafana/ui'
 
-import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { HistorianDataSourceOptions, HistorianSecureJsonData } from './types';
+import { DataSourcePluginOptionsEditorProps } from '@grafana/data'
+import { HistorianDataSourceOptions, HistorianSecureJsonData } from './types'
 
-interface Props extends DataSourcePluginOptionsEditorProps<HistorianDataSourceOptions> {}
+interface Props extends DataSourcePluginOptionsEditorProps<HistorianDataSourceOptions> { }
 
-interface State {}
+interface State { }
 
 export class ConfigEditor extends PureComponent<Props, State> {
   onSettingChange = (prop: string) => (event: ChangeEvent<HTMLInputElement>) => {
@@ -15,8 +15,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
       ...options.jsonData,
       [prop]: event.target.value,
     };
-    onOptionsChange({ ...options, jsonData });
-  };
+    onOptionsChange({ ...options, jsonData })
+  }
 
   onSecureSettingChange = (prop: string) => (event: ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
@@ -25,8 +25,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
       secureJsonData: {
         [prop]: event.target.value,
       },
-    });
-  };
+    })
+  }
 
   onSecureSettingReset = (prop: string) => () => {
     const { onOptionsChange, options } = this.props;
@@ -40,13 +40,13 @@ export class ConfigEditor extends PureComponent<Props, State> {
         ...options.secureJsonData,
         [prop]: '',
       },
-    });
-  };
+    })
+  }
 
   render() {
-    const { options } = this.props;
-    const { jsonData, secureJsonFields } = options;
-    const secureJsonData = (options.secureJsonData || {}) as HistorianSecureJsonData;
+    const { options } = this.props
+    const { jsonData, secureJsonFields } = options
+    const secureJsonData = (options.secureJsonData || {}) as HistorianSecureJsonData
 
     return (
       <div className="gf-form-group">
@@ -103,6 +103,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
           </InlineFieldRow>
         </FieldSet>
       </div>
-    );
+    )
   }
 }

@@ -17,6 +17,7 @@ func (api *API) MeasurementQuery(query schemas.Query) (*schemas.QueryResult, err
 	return queryResult, nil
 }
 
+// RawQuery executes a raw time series query
 func (api *API) RawQuery(timeseriesDatabase uuid.UUID, query schemas.RawQuery) (*schemas.QueryResult, error) {
 	queryResult := &schemas.QueryResult{}
 	if err := api.client.Post(fmt.Sprintf("/api/timeseries/%v/raw_query", timeseriesDatabase), query, queryResult); err != nil {
