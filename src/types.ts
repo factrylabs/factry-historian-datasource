@@ -62,3 +62,45 @@ export interface RawQuery {
   TimeseriesDatabase: string
   Query: string
 }
+
+export interface Collector {
+  Name: string
+  UUID: string
+  Description: string
+  CollectorType: string
+}
+
+export interface TimeseriesDatabase {
+  Name: string
+  UUID: string
+  Description: string
+}
+
+export interface Measurement {
+  Name: string
+  UUID: string
+  Description: string
+  Datatype: string
+  Status: string
+  CollectorUUID: string
+  Collector?: Collector
+  DatabaseUUID: string
+  Database: TimeseriesDatabase
+  UoM: string
+}
+
+export interface Asset {
+  Name: string
+  UUID: string
+  Description: string
+  Status: string
+  ParentUUID: string
+  Parent?: Asset
+}
+
+export interface AssetMeasurement {
+  Name: string
+  UUID: string
+  AssetUUID: string
+  MeasurementUUID: string
+}

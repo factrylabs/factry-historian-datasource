@@ -70,7 +70,8 @@ func seriesToFields(series *historianSchemas.Series, uom string) []*data.Field {
 		fields = append(fields, data.NewField("time", data.Labels{}, timestamps))
 		valueField := valueField("value", values, labels)
 		valueField.Config = &data.FieldConfig{
-			Unit: uom,
+			DisplayNameFromDS: series.Measurement, // TODO status not visible in frontend anymore?
+			Unit:              uom,
 		}
 		fields = append(fields, valueField)
 	}

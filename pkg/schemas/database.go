@@ -14,21 +14,23 @@ type Collector struct {
 
 // TimeseriesDatabase has the fields of a time series database that are used by the data source
 type TimeseriesDatabase struct {
-	Name string
-	UUID uuid.UUID
+	Name        string
+	UUID        uuid.UUID
+	Description string
 }
 
 // Measurement has the fields of a measurement that are used by the data source
 type Measurement struct {
-	Name         string
-	UUID         uuid.UUID
-	Description  string
-	Datatype     string
-	Status       string
-	Collector    *Collector
-	DatabaseUUID uuid.UUID
-	Database     *TimeseriesDatabase
-	UoM          string
+	Name          string
+	UUID          uuid.UUID
+	Description   string
+	Datatype      string
+	Status        string
+	CollectorUUID uuid.UUID
+	Collector     *Collector
+	DatabaseUUID  uuid.UUID
+	Database      *TimeseriesDatabase
+	UoM           string
 }
 
 // Asset has the fields of an asset that are used by the data source
@@ -39,4 +41,12 @@ type Asset struct {
 	Status      string
 	ParentUUID  *uuid.UUID
 	Parent      *Asset
+}
+
+// AssetMeasurement has the fields of an asset measurement that are used by the data source
+type AssetMeasurement struct {
+	Name            string
+	UUID            uuid.UUID
+	AssetUUID       uuid.UUID
+	MeasurementUUID uuid.UUID
 }

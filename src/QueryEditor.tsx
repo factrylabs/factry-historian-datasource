@@ -3,14 +3,15 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { AsyncSelect, Cascader, TextArea, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption } from '@grafana/ui'
 import { QueryEditorProps, SelectableValue } from '@grafana/data'
 import { DataSource } from './datasource'
-import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery } from './types'
+import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetMeasurement, Measurement, Collector, Asset } from './types'
 
 interface State {
   tabIndex: number
   collectors: Array<SelectableValue<string>>
   databases: Array<SelectableValue<string>>
   filter: MeasurementFilter
-  measurements: Array<any>
+  measurements: Array<Measurement>
+  assetMeasurements: Array<AssetMeasurement>
   assets: Array<CascaderOption>
 }
 
@@ -57,8 +58,8 @@ export class QueryEditor extends PureComponent<Props, State> {
 
   getCollectors(): Array<SelectableValue<string>> {
     const result: Array<SelectableValue<string>> = [{ label: 'All collectors', value: '' }]
-    this.props.datasource.getCollectors().then((collectors: any[]) => {
-      collectors.forEach((collector: any) => {
+    this.props.datasource.getCollectors().then((collectors) => {
+      collectors.forEach((collector) => {
         result.push({ label: collector.Name, value: collector.UUID, description: collector.Description })
       })
     })
@@ -72,8 +73,8 @@ export class QueryEditor extends PureComponent<Props, State> {
 
   getTimeseriesDatabases(): Array<SelectableValue<string>> {
     const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
-    this.props.datasource.getTimeseriesDatabases().then((timeseriesDatabases: any[]) => {
-      timeseriesDatabases.forEach((timeseriesDatabase: any) => {
+    this.props.datasource.getTimeseriesDatabases().then((timeseriesDatabases) => {
+      timeseriesDatabases.forEach((timeseriesDatabase) => {
         result.push({ label: timeseriesDatabase.Name, value: timeseriesDatabase.UUID, description: timeseriesDatabase.Description })
       })
     })
@@ -88,9 +89,9 @@ export class QueryEditor extends PureComponent<Props, State> {
   async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
     const result: Array<SelectableValue<string>> = []
     const filter = { ...this.state.filter, Keyword: query }
-    await this.props.datasource.getMeasurements(filter).then((measurements: any[]) => {
+    await this.props.datasource.getMeasurements(filter).then((measurements) => {
       this.setState({ ...this.state, measurements: measurements })
-      measurements.forEach((measurement: any) => {
+      measurements.forEach((measurement) => {
         result.push({ label: measurement.Name, value: measurement.UUID, description: '(' + measurement.UoM + ') ' + measurement.Description })
       })
     })
@@ -107,41 +108,56 @@ export class QueryEditor extends PureComponent<Props, State> {
       } as MeasurementQuery
       onChange(query)
     }
-  };
+  }
 
   getAssets(): Array<CascaderOption> {
     const result: Array<CascaderOption> = []
-    this.props.datasource.getAssets().then((assets: any[]) => {
-      assets.filter((asset) => !asset.ParentUUID).forEach((asset: any) => {
-        const cascaderOption: CascaderOption = {
-          label: asset.Name,
-          value: asset.UUID,
-          items: this.getChildAssets(asset, assets)
-        }
-        result.push(cascaderOption);
+    this.props.datasource.getAssets().then((assets) => {
+      this.props.datasource.getAssetMeasurements().then((assetMeasurements) => {
+        this.setState({ ...this.state, assetMeasurements: assetMeasurements })
+        result.push(...this.getChildAssets(null, assets))
       })
     })
 
     return result
   }
 
-  getChildAssets(parent, assets): Array<CascaderOption> {
+  getChildAssets(parent: string, assets: Asset[]): Array<CascaderOption> {
     const result: Array<CascaderOption> = []
 
-    assets.filter((asset) => asset.ParentUUID === parent.UUID).forEach((asset) => {
+    assets.filter((asset) => asset.ParentUUID === parent).forEach((asset) => {
       const cascaderOption: CascaderOption = {
         label: asset.Name,
         value: asset.UUID,
-        items: this.getChildAssets(asset, assets)
+        items: this.getChildAssets(asset.UUID, assets)
       }
+      const properties = this.state.assetMeasurements
+        ?.filter(assetMeasurement => assetMeasurement.AssetUUID === asset.UUID)
+        .map(assetMeasurement => {
+          return {
+            label: assetMeasurement.Name,
+            value: assetMeasurement.UUID,
+          } as CascaderOption
+        })
+
+      cascaderOption.items.push(...properties)
       result.push(cascaderOption)
     })
 
     return result
   }
 
-  onSelectAsset(asset: string) {
-    this.setState({ ...this.state, filter: { ...this.state.filter, Asset: asset } })
+  onSelectAsset(selected: string) {
+    const assetMeasurement = this.state.assetMeasurements.find(e => e.UUID === selected)
+    if (assetMeasurement) {
+      const { onChange, query } = this.props
+      query.queryType = 'MeasurementQuery'
+      query.query = {
+        Measurements: [{ UUID: assetMeasurement.MeasurementUUID }], // TODO fetch measurement somewhere, that way we have all engineering values
+        GroupBy: ['status']
+      } as MeasurementQuery
+      onChange(query)
+    }
   }
 
   setCurrentQuery(queryString: string) {
@@ -214,17 +230,8 @@ export class QueryEditor extends PureComponent<Props, State> {
             <InlineField label="Asset" grow tooltip="Specify asset to work with">
               <Cascader
                 options={this.state.assets}
-                getSearchableOptions={this.state.assets}
                 displayAllSelectedLevels
                 onSelect={this.onSelectAsset}
-              />
-            </InlineField>
-            <InlineField label="Measurement" grow tooltip="Specify measurement to work with">
-              <AsyncSelect
-                placeholder="select measurement"
-                loadOptions={this.loadMeasurementOptions}
-                onChange={this.onMeasurementChange}
-                width={30}
               />
             </InlineField>
           </InlineFieldRow>

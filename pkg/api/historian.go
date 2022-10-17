@@ -47,3 +47,14 @@ func (api *API) GetAssets() ([]schemas.Asset, error) {
 
 	return assets, nil
 }
+
+// GetAssetMeasurements calls get asset measurements in the historian API
+func (api *API) GetAssetMeasurements() ([]schemas.AssetMeasurement, error) {
+	assetMeasurements := []schemas.AssetMeasurement{}
+
+	if err := api.client.Get("/api/asset_measurements", &assetMeasurements); err != nil {
+		return nil, err
+	}
+
+	return assetMeasurements, nil
+}
