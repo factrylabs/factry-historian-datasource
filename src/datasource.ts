@@ -1,6 +1,6 @@
 import { DataSourceInstanceSettings } from '@grafana/data'
 import { DataSourceWithBackend } from '@grafana/runtime'
-import { Asset, AssetMeasurement, Collector, HistorianDataSourceOptions, Measurement, MeasurementFilter, Query, TimeseriesDatabase } from './types'
+import { Asset, AssetProperty, Collector, HistorianDataSourceOptions, Measurement, MeasurementFilter, Query, TimeseriesDatabase } from './types'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>) {
@@ -23,7 +23,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return this.getResource('assets')
   }
 
-  async getAssetMeasurements(): Promise<AssetMeasurement[]> {
-    return this.getResource('asset-measurements')
+  async getAssetProperties(): Promise<AssetProperty[]> {
+    return this.getResource('asset-properties')
   }
 }

@@ -3,7 +3,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { AsyncSelect, Cascader, TextArea, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption } from '@grafana/ui'
 import { QueryEditorProps, SelectableValue } from '@grafana/data'
 import { DataSource } from './datasource'
-import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetMeasurement, Measurement, Collector, Asset } from './types'
+import type { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetProperty, Measurement, Asset } from './types'
 
 interface State {
   tabIndex: number
@@ -11,7 +11,7 @@ interface State {
   databases: Array<SelectableValue<string>>
   filter: MeasurementFilter
   measurements: Array<Measurement>
-  assetMeasurements: Array<AssetMeasurement>
+  assetProperties: Array<AssetProperty>
   assets: Array<CascaderOption>
 }
 
@@ -113,8 +113,8 @@ export class QueryEditor extends PureComponent<Props, State> {
   getAssets(): Array<CascaderOption> {
     const result: Array<CascaderOption> = []
     this.props.datasource.getAssets().then((assets) => {
-      this.props.datasource.getAssetMeasurements().then((assetMeasurements) => {
-        this.setState({ ...this.state, assetMeasurements: assetMeasurements })
+      this.props.datasource.getAssetProperties().then((assetProperties) => {
+        this.setState({ ...this.state, assetProperties: assetProperties })
         result.push(...this.getChildAssets(null, assets))
       })
     })
@@ -131,12 +131,12 @@ export class QueryEditor extends PureComponent<Props, State> {
         value: asset.UUID,
         items: this.getChildAssets(asset.UUID, assets)
       }
-      const properties = this.state.assetMeasurements
-        ?.filter(assetMeasurement => assetMeasurement.AssetUUID === asset.UUID)
-        .map(assetMeasurement => {
+      const properties = this.state.assetProperties
+        ?.filter(assetProperty => assetProperty.AssetUUID === asset.UUID)
+        .map(assetProperty => {
           return {
-            label: assetMeasurement.Name,
-            value: assetMeasurement.UUID,
+            label: assetProperty.Name,
+            value: assetProperty.UUID,
           } as CascaderOption
         })
 
@@ -148,12 +148,12 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   onSelectAsset(selected: string) {
-    const assetMeasurement = this.state.assetMeasurements.find(e => e.UUID === selected)
-    if (assetMeasurement) {
+    const assetProperty = this.state.assetProperties.find(e => e.UUID === selected)
+    if (assetProperty) {
       const { onChange, query } = this.props
       query.queryType = 'MeasurementQuery'
       query.query = {
-        Measurements: [{ UUID: assetMeasurement.MeasurementUUID }], // TODO fetch measurement somewhere, that way we have all engineering values
+        Measurements: [{ UUID: assetProperty.MeasurementUUID }], // TODO fetch measurement somewhere, that way we have all engineering values
         GroupBy: ['status']
       } as MeasurementQuery
       onChange(query)

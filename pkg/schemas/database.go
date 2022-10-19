@@ -43,8 +43,8 @@ type Asset struct {
 	Parent      *Asset
 }
 
-// AssetMeasurement has the fields of an asset measurement that are used by the data source
-type AssetMeasurement struct {
+// AssetProperty has the fields of an asset property that are used by the data source
+type AssetProperty struct {
 	Name            string
 	UUID            uuid.UUID
 	AssetUUID       uuid.UUID

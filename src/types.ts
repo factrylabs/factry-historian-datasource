@@ -98,7 +98,7 @@ export interface Asset {
   Parent?: Asset
 }
 
-export interface AssetMeasurement {
+export interface AssetProperty {
   Name: string
   UUID: string
   AssetUUID: string
