@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -14,21 +15,21 @@ func QueryResultToDataFrame(measurements []schemas.Measurement, queryResult *his
 	dataFrames := data.Frames{}
 
 	for _, series := range queryResult.Series {
-		uom := "none"
+		seriesMeasurement := schemas.Measurement{}
 		for _, measurement := range measurements {
 			if measurement.Name == series.Measurement {
-				uom = measurement.UoM
+				seriesMeasurement = measurement
 				break
 			}
 		}
-		frame := data.NewFrame(series.Measurement, seriesToFields(series, uom)...)
+		frame := data.NewFrame(series.Measurement, seriesToFields(series, seriesMeasurement)...)
 		dataFrames = append(dataFrames, frame)
 	}
 
 	return dataFrames, nil
 }
 
-func seriesToFields(series *historianSchemas.Series, uom string) []*data.Field {
+func seriesToFields(series *historianSchemas.Series, measurement schemas.Measurement) []*data.Field {
 	fields := []*data.Field{}
 	labels := data.Labels{}
 	for k, v := range series.Tags {
@@ -69,13 +70,59 @@ func seriesToFields(series *historianSchemas.Series, uom string) []*data.Field {
 		}
 		fields = append(fields, data.NewField("time", data.Labels{}, timestamps))
 		valueField := valueField("value", values, labels)
-		valueField.Config = &data.FieldConfig{
-			DisplayNameFromDS: series.Measurement, // TODO status not visible in frontend anymore?
-			Unit:              uom,
-		}
+		valueField.Config = getFieldConfig(measurement)
 		fields = append(fields, valueField)
 	}
 	return fields
+}
+
+func getFieldConfig(measurement schemas.Measurement) *data.FieldConfig {
+	fieldConfig := &data.FieldConfig{
+		DisplayNameFromDS: measurement.Name, // TODO status not visible in frontend anymore?
+		Unit:              "none",
+		Description:       measurement.Description,
+	}
+	config, err := measurement.Attributes.GetAttributes("Config")
+	if err == nil {
+		if uom := config.GetString("UoM"); uom != "" {
+			fieldConfig.Unit = uom
+		}
+		if min, err := config.GetFloat64("ValueMin"); err == nil {
+			fieldConfig.SetMin(min)
+		}
+		if max, err := config.GetFloat64("ValueMax"); err == nil {
+			fieldConfig.SetMax(max)
+		}
+
+		thresholdConfig := &data.ThresholdsConfig{
+			Mode: data.ThresholdsModeAbsolute,
+			Steps: []data.Threshold{
+				{
+					Value: data.ConfFloat64(math.NaN()),
+					Color: "red",
+				},
+			},
+		}
+
+		if LimitLo, err := config.GetFloat64("LimitLo"); err == nil {
+			threshold := data.Threshold{
+				Value: data.ConfFloat64(LimitLo),
+				Color: "green",
+			}
+			thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
+		}
+		if limitHi, err := config.GetFloat64("LimitHi"); err == nil {
+			threshold := data.Threshold{
+				Value: data.ConfFloat64(limitHi),
+				Color: "red",
+			}
+			thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
+		}
+		if len(thresholdConfig.Steps) > 1 {
+			fieldConfig.Thresholds = thresholdConfig
+		}
+	}
+	return fieldConfig
 }
 
 func valueField(field string, values []interface{}, labels data.Labels) *data.Field {

@@ -2,6 +2,8 @@ package schemas
 
 import (
 	"github.com/google/uuid"
+
+	historianSchemas "gitlab.com/factry/historian/historian-server.git/v5/pkg/schemas"
 )
 
 // Collector has the fields of a collector that are used by the data source
@@ -30,7 +32,7 @@ type Measurement struct {
 	Collector     *Collector
 	DatabaseUUID  uuid.UUID
 	Database      *TimeseriesDatabase
-	UoM           string
+	Attributes    historianSchemas.Attributes
 }
 
 // Asset has the fields of an asset that are used by the data source
