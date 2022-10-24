@@ -14,11 +14,17 @@ type Collector struct {
 	CollectorType string
 }
 
+// TimeseriesDatabaseType has the fields of a time series database type that are used by the data source
+type TimeseriesDatabaseType struct {
+	Name string
+}
+
 // TimeseriesDatabase has the fields of a time series database that are used by the data source
 type TimeseriesDatabase struct {
-	Name        string
-	UUID        uuid.UUID
-	Description string
+	Name                   string
+	UUID                   uuid.UUID
+	Description            string
+	TimeseriesDatabaseType *TimeseriesDatabaseType
 }
 
 // Measurement has the fields of a measurement that are used by the data source

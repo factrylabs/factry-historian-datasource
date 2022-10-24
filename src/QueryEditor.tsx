@@ -1,15 +1,15 @@
 import React, { PureComponent } from 'react'
 import { getTemplateSrv } from '@grafana/runtime'
-import { AsyncSelect, Cascader, TextArea, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption } from '@grafana/ui'
+import { AsyncSelect, Cascader, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption, CodeEditor } from '@grafana/ui'
 import { QueryEditorProps, SelectableValue } from '@grafana/data'
 import { DataSource } from './datasource'
-import type { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetProperty, Measurement, Asset } from './types'
+import type { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetProperty, Measurement, Asset, Pagination, TimeseriesDatabase } from './types'
 
 interface State {
   tabIndex: number
-  collectors: Array<SelectableValue<string>>
-  databases: Array<SelectableValue<string>>
+  databases: Array<TimeseriesDatabase>
   filter: MeasurementFilter
+  pagination: Pagination
   measurements: Array<Measurement>
   assetProperties: Array<AssetProperty>
   assets: Array<CascaderOption>
@@ -31,54 +31,65 @@ export class QueryEditor extends PureComponent<Props, State> {
     this.loadMeasurementOptions = this.loadMeasurementOptions.bind(this)
     this.onSelectAsset = this.onSelectAsset.bind(this)
     this.onTimeseriesDatabaseChange = this.onTimeseriesDatabaseChange.bind(this)
-    this.setCurrentQuery = this.setCurrentQuery.bind(this)
+    this.setRawQuery = this.setRawQuery.bind(this)
+    this.getTimeseriesDatabaseType = this.getTimeseriesDatabaseType.bind(this)
   }
 
   state = {
     tabIndex: 0,
     filter: {
       Database: '',
-      Collector: '',
     },
-    collectors: [],
+    pagination: {
+      Limit: 100,
+    },
     databases: [],
     measurements: [],
   } as State
 
   componentDidMount() {
-    const collectors = this.getCollectors()
+    // TODO somehow fill in selected value on reload
+    // TODO better way to determine tab to open
+    let tabIndex = 0
+    const { query } = this.props
+    switch (query.queryType) {
+      case 'MeasurementQuery':
+        tabIndex = 0
+        if (query.query.Measurements.length > 0 && !query.query.Measurements[0].Name) {
+          tabIndex = 1
+        }
+        break
+      case 'RawQuery':
+        tabIndex = 2
+        break
+    }
     const databases = this.getTimeseriesDatabases()
     const assets = this.getAssets()
-    this.setState({ ...this.state, databases: databases, collectors: collectors, assets: assets })
+    this.setState({ ...this.state, databases: databases, assets: assets, tabIndex: tabIndex })
   }
 
   setTabIndex(index: number) {
     this.setState({ ...this.state, tabIndex: index })
   }
 
-  getCollectors(): Array<SelectableValue<string>> {
-    const result: Array<SelectableValue<string>> = [{ label: 'All collectors', value: '' }]
-    this.props.datasource.getCollectors().then((collectors) => {
-      collectors.forEach((collector) => {
-        result.push({ label: collector.Name, value: collector.UUID, description: collector.Description })
+  getTimeseriesDatabases(): Array<TimeseriesDatabase> {
+    const result: Array<TimeseriesDatabase> = []
+    this.props.datasource.getTimeseriesDatabases().then((timeseriesDatabases) => {
+      timeseriesDatabases.forEach((timeseriesDatabase) => {
+        if (timeseriesDatabase.Name !== '_internal_factry') {
+          result.push(timeseriesDatabase)
+        }
       })
     })
 
     return result
   }
 
-  onCollectorChange = (event: SelectableValue<string>) => {
-    this.setState({ ...this.state, filter: { ...this.state.filter, Collector: event.value } })
-  };
-
-  getTimeseriesDatabases(): Array<SelectableValue<string>> {
+  selectableTimeseriesDatabases(databases: Array<TimeseriesDatabase>): Array<SelectableValue<string>> {
     const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
-    this.props.datasource.getTimeseriesDatabases().then((timeseriesDatabases) => {
-      timeseriesDatabases.forEach((timeseriesDatabase) => {
-        result.push({ label: timeseriesDatabase.Name, value: timeseriesDatabase.UUID, description: timeseriesDatabase.Description })
-      })
+    databases.forEach((database) => {
+      result.push({ label: database.Name, value: database.UUID, description: database.Description })
     })
-
     return result
   }
 
@@ -89,10 +100,11 @@ export class QueryEditor extends PureComponent<Props, State> {
   async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
     const result: Array<SelectableValue<string>> = []
     const filter = { ...this.state.filter, Keyword: query }
-    await this.props.datasource.getMeasurements(filter).then((measurements) => {
+    await this.props.datasource.getMeasurements(filter, this.state.pagination).then((measurements) => {
       this.setState({ ...this.state, measurements: measurements })
       measurements.forEach((measurement) => {
-        result.push({ label: measurement.Name, value: measurement.UUID, description: '(' + measurement.UoM + ') ' + measurement.Description })
+        const database = this.state.databases.find(e => e.UUID === measurement.DatabaseUUID)
+        result.push({ label: measurement.Name, value: measurement.UUID, description: `(${database?.Name}) ${measurement.Description}` })
       })
     })
     return result
@@ -160,7 +172,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     }
   }
 
-  setCurrentQuery(queryString: string) {
+  setRawQuery(queryString: string) {
     const { onChange, query } = this.props
     query.queryType = 'RawQuery'
     if (getTemplateSrv().getVariables().length > 0) {
@@ -171,6 +183,10 @@ export class QueryEditor extends PureComponent<Props, State> {
       Query: queryString,
     } as RawQuery
     onChange(query)
+  }
+
+  getTimeseriesDatabaseType(database: string): string {
+    return this.state.databases.find(e => e.UUID === database)?.TimeseriesDatabaseType?.Name || 'Unknown database type'
   }
 
   onRunQuery(
@@ -185,38 +201,30 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   render() {
+    const { query } = this.props;
     const tabs = [
       {
         title: 'Measurements',
         content: (
           <div>
             <InlineFieldRow>
-              <InlineField label="Collector" grow tooltip="Specify a collector to work with">
+              <InlineField label="Database" grow labelWidth={20} tooltip="Specify a time series database to work with">
                 <Select
-                  value={selectable(this.state.collectors, this.state.filter.Collector)}
-                  placeholder="select collector"
-                  options={this.state.collectors}
-                  onChange={this.onCollectorChange}
-                />
-              </InlineField>
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField label="Database" grow tooltip="Specify a time series database to work with">
-                <Select
-                  value={selectable(this.state.databases, this.state.filter.Database)}
+                  value={selectable(this.selectableTimeseriesDatabases(this.state.databases), this.state.filter.Database)}
                   placeholder="select timeseries database"
-                  options={this.state.databases}
+                  options={this.selectableTimeseriesDatabases(this.state.databases)}
                   onChange={this.onTimeseriesDatabaseChange}
                 />
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>
-              <InlineField label="Measurement" grow tooltip="Specify measurement to work with">
+              <InlineField label="Measurement" grow labelWidth={20} tooltip="Specify measurement to work with">
                 <AsyncSelect
                   placeholder="select measurement"
                   loadOptions={this.loadMeasurementOptions}
+                  defaultOptions
                   onChange={this.onMeasurementChange}
-
+                  menuShouldPortal
                 />
               </InlineField>
             </InlineFieldRow>
@@ -227,7 +235,7 @@ export class QueryEditor extends PureComponent<Props, State> {
         title: 'Assets',
         content: (
           <InlineFieldRow>
-            <InlineField label="Asset" grow tooltip="Specify asset to work with">
+            <InlineField label="Asset" grow labelWidth={20} tooltip="Specify an asset property to work with">
               <Cascader
                 options={this.state.assets}
                 displayAllSelectedLevels
@@ -242,27 +250,30 @@ export class QueryEditor extends PureComponent<Props, State> {
         content: (
           <div>
             <InlineFieldRow>
-              <InlineField label="Database" grow tooltip="Specify a time series database to work with">
+              <InlineField label="Database" grow labelWidth={20} tooltip="Specify a time series database to work with">
                 <Select
-                  value={selectable(this.state.databases, this.state.filter.Database)}
+                  value={selectable(this.selectableTimeseriesDatabases(this.state.databases), this.state.filter.Database)}
                   placeholder="select timeseries database"
-                  options={this.state.databases}
+                  options={this.selectableTimeseriesDatabases(this.state.databases)}
                   onChange={this.onTimeseriesDatabaseChange}
                 />
               </InlineField>
             </InlineFieldRow>
-            <InlineFieldRow>
-              <TextArea
-                aria-label="query"
-                rows={3}
-                spellCheck={false}
-                placeholder="Raw Query"
-                onBlur={(e) => this.setCurrentQuery(e.currentTarget.value)}
-                onChange={(e) => {
-                  this.setCurrentQuery(e.currentTarget.value);
-                }}
-              />
-            </InlineFieldRow>
+            {this.state.filter.Database !== '' &&
+              <InlineFieldRow>
+                <InlineField label={`${this.getTimeseriesDatabaseType(this.state.filter.Database)} query`} grow labelWidth={20} tooltip="">
+                  <CodeEditor
+                    height={'200px'}
+                    language="sql"
+                    onBlur={this.setRawQuery}
+                    onSave={this.setRawQuery}
+                    showMiniMap={false}
+                    showLineNumbers={true}
+                    readOnly={this.state.filter.Database === ''}
+                  />
+                </InlineField>
+              </InlineFieldRow>
+            }
           </div>
         )
       }
@@ -279,11 +290,7 @@ export class QueryEditor extends PureComponent<Props, State> {
             />
           </InlineField>
         </InlineFieldRow>
-        <InlineFieldRow>
-          <InlineField>
-            {tabs[this.state.tabIndex].content}
-          </InlineField>
-        </InlineFieldRow>
+        {tabs[this.state.tabIndex].content}
       </div>
     )
   }

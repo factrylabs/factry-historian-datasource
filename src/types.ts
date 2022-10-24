@@ -58,6 +58,11 @@ export interface MeasurementFilter {
   ExcludeCalculations?: boolean
 }
 
+export interface Pagination {
+  Limit: number
+  Page: number
+}
+
 export interface RawQuery {
   TimeseriesDatabase: string
   Query: string
@@ -70,10 +75,15 @@ export interface Collector {
   CollectorType: string
 }
 
+export interface TimeseriesDatabaseType {
+  Name: string
+}
+
 export interface TimeseriesDatabase {
   Name: string
   UUID: string
   Description: string
+  TimeseriesDatabaseType?: TimeseriesDatabaseType
 }
 
 export interface Measurement {

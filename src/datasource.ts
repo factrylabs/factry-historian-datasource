@@ -1,14 +1,23 @@
 import { DataSourceInstanceSettings } from '@grafana/data'
 import { DataSourceWithBackend } from '@grafana/runtime'
-import { Asset, AssetProperty, Collector, HistorianDataSourceOptions, Measurement, MeasurementFilter, Query, TimeseriesDatabase } from './types'
+import { Asset, AssetProperty, Collector, HistorianDataSourceOptions, Measurement, MeasurementFilter, Pagination, Query, TimeseriesDatabase } from './types'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>) {
     super(instanceSettings)
   }
 
-  async getMeasurements(filter: MeasurementFilter): Promise<Measurement[]> {
-    return this.getResource('measurements', filter)
+  async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {
+    const params = {
+      ...filter,
+    }
+    if (pagination.Limit) {
+      params["limit"] = pagination.Limit
+    }
+    if (pagination.Page) {
+      params["page"] = pagination.Page
+    }
+    return this.getResource('measurements', params)
   }
 
   async getCollectors(): Promise<Collector[]> {
