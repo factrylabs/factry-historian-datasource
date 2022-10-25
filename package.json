@@ -17,6 +17,7 @@
     "@grafana/runtime": "latest",
     "@grafana/toolkit": "latest",
     "@grafana/ui": "latest",
+    "@types/debounce-promise": "^3.1.4",
     "@types/lodash": "latest",
     "@typescript-eslint/parser": "^5.38.1",
     "eslint-config-prettier": "^8.5.0",
@@ -29,5 +30,8 @@
   },
   "engines": {
     "node": ">=14"
+  },
+  "dependencies": {
+    "debounce-promise": "^3.1.2"
   }
 }

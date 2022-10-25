@@ -69,7 +69,7 @@ func seriesToFields(series *historianSchemas.Series, measurement schemas.Measure
 			values = append(values, dataPoint.Value)
 		}
 		fields = append(fields, data.NewField("time", data.Labels{}, timestamps))
-		valueField := valueField("value", values, labels)
+		valueField := valueField(measurement.Name, values, labels)
 		valueField.Config = getFieldConfig(measurement)
 		fields = append(fields, valueField)
 	}
@@ -78,9 +78,8 @@ func seriesToFields(series *historianSchemas.Series, measurement schemas.Measure
 
 func getFieldConfig(measurement schemas.Measurement) *data.FieldConfig {
 	fieldConfig := &data.FieldConfig{
-		DisplayNameFromDS: measurement.Name, // TODO status not visible in frontend anymore?
-		Unit:              "none",
-		Description:       measurement.Description,
+		Unit:        "none",
+		Description: measurement.Description,
 	}
 	config, err := measurement.Attributes.GetAttributes("Config")
 	if err == nil {

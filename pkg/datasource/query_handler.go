@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
@@ -71,16 +71,22 @@ func handleQuery(query Query, backendQuery backend.DataQuery, api *api.API) (dat
 		return nil, err
 	}
 
-	if measurementQuery.Aggregation != nil {
-		measurementQuery.Aggregation.Period = backendQuery.Interval.String()
-	}
-
 	result, err := api.MeasurementQuery(historianQuery(measurementQuery, backendQuery))
 	if err != nil {
 		return nil, err
 	}
 
-	return QueryResultToDataFrame(measurementQuery.Measurements, result)
+	measurements := make([]schemas.Measurement, len(measurementQuery.Measurements))
+	for i, measurementUUID := range measurementQuery.Measurements {
+		measurement, err := api.GetMeasurement(measurementUUID)
+		if err != nil {
+			return data.Frames{}, fmt.Errorf("Error getting measurement: %v", err)
+		}
+
+		measurements[i] = measurement
+	}
+
+	return QueryResultToDataFrame(measurements, result)
 }
 
 func handleRawQuery(query Query, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
@@ -114,18 +120,22 @@ func fillQueryVariables(query string, databaseType string, backendQuery backend.
 }
 
 func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQuery) historianSchemas.Query {
+	start := backendQuery.TimeRange.From.Truncate(time.Second)
+	end := backendQuery.TimeRange.To.Truncate(time.Second)
 	historianQuery := historianSchemas.Query{
-		MeasurementUUIDs: make([]uuid.UUID, len(query.Measurements)),
-		Start:            backendQuery.TimeRange.From,
-		End:              &backendQuery.TimeRange.To,
+		MeasurementUUIDs: query.Measurements,
+		Start:            start,
+		End:              &end,
 		Tags:             query.Tags,
 		GroupBy:          query.GroupBy,
 		Limit:            int(backendQuery.MaxDataPoints),
-		Aggregation:      query.Aggregation,
 	}
 
-	for i, measurement := range query.Measurements {
-		historianQuery.MeasurementUUIDs[i] = measurement.UUID
+	if query.Aggregation != nil {
+		historianQuery.Aggregation = query.Aggregation
+		if query.Aggregation.Period == "" || query.Aggregation.Period == "$__interval" {
+			historianQuery.Aggregation.Period = backendQuery.Interval.String()
+		}
 	}
 
 	return historianQuery

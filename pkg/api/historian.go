@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/google/uuid"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 )
 
@@ -13,6 +14,17 @@ func (api *API) GetMeasurements(query string) ([]schemas.Measurement, error) {
 	}
 
 	return measurements, nil
+}
+
+// GetMeasurement calls get measurement in the historian API
+func (api *API) GetMeasurement(uuid uuid.UUID) (schemas.Measurement, error) {
+	measurement := schemas.Measurement{}
+
+	if err := api.client.Get("/api/measurements/"+uuid.String(), &measurement); err != nil {
+		return measurement, err
+	}
+
+	return measurement, nil
 }
 
 // GetCollectors calls get collectors in the historian API

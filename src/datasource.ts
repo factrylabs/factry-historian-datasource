@@ -8,7 +8,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {
-    const params = {
+    const params: Record<string, unknown> = {
       ...filter,
     }
     if (pagination.Limit) {

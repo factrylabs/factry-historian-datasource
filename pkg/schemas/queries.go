@@ -7,7 +7,7 @@ import (
 
 // MeasurementQuery is used to build the time series query to send to the historian
 type MeasurementQuery struct {
-	Measurements []Measurement
+	Measurements []uuid.UUID
 	Tags         map[string]string
 	GroupBy      []string
 	Aggregation  *historianSchemas.Aggregation

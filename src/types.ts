@@ -32,6 +32,20 @@ export interface MeasurementByName {
   Name: string
 }
 
+export enum AggregationName {
+  'count',
+  'integral',
+  'mean',
+  'median',
+  'mode',
+  'spread',
+  'stddev',
+  'sum',
+  'first',
+  'last',
+  'max',
+  'min',
+}
 
 export interface Aggregation {
   Name: string
@@ -42,7 +56,7 @@ export interface Aggregation {
 }
 
 export interface MeasurementQuery {
-  Measurements?: any[]
+  Measurements?: string[]
   Tags?: Attributes
   GroupBy?: string[]
   Aggregation?: Aggregation
