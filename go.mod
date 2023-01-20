@@ -8,7 +8,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.8.0
 	gitlab.com/factry/factry-core/rest.git v1.0.3
-	gitlab.com/factry/historian/historian-server.git/v5 v5.2.0
+	gitlab.com/factry/historian/historian-server.git/v5 v5.2.5
 )
 
 require (

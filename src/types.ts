@@ -16,7 +16,7 @@ export const defaultQuery: Partial<Query> = {
  */
 export interface HistorianDataSourceOptions extends DataSourceJsonData {
   url: string
-  username: string
+  organization: string
 }
 
 /**
@@ -24,7 +24,6 @@ export interface HistorianDataSourceOptions extends DataSourceJsonData {
  */
 export interface HistorianSecureJsonData {
   token?: string
-  password?: string
 }
 
 export interface MeasurementByName {

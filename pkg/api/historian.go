@@ -42,7 +42,7 @@ func (api *API) GetCollectors() ([]schemas.Collector, error) {
 func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
 	timeseriesDatabases := []schemas.TimeseriesDatabase{}
 
-	if err := api.client.Get("/api/timeseries_databases", &timeseriesDatabases); err != nil {
+	if err := api.client.Get("/api/timeseries-databases", &timeseriesDatabases); err != nil {
 		return nil, err
 	}
 
@@ -64,7 +64,7 @@ func (api *API) GetAssets() ([]schemas.Asset, error) {
 func (api *API) GetAssetProperties() ([]schemas.AssetProperty, error) {
 	assetProperties := []schemas.AssetProperty{}
 
-	if err := api.client.Get("/api/assets/properties", &assetProperties); err != nil {
+	if err := api.client.Get("/api/asset-properties", &assetProperties); err != nil {
 		return nil, err
 	}
 

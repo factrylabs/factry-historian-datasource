@@ -335,8 +335,8 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 gitlab.com/factry/factry-core/rest.git v1.0.3 h1:KRiQnt5z2Ltd4zwMhkq+A1N5B7sQkb+WInuNEKh8ZKI=
 gitlab.com/factry/factry-core/rest.git v1.0.3/go.mod h1:NhrNRf7fTPDaCEUk9kRBQ+4eW3u/B9EdUUP0EMhApNc=
-gitlab.com/factry/historian/historian-server.git/v5 v5.2.0 h1:1NFYTFmkcr635+ocZXw9hqETZt0Ss2IckAiujZ1E7TE=
-gitlab.com/factry/historian/historian-server.git/v5 v5.2.0/go.mod h1:hNvjGhXZETu3iJDnrSnu9PDEstjFnbRP1rO6gf2PkmU=
+gitlab.com/factry/historian/historian-server.git/v5 v5.2.5 h1:Z/CbaH3D7dG7ME/ry3qQd0CPueFZHPvhgfOnp915czM=
+gitlab.com/factry/historian/historian-server.git/v5 v5.2.5/go.mod h1:+ZRsprYzZZXBA2k/CKYLtI7YynprVZt5x2SaLNbwYLQ=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=

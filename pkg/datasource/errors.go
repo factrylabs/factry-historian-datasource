@@ -2,6 +2,7 @@ package datasource
 
 import "github.com/pkg/errors"
 
+// error consts
 var (
 	ErrorMessageInvalidJSON              = errors.New("could not parse json")
 	ErrorMessageInvalidURL               = errors.New("invalid url. Either empty or not set")
@@ -17,5 +18,6 @@ var (
 	ErrorInvalidAuthToken                = errors.New("empty or invalid auth token found")
 	ErrorInvalidOrganizationSlug         = errors.New("invalid or empty organization slug")
 	ErrorUnknownQueryType                = errors.New("unknown query type")
-	ErrorMessageMissingCredentials       = errors.New("no user credentials ore")
+	ErrorMessageMissingCredentials       = errors.New("no token")
+	ErrorMessageNoOrganization           = errors.New("no organization selected")
 )

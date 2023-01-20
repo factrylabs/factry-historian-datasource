@@ -67,28 +67,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
-            <InlineField label="Username" labelWidth={20}>
-              <Input
-                name="username"
-                placeholder="username"
-                width={20}
-                onChange={this.onSettingChange('username')}
-                value={jsonData.username || ''}
-              />
-            </InlineField>
-            <InlineField label="Password" labelWidth={20}>
-              <SecretInput
-                name="password"
-                isConfigured={(secureJsonFields && secureJsonFields.password) as boolean}
-                value={secureJsonData.password || ''}
-                onReset={this.onSecureSettingReset('password')}
-                onChange={this.onSecureSettingChange('password')}
-                width={20}
-              />
-            </InlineField>
-          </InlineFieldRow>
-
-          <InlineFieldRow>
             <InlineField label="Token" labelWidth={20}>
               <SecretInput
                 name="token"
@@ -98,6 +76,20 @@ export class ConfigEditor extends PureComponent<Props, State> {
                 width={61}
                 onReset={this.onSecureSettingReset('token')}
                 onChange={this.onSecureSettingChange('token')}
+              />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField
+              label="Organization"
+              labelWidth={20}
+              tooltip="Specify the organization UUID"
+            >
+              <Input
+                width={61}
+                name="url"
+                onChange={this.onSettingChange('organization')}
+                value={jsonData.organization || ''}
               />
             </InlineField>
           </InlineFieldRow>

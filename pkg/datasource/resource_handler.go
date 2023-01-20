@@ -38,7 +38,8 @@ func GetResourceQuery(body []byte) (*HistorianResourceQuery, error) {
 	return &query, nil
 }
 
-func (ds *HistorianDatasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
+// CallResource maps a resource call to the corresponding historian API call
+func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
 	dsi, err := ds.getDatasourceInstance(ctx, req.PluginContext)
 	if err != nil {
 		return err

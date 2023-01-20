@@ -27,7 +27,7 @@ type Query struct {
 }
 
 // QueryData handles incoming backend queries
-func (ds *HistorianDatasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	response := backend.NewQueryDataResponse()
 	dsi, err := ds.getDatasourceInstance(ctx, req.PluginContext)
 	if err != nil {

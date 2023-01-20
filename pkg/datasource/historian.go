@@ -9,21 +9,24 @@ import (
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
 )
 
+// DataSource consts
 const (
 	PluginID                     string = "factry-historian-datasource"
-	SuccessfulHealthCheckMessage string = "plugin health check successful"
+	SuccessfulHealthCheckMessage string = "Connection test successful, %v timeseries database(s) found"
 	DefaultHistorianURL          string = "http://127.0.0.1:8000"
 )
 
+// HistorianPlugin ...
 type HistorianPlugin struct {
 	API *api.API
 }
 
-type HistorianDatasource struct {
+// HistorianDataSource ...
+type HistorianDataSource struct {
 	IM instancemgmt.InstanceManager
 }
 
-func (ds *HistorianDatasource) getDatasourceInstance(ctx context.Context, pluginCtx backend.PluginContext) (*HistorianPlugin, error) {
+func (ds *HistorianDataSource) getDatasourceInstance(ctx context.Context, pluginCtx backend.PluginContext) (*HistorianPlugin, error) {
 	s, err := ds.IM.Get(pluginCtx)
 	if err != nil {
 		return nil, err
@@ -32,9 +35,10 @@ func (ds *HistorianDatasource) getDatasourceInstance(ctx context.Context, plugin
 	return s.(*HistorianPlugin), nil
 }
 
-func NewDatasource() datasource.ServeOpts {
+// NewDataSource creates a new data source instance
+func NewDataSource() datasource.ServeOpts {
 	im := datasource.NewInstanceManager(getInstance)
-	host := &HistorianDatasource{
+	host := &HistorianDataSource{
 		IM: im,
 	}
 	return datasource.ServeOpts{
@@ -51,16 +55,9 @@ func getInstance(s backend.DataSourceInstanceSettings) (instancemgmt.Instance, e
 	}
 
 	historianPlugin := &HistorianPlugin{}
-	if settings.Token != "" {
-		historianPlugin.API, err = api.NewAPIWithToken(settings.URL, settings.Token)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		historianPlugin.API, err = api.NewAPIWithUser(settings.URL, settings.Username, settings.Password)
-		if err != nil {
-			return nil, err
-		}
+	historianPlugin.API, err = api.NewAPIWithToken(settings.URL, settings.Token, settings.Organization)
+	if err != nil {
+		return nil, err
 	}
 
 	return historianPlugin, nil

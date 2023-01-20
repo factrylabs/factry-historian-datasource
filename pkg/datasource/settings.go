@@ -11,10 +11,9 @@ import (
 // Settings - data loaded from grafana settings database
 type Settings struct {
 	URL                string `json:"url,omitempty"`
-	Username           string `json:"username,omitempty"`
 	Token              string `json:"token,omitempty"`
+	Organization       string `json:"organization,omitempty"`
 	InsecureSkipVerify bool   `json:"tlsSkipVerify,omitempty"`
-	Password           string `json:"-,omitempty"`
 	Timeout            string `json:"timeout,omitempty"`
 	QueryTimeout       string `json:"queryTimeout,omitempty"`
 }
@@ -24,8 +23,12 @@ func (settings *Settings) isValid() (err error) {
 		return ErrorMessageInvalidURL
 	}
 
-	if settings.Token == "" && (settings.Username == "" || settings.Password == "") {
+	if settings.Token == "" {
 		return ErrorMessageMissingCredentials
+	}
+
+	if settings.Organization == "" {
+		return ErrorMessageNoOrganization
 	}
 
 	return nil
@@ -43,7 +46,6 @@ func LoadSettings(config backend.DataSourceInstanceSettings) (settings Settings,
 	if strings.TrimSpace(settings.QueryTimeout) == "" {
 		settings.QueryTimeout = "60"
 	}
-	settings.Password = config.DecryptedSecureJSONData["password"]
 	settings.Token = config.DecryptedSecureJSONData["token"]
 	return settings, settings.isValid()
 }
