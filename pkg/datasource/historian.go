@@ -11,9 +11,8 @@ import (
 
 // DataSource consts
 const (
-	PluginID                     string = "factry-historian-datasource"
-	SuccessfulHealthCheckMessage string = "Connection test successful, %v timeseries database(s) found"
-	DefaultHistorianURL          string = "http://127.0.0.1:8000"
+	PluginID            string = "factry-historian-datasource"
+	DefaultHistorianURL string = "http://127.0.0.1:8000"
 )
 
 // HistorianPlugin ...

@@ -11,7 +11,7 @@ import (
 // Settings - data loaded from grafana settings database
 type Settings struct {
 	URL                string `json:"url,omitempty"`
-	Token              string `json:"token,omitempty"`
+	Token              string `json:"-,omitempty"`
 	Organization       string `json:"organization,omitempty"`
 	InsecureSkipVerify bool   `json:"tlsSkipVerify,omitempty"`
 	Timeout            string `json:"timeout,omitempty"`
