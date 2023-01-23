@@ -23,7 +23,7 @@ export function getAggregations(): Array<SelectableValue<string>> {
     })
 }
 
-export function getIntervals(): Array<SelectableValue<string>> {
+export function getPeriods(): Array<SelectableValue<string>> {
   return [
     {
       label: "$__interval", value: "$__interval"

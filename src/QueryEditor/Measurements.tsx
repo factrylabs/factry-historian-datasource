@@ -1,10 +1,9 @@
 import React from 'react'
 import { SelectableValue } from '@grafana/data'
-import { AsyncSelect, InlineField, InlineFieldRow, Input, Select } from '@grafana/ui'
-import { Aggregation, Attributes, MeasurementFilter, MeasurementQuery, Query, TimeseriesDatabase } from 'types'
-import { QueryTag, TagsSection } from 'TagsSection'
-import { getAggregations, getIntervals, selectable } from './util'
-
+import { AsyncSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
+import { Attributes, MeasurementFilter, MeasurementQuery, Query, TimeseriesDatabase } from 'types'
+import { selectable } from './util'
+import { QueryOptions } from './QueryOptions'
 
 export interface Props {
   databases: TimeseriesDatabase[]
@@ -12,7 +11,6 @@ export interface Props {
   query: Query
   measurementQuery: MeasurementQuery
   tags: any
-  onChange: (query: Query) => void
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
   onRunQuery: () => void
   onTimeseriesDatabaseChange: (database: SelectableValue<string>) => void
@@ -22,7 +20,7 @@ export interface Props {
 
 export const Measurements = ({
   databases, filter, query, measurementQuery, tags,
-  onChange, onRunQuery, onChangeMeasurementQuery,
+  onRunQuery, onChangeMeasurementQuery,
   onTimeseriesDatabaseChange,
   onLoadMeasurementOptions,
   onUpdateTags
@@ -39,50 +37,6 @@ export const Measurements = ({
     if (event.value) {
       const measurements = [event.value]
       const updatedQuery = { ...measurementQuery, Measurements: measurements }
-      onChangeMeasurementQuery(updatedQuery)
-      onRunQuery()
-    }
-  }
-
-  const onAggregationChange = (event: SelectableValue<string>) => {
-    if (event.value) {
-      const aggregation = {
-        ...measurementQuery.Aggregation,
-        Name: event.value,
-      } as Aggregation
-      const updatedQuery = { ...measurementQuery, Aggregation: aggregation }
-      onChangeMeasurementQuery(updatedQuery)
-      onRunQuery()
-    }
-  }
-
-  const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
-    const tags: Attributes = {}
-    updatedTags.forEach(tag => {
-      tags[tag.key] = tag.value
-    })
-    const updatedQuery = { ...measurementQuery, Tags: updatedTags }
-    onUpdateTags(tags)
-    onChangeMeasurementQuery(updatedQuery)
-    onRunQuery()
-  }
-
-  const onGroupByChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    if (event.target.value) {
-      const groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
-      const updatedQuery = { ...measurementQuery, GroupBy: groupBy }
-      onChangeMeasurementQuery(updatedQuery)
-      onRunQuery()
-    }
-  }
-
-  const onPeriodChange = (selected: SelectableValue<string>): void => {
-    if (selected.value) {
-      const aggregation = {
-        ...measurementQuery.Aggregation,
-        Period: selected.value
-      } as Aggregation
-      const updatedQuery = { ...measurementQuery, Aggregation: aggregation }
       onChangeMeasurementQuery(updatedQuery)
       onRunQuery()
     }
@@ -108,40 +62,16 @@ export const Measurements = ({
             defaultOptions
             onChange={onMeasurementChange}
             menuShouldPortal
-
-          />
-        </InlineField>
-        <InlineField>
-          <Select
-            defaultValue={measurementQuery.Aggregation?.Name}
-            placeholder="select an aggregation"
-            options={getAggregations()}
-            onChange={onAggregationChange}
-          />
-        </InlineField>
-        <TagsSection
-          tags={tags}
-          onChange={handleTagsSectionChange}
-          getTagKeyOptions={() => { return Promise.resolve([]) }}
-          getTagValueOptions={(key: string) => { return Promise.resolve([]) }}
-        />
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="GROUP BY" labelWidth={20} tooltip="Enter a list of tags to group by separated by ','">
-          <Input
-            placeholder="group by"
-            onChange={onGroupByChange}
-            defaultValue="status"
-          />
-        </InlineField>
-        <InlineField>
-          <Select
-            value={measurementQuery.Aggregation?.Period || "$__interval"}
-            options={getIntervals()}
-            onChange={onPeriodChange} // TODO allow custom options
           />
         </InlineField>
       </InlineFieldRow>
+      <QueryOptions
+        measurementQuery={measurementQuery}
+        tags={tags}
+        onChangeMeasurementQuery={onChangeMeasurementQuery}
+        onUpdateTags={onUpdateTags}
+        onRunQuery={onRunQuery}
+      />
     </div>
   )
 }

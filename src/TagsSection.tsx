@@ -48,25 +48,27 @@ const condititonOptions: Array<SelectableValue<KnownCondition>> = knownCondition
 
 type Props = {
   tags: QueryTag[];
-  onChange: (tags: QueryTag[]) => void;
-  getTagKeyOptions: () => Promise<string[]>;
-  getTagValueOptions: (key: string) => Promise<string[]>;
+  onChange: (tags: QueryTag[]) => void
+  getTagKeyOptions?: () => Promise<string[]>
+  getTagValueOptions?: (key: string) => Promise<string[]>
 };
 
 type TagProps = {
-  tag: QueryTag;
-  isFirst: boolean;
-  onRemove: () => void;
-  onChange: (tag: QueryTag) => void;
-  getTagKeyOptions: () => Promise<string[]>;
-  getTagValueOptions: (key: string) => Promise<string[]>;
+  tag: QueryTag
+  isFirst: boolean
+  onRemove: () => void
+  onChange: (tag: QueryTag) => void
+  getTagKeyOptions?: () => Promise<string[]>
+  getTagValueOptions?: (key: string) => Promise<string[]>
 };
 
 const loadConditionOptions = () => Promise.resolve(condititonOptions);
 
 const loadOperatorOptions = () => Promise.resolve(operatorOptions);
 
-const Tag = ({ tag, isFirst, onRemove, onChange, getTagKeyOptions, getTagValueOptions }: TagProps): JSX.Element => {
+const defaultOptions = () => Promise.resolve([])
+
+const Tag = ({ tag, isFirst, onRemove, onChange, getTagKeyOptions = defaultOptions, getTagValueOptions = defaultOptions }: TagProps): JSX.Element => {
   const operator = getOperator(tag);
   const condition = getCondition(tag, isFirst);
 
@@ -135,7 +137,7 @@ const Tag = ({ tag, isFirst, onRemove, onChange, getTagKeyOptions, getTagValueOp
   )
 }
 
-export const TagsSection = ({ tags, onChange, getTagKeyOptions, getTagValueOptions }: Props): JSX.Element => {
+export const TagsSection = ({ tags, onChange, getTagKeyOptions = defaultOptions, getTagValueOptions = defaultOptions }: Props): JSX.Element => {
   const onTagChange = (newTag: QueryTag, index: number) => {
     const newTags = tags.map((tag, i) => {
       return index === i ? newTag : tag;

@@ -1,19 +1,27 @@
 import React, { useState } from 'react'
 import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import { Cascader, CascaderOption } from 'components/Cascader/Cascader'
-import { AssetProperty, MeasurementQuery, Query } from 'types'
+import { AssetProperty, Attributes, MeasurementQuery, Query } from 'types'
 import type { SelectableValue } from '@grafana/data'
+import { QueryOptions } from './QueryOptions'
 
 
 export interface Props {
   assets: CascaderOption[]
   assetProperties: AssetProperty[]
   query: Query
-  onChange: (query: Query) => void
+  measurementQuery: MeasurementQuery
+  tags: any
+  onChangeMeasurementQuery: (query: MeasurementQuery) => void
+  onUpdateTags(updatedTags: Attributes): void
   onRunQuery: () => void
 }
 
-export const Assets = ({ assets, assetProperties, query, onChange, onRunQuery }: Props): JSX.Element => {
+export const Assets = ({
+  assets, assetProperties, query, measurementQuery, tags,
+  onChangeMeasurementQuery, onUpdateTags,
+  onRunQuery
+}: Props): JSX.Element => {
   const [selectedAsset, setSelectedAsset] = useState("")
 
   const onSelectAsset = (selected: string): void => {
@@ -23,12 +31,9 @@ export const Assets = ({ assets, assetProperties, query, onChange, onRunQuery }:
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const assetProperty = assetProperties.find(e => items.map(e => e.value).includes(e.Name))
     if (assetProperty) {
-      query.queryType = 'MeasurementQuery'
-      query.query = {
-        Measurements: [assetProperty.MeasurementUUID],
-        GroupBy: ['status']
-      } as MeasurementQuery
-      onChange(query)
+      const measurements = [assetProperty.MeasurementUUID]
+      const updatedQuery = { ...measurementQuery, Measurements: measurements }
+      onChangeMeasurementQuery(updatedQuery)
       onRunQuery()
     }
   }
@@ -60,6 +65,13 @@ export const Assets = ({ assets, assetProperties, query, onChange, onRunQuery }:
           />
         </InlineField>
       </InlineFieldRow>
+      <QueryOptions
+        measurementQuery={measurementQuery}
+        tags={tags}
+        onChangeMeasurementQuery={onChangeMeasurementQuery}
+        onUpdateTags={onUpdateTags}
+        onRunQuery={onRunQuery}
+      />
     </div>
   )
 }

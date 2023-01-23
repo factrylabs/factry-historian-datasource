@@ -192,9 +192,18 @@ export class QueryEditor extends PureComponent<Props, State> {
         children?: React.ReactNode
       }>
   ) {
-    if (props.query.queryType) {
-      this.props.onRunQuery()
+    if (!props.query.queryType) {
+      return
     }
+
+    if (props.query.queryType === 'MeasurementQuery') {
+      const query = props.query.query as MeasurementQuery
+      if (query.Measurements?.length === 0) {
+        return
+      }
+    }
+
+    this.props.onRunQuery()
   }
 
   render() {
@@ -206,8 +215,11 @@ export class QueryEditor extends PureComponent<Props, State> {
             assetProperties={this.state.assetProperties}
             assets={this.state.assets}
             query={this.props.query}
-            onChange={this.props.onChange}
-            onRunQuery={this.props.onRunQuery}
+            measurementQuery={this.state.measurementQuery}
+            tags={this.state.tags}
+            onChangeMeasurementQuery={this.onChangeMeasurementQuery}
+            onUpdateTags={this.onUpdateTags}
+            onRunQuery={() => this.onRunQuery(this.props)}
           />
         ),
       },
@@ -220,12 +232,11 @@ export class QueryEditor extends PureComponent<Props, State> {
             measurementQuery={this.state.measurementQuery}
             query={this.props.query}
             tags={this.state.tags}
-            onChange={this.props.onChange}
-            onRunQuery={this.props.onRunQuery}
             onLoadMeasurementOptions={this.loadMeasurementOptions}
             onTimeseriesDatabaseChange={this.onTimeseriesDatabaseChange}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
             onUpdateTags={this.onUpdateTags}
+            onRunQuery={() => this.onRunQuery(this.props)}
           />
         ),
       },
