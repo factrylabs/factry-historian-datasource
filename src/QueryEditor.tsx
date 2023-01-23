@@ -1,10 +1,12 @@
 import React, { PureComponent } from 'react'
 import { getTemplateSrv } from '@grafana/runtime'
-import { AsyncSelect, Cascader, RadioButtonGroup, Select, InlineField, InlineFieldRow, CascaderOption, CodeEditor, Input } from '@grafana/ui'
+import { RadioButtonGroup, Select, InlineField, InlineFieldRow, CodeEditor } from '@grafana/ui'
 import { QueryEditorProps, SelectableValue } from '@grafana/data'
 import { DataSource } from './datasource'
-import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetProperty, Measurement, Asset, Pagination, TimeseriesDatabase, AggregationName, Aggregation, Attributes } from './types'
-import { InfluxQueryTag, TagsSection } from 'TagsSection'
+import { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetProperty, Measurement, Asset, Pagination, TimeseriesDatabase, Attributes } from './types'
+import { CascaderOption } from 'components/Cascader/Cascader'
+import { Assets } from 'QueryEditor/Assets'
+import { Measurements } from 'QueryEditor/Measurements'
 
 interface State {
   tabIndex: number
@@ -33,14 +35,11 @@ export class QueryEditor extends PureComponent<Props, State> {
   constructor(props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>) {
     super(props)
     this.loadMeasurementOptions = this.loadMeasurementOptions.bind(this)
-    this.onSelectAsset = this.onSelectAsset.bind(this)
     this.onTimeseriesDatabaseChange = this.onTimeseriesDatabaseChange.bind(this)
     this.setRawQuery = this.setRawQuery.bind(this)
     this.getTimeseriesDatabaseType = this.getTimeseriesDatabaseType.bind(this)
-    this.onAggregationChange = this.onAggregationChange.bind(this)
-    this.onGroupByChange = this.onGroupByChange.bind(this)
-    this.handleTagsSectionChange = this.handleTagsSectionChange.bind(this)
-    this.onPeriodChange = this.onPeriodChange.bind(this)
+    this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
+    this.onUpdateTags = this.onUpdateTags.bind(this)
   }
 
   state = {
@@ -84,6 +83,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     }
     const databases = this.getTimeseriesDatabases()
     const assets = this.getAssets()
+
     this.setState({ ...this.state, databases: databases, assets: assets, tabIndex: tabIndex })
   }
 
@@ -129,18 +129,6 @@ export class QueryEditor extends PureComponent<Props, State> {
     return result
   }
 
-  onMeasurementChange = (event: SelectableValue<string>) => {
-    if (event.value) {
-      const { onChange, query } = this.props
-      query.queryType = 'MeasurementQuery'
-      const measurements = [event.value]
-      const measurementQuery = { ...this.state.measurementQuery, Measurements: measurements }
-      this.setState({ ...this.state, measurementQuery: measurementQuery })
-      query.query = measurementQuery
-      onChange(query)
-    }
-  }
-
   getAssets(): CascaderOption[] {
     const result: CascaderOption[] = []
     this.props.datasource.getAssets().then((assets) => {
@@ -158,16 +146,6 @@ export class QueryEditor extends PureComponent<Props, State> {
 
     assets.filter((asset) => asset.ParentUUID === parent).forEach((asset) => {
       let items = this.getChildAssets(asset.UUID, assets)
-      const properties = this.state.assetProperties
-        ?.filter(assetProperty => assetProperty.AssetUUID === asset.UUID)
-        .map(assetProperty => {
-          return {
-            label: assetProperty.Name,
-            value: assetProperty.UUID,
-          } as CascaderOption
-        })
-
-      items.push(...properties)
       const cascaderOption: CascaderOption = {
         label: asset.Name,
         value: asset.UUID,
@@ -177,19 +155,6 @@ export class QueryEditor extends PureComponent<Props, State> {
     })
 
     return result
-  }
-
-  onSelectAsset(selected: string) {
-    const assetProperty = this.state.assetProperties.find(e => e.UUID === selected)
-    if (assetProperty) {
-      const { onChange, query } = this.props
-      query.queryType = 'MeasurementQuery'
-      query.query = {
-        Measurements: [assetProperty.MeasurementUUID],
-        GroupBy: ['status']
-      } as MeasurementQuery
-      onChange(query)
-    }
   }
 
   setRawQuery(queryString: string) {
@@ -209,99 +174,16 @@ export class QueryEditor extends PureComponent<Props, State> {
     return this.state.databases.find(e => e.UUID === database)?.TimeseriesDatabaseType?.Name || 'Unknown database type'
   }
 
-  getAggregations(): Array<SelectableValue<string>> {
-    return Object.values(AggregationName)
-      .filter((aggregation) => isNaN(Number(aggregation)))
-      .map((aggregation) => {
-        return {
-          label: aggregation,
-          value: aggregation,
-        } as SelectableValue<string>
-      })
+  onUpdateTags(updatedTags: Attributes): void {
+    this.setState({ ...this.state, tags: updatedTags })
   }
 
-  onAggregationChange(event: SelectableValue<string>): void {
-    if (event.value) {
-      const { onChange, query } = this.props
-      query.queryType = 'MeasurementQuery'
-      const aggregation = {
-        ...this.state.measurementQuery.Aggregation,
-        Name: event.value,
-      } as Aggregation
-      const measurementQuery = { ...this.state.measurementQuery, Aggregation: aggregation }
-      this.setState({ ...this.state, measurementQuery: measurementQuery })
-      query.query = measurementQuery
-      onChange(query)
-    }
-  }
-
-  onGroupByChange(event: React.ChangeEvent<HTMLInputElement>): void {
-    if (event.target.value) {
-      const { onChange, query } = this.props
-      query.queryType = 'MeasurementQuery'
-      const groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
-      const measurementQuery = { ...this.state.measurementQuery, GroupBy: groupBy }
-      this.setState({ ...this.state, measurementQuery: measurementQuery })
-      query.query = measurementQuery
-      onChange(query)
-    }
-  }
-
-  handleTagsSectionChange(updatedTags: InfluxQueryTag[]): void {
+  onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'MeasurementQuery'
-    const tags: Attributes = {}
-    updatedTags.forEach(tag => {
-      tags[tag.key] = tag.value
-    })
-    const measurementQuery = { ...this.state.measurementQuery, Tags: tags }
-    this.setState({ ...this.state, tags: updatedTags, measurementQuery: measurementQuery })
+    this.setState({ ...this.state, measurementQuery: measurementQuery })
     query.query = measurementQuery
     onChange(query)
-  }
-
-  getIntervals(): Array<SelectableValue<string>> {
-    return [
-      {
-        label: "$__interval", value: "$__interval"
-      },
-      {
-        label: "1s", value: "1s"
-      },
-      {
-        label: "10s", value: "10s"
-      },
-      {
-        label: "1m", value: "1m"
-      },
-      {
-        label: "5m", value: "5m"
-      },
-      {
-        label: "10m", value: "10m"
-      },
-      {
-        label: "15m", value: "15m"
-      },
-      {
-        label: "1h", value: "1h"
-      }
-    ]
-  }
-
-  onPeriodChange(selected: SelectableValue<string>): void {
-    if (selected.value) {
-      const { onChange, query } = this.props
-      query.queryType = 'MeasurementQuery'
-      const aggregation = {
-        ...this.state.measurementQuery.Aggregation,
-        Period: selected.value
-      } as Aggregation
-      const measurementQuery = { ...this.state.measurementQuery, Aggregation: aggregation }
-      this.setState({ ...this.state, measurementQuery: measurementQuery })
-      query.query = measurementQuery
-      onChange(query)
-    }
   }
 
   onRunQuery(
@@ -318,76 +200,33 @@ export class QueryEditor extends PureComponent<Props, State> {
   render() {
     const tabs = [
       {
-        title: 'Measurements',
+        title: 'Assets',
         content: (
-          <div>
-            <InlineFieldRow>
-              <InlineField label="Database" labelWidth={20} tooltip="Specify a time series database to work with">
-                <Select
-                  value={selectable(this.selectableTimeseriesDatabases(this.state.databases), this.state.filter.Database)}
-                  placeholder="select timeseries database"
-                  options={this.selectableTimeseriesDatabases(this.state.databases)}
-                  onChange={this.onTimeseriesDatabaseChange}
-                />
-              </InlineField>
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField label="Measurement" labelWidth={20} tooltip="Specify measurement to work with">
-                <AsyncSelect
-                  placeholder="select measurement"
-                  loadOptions={this.loadMeasurementOptions}
-                  defaultOptions
-                  onChange={this.onMeasurementChange}
-                  menuShouldPortal
-
-                />
-              </InlineField>
-              <InlineField>
-                <Select
-                  defaultValue={this.state.measurementQuery.Aggregation?.Name}
-                  placeholder="select an aggregation"
-                  options={this.getAggregations()}
-                  onChange={this.onAggregationChange}
-                />
-              </InlineField>
-              <TagsSection
-                tags={this.state.tags}
-                onChange={this.handleTagsSectionChange}
-                getTagKeyOptions={() => { return Promise.resolve([]) }}
-                getTagValueOptions={(key: string) => { return Promise.resolve([]) }}
-              />
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField label="GROUP BY" labelWidth={20} tooltip="Enter a list of tags to group by separated by ','">
-                <Input
-                  placeholder="group by"
-                  onChange={this.onGroupByChange}
-                  defaultValue="status"
-                />
-              </InlineField>
-              <InlineField>
-                <Select
-                  value={this.state.measurementQuery.Aggregation?.Period || "$__interval"}
-                  options={this.getIntervals()}
-                  onChange={this.onPeriodChange} // TODO allow custom options
-                />
-              </InlineField>
-            </InlineFieldRow>
-          </div>
+          <Assets
+            assetProperties={this.state.assetProperties}
+            assets={this.state.assets}
+            query={this.props.query}
+            onChange={this.props.onChange}
+            onRunQuery={this.props.onRunQuery}
+          />
         ),
       },
       {
-        title: 'Assets',
+        title: 'Measurements',
         content: (
-          <InlineFieldRow>
-            <InlineField label="Asset" grow labelWidth={20} tooltip="Specify an asset property to work with">
-              <Cascader
-                options={this.state.assets}
-                displayAllSelectedLevels
-                onSelect={this.onSelectAsset}
-              />
-            </InlineField>
-          </InlineFieldRow>
+          <Measurements
+            databases={this.state.databases}
+            filter={this.state.filter}
+            measurementQuery={this.state.measurementQuery}
+            query={this.props.query}
+            tags={this.state.tags}
+            onChange={this.props.onChange}
+            onRunQuery={this.props.onRunQuery}
+            onLoadMeasurementOptions={this.loadMeasurementOptions}
+            onTimeseriesDatabaseChange={this.onTimeseriesDatabaseChange}
+            onChangeMeasurementQuery={this.onChangeMeasurementQuery}
+            onUpdateTags={this.onUpdateTags}
+          />
         ),
       },
       {

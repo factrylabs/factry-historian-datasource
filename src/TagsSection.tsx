@@ -12,11 +12,11 @@ function isRegex(text: string): boolean {
   return /^\/.*\/$/.test(text)
 }
 
-function getOperator(tag: InfluxQueryTag): string {
+function getOperator(tag: QueryTag): string {
   return tag.operator ?? (isRegex(tag.value) ? '=~' : '=');
 }
 
-function getCondition(tag: InfluxQueryTag, isFirst: boolean): string | undefined {
+function getCondition(tag: QueryTag, isFirst: boolean): string | undefined {
   return isFirst ? undefined : tag.condition ?? 'AND';
 }
 
@@ -31,7 +31,7 @@ function adjustOperatorIfNeeded(currentOperator: string, newTagValue: string): s
   }
 }
 
-export interface InfluxQueryTag {
+export interface QueryTag {
   key: string;
   operator?: string;
   condition?: string;
@@ -47,17 +47,17 @@ const operatorOptions: Array<SelectableValue<KnownOperator>> = knownOperators.ma
 const condititonOptions: Array<SelectableValue<KnownCondition>> = knownConditions.map(toSelectableValue);
 
 type Props = {
-  tags: InfluxQueryTag[];
-  onChange: (tags: InfluxQueryTag[]) => void;
+  tags: QueryTag[];
+  onChange: (tags: QueryTag[]) => void;
   getTagKeyOptions: () => Promise<string[]>;
   getTagValueOptions: (key: string) => Promise<string[]>;
 };
 
 type TagProps = {
-  tag: InfluxQueryTag;
+  tag: QueryTag;
   isFirst: boolean;
   onRemove: () => void;
-  onChange: (tag: InfluxQueryTag) => void;
+  onChange: (tag: QueryTag) => void;
   getTagKeyOptions: () => Promise<string[]>;
   getTagValueOptions: (key: string) => Promise<string[]>;
 };
@@ -136,7 +136,7 @@ const Tag = ({ tag, isFirst, onRemove, onChange, getTagKeyOptions, getTagValueOp
 }
 
 export const TagsSection = ({ tags, onChange, getTagKeyOptions, getTagValueOptions }: Props): JSX.Element => {
-  const onTagChange = (newTag: InfluxQueryTag, index: number) => {
+  const onTagChange = (newTag: QueryTag, index: number) => {
     const newTags = tags.map((tag, i) => {
       return index === i ? newTag : tag;
     });
@@ -153,12 +153,12 @@ export const TagsSection = ({ tags, onChange, getTagKeyOptions, getTagValueOptio
   }
 
   const addNewTag = (tagKey: string, isFirst: boolean) => {
-    const minimalTag: InfluxQueryTag = {
+    const minimalTag: QueryTag = {
       key: tagKey,
       value: 'select tag value',
     }
 
-    const newTag: InfluxQueryTag = {
+    const newTag: QueryTag = {
       key: minimalTag.key,
       value: minimalTag.value,
       operator: getOperator(minimalTag),
