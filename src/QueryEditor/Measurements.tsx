@@ -3,7 +3,7 @@ import { SelectableValue } from '@grafana/data'
 import { AsyncSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { selectable } from './util'
 import { QueryOptions } from './QueryOptions'
-import type { MeasurementQuery, State, TimeseriesDatabase } from 'types'
+import type { MeasurementQuery, MeasurementQueryState, State, TimeseriesDatabase } from 'types'
 
 export interface Props {
   state: State
@@ -90,18 +90,15 @@ export const Measurements = ({
     return result
   }
 
-  const handleChangeMeasurementQuery = (updatedQuery: MeasurementQuery): void => {
+  const handleChangeMeasurementQuery = (options: MeasurementQueryState): void => {
     saveState({
       ...state,
       measurementsState: {
         ...state.measurementsState,
-        queryOptions: {
-          ...state.measurementsState.queryOptions,
-          measurementQuery: updatedQuery
-        }
+        queryOptions: options
       }
     })
-    onChangeMeasurementQuery(updatedQuery)
+    onChangeMeasurementQuery(options.measurementQuery)
   }
 
   return (
@@ -130,7 +127,7 @@ export const Measurements = ({
       </InlineFieldRow>
       <QueryOptions
         state={state.measurementsState.queryOptions}
-        onChangeMeasurementQuery={handleChangeMeasurementQuery}
+        onChange={handleChangeMeasurementQuery}
         onRunQuery={onRunQuery}
       />
     </div>

@@ -3,7 +3,7 @@ import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryOptions } from './QueryOptions'
-import type { MeasurementQuery, State } from 'types'
+import type { MeasurementQuery, MeasurementQueryState, State } from 'types'
 
 export interface Props {
   state: State
@@ -56,18 +56,15 @@ export const Assets = ({
     })
   }
 
-  const handleChangeMeasurementQuery = (updatedQuery: MeasurementQuery): void => {
+  const handleChangeMeasurementQuery = (options: MeasurementQueryState): void => {
     saveState({
       ...state,
       assetsState: {
         ...state.assetsState,
-        queryOptions: {
-          ...state.assetsState.queryOptions,
-          measurementQuery: updatedQuery
-        }
+        queryOptions: options
       }
     })
-    onChangeMeasurementQuery(updatedQuery)
+    onChangeMeasurementQuery(options.measurementQuery)
   }
 
   return (
@@ -94,7 +91,7 @@ export const Assets = ({
       </InlineFieldRow>
       <QueryOptions
         state={state.assetsState.queryOptions}
-        onChangeMeasurementQuery={handleChangeMeasurementQuery}
+        onChange={handleChangeMeasurementQuery}
         onRunQuery={onRunQuery}
       />
     </div>

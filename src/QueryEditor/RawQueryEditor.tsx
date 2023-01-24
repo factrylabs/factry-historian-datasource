@@ -5,7 +5,6 @@ import { selectable } from './util'
 import type { State, TimeseriesDatabase } from 'types'
 
 export interface Props {
-  databases: TimeseriesDatabase[]
   state: State
   saveState(state: State): void
   onChangeRawQuery(queryString: string): void
@@ -13,7 +12,7 @@ export interface Props {
 }
 
 export const RawQueryEditor = ({
-  databases, state, saveState,
+  state, saveState,
   onRunQuery, onChangeRawQuery
 }: Props): JSX.Element => {
   const selectableTimeseriesDatabases = (databases: TimeseriesDatabase[]): Array<SelectableValue<string>> => {
@@ -25,7 +24,7 @@ export const RawQueryEditor = ({
   }
 
   const getTimeseriesDatabaseType = (database: string): string => {
-    return databases.find(e => e.UUID === database)?.TimeseriesDatabaseType?.Name || 'Unknown database type'
+    return state.databases.find(e => e.UUID === database)?.TimeseriesDatabaseType?.Name || 'Unknown database type'
   }
 
   const onUpdateQuery = (query: string): void => {
@@ -48,9 +47,9 @@ export const RawQueryEditor = ({
       <InlineFieldRow>
         <InlineField label="Database" grow labelWidth={20} tooltip="Specify a time series database to work with">
           <Select
-            value={selectable(selectableTimeseriesDatabases(databases), state.rawState.filter.Database)}
+            value={selectable(selectableTimeseriesDatabases(state.databases), state.rawState.filter.Database)}
             placeholder="select timeseries database"
-            options={selectableTimeseriesDatabases(databases)}
+            options={selectableTimeseriesDatabases(state.databases)}
             onChange={onTimeseriesDatabaseChange}
           />
         </InlineField>

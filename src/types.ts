@@ -1,5 +1,6 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data'
 import type { CascaderOption } from 'components/Cascader/Cascader'
+import { QueryTag } from 'TagsSection'
 
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,7 +36,7 @@ export interface RawTabState {
 export interface MeasurementQueryState {
   measurementQuery: MeasurementQuery
   filter: MeasurementFilter
-  tags: any
+  tags: QueryTag[]
 }
 
 export interface Query extends DataQuery {

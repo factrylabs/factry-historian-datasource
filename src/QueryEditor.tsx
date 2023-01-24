@@ -242,7 +242,6 @@ export class QueryEditor extends PureComponent<Props, State> {
           <RawQueryEditor
             state={this.state}
             saveState={this.saveState}
-            databases={this.state.databases}
             onChangeRawQuery={this.onChangeRawQuery}
             onRunQuery={() => this.onRunQuery(this.props)}
           />

@@ -1,20 +1,19 @@
 import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { InlineField, InlineFieldRow, Input, Select } from '@grafana/ui'
-import { Aggregation, Attributes, MeasurementQuery, MeasurementQueryState } from 'types'
+import { Aggregation, Attributes, MeasurementQueryState } from 'types'
 import { QueryTag, TagsSection } from 'TagsSection'
 import { getAggregations, getPeriods } from './util'
 
-
 export interface Props {
   state: MeasurementQueryState
-  onChangeMeasurementQuery: (query: MeasurementQuery) => void
+  onChange: (options: MeasurementQueryState) => void
   onRunQuery: () => void
 }
 
 export const QueryOptions = ({
   state,
-  onRunQuery, onChangeMeasurementQuery
+  onRunQuery, onChange
 }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
   const onAggregationChange = (event: SelectableValue<string>) => {
@@ -26,7 +25,7 @@ export const QueryOptions = ({
       } as Aggregation
     }
     const updatedQuery = { ...state.measurementQuery, Aggregation: aggregation }
-    onChangeMeasurementQuery(updatedQuery)
+    onChange({ ...state, measurementQuery: updatedQuery })
     onRunQuery()
   }
 
@@ -35,8 +34,8 @@ export const QueryOptions = ({
     updatedTags.forEach(tag => {
       tags[tag.key] = tag.value
     })
-    const updatedQuery = { ...state.measurementQuery, Tags: updatedTags }
-    onChangeMeasurementQuery(updatedQuery)
+    const updatedQuery = { ...state.measurementQuery, Tags: tags }
+    onChange({ ...state, measurementQuery: updatedQuery, tags: updatedTags })
     onRunQuery()
   }
 
@@ -47,7 +46,7 @@ export const QueryOptions = ({
 
     const groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
     const updatedQuery = { ...state.measurementQuery, GroupBy: groupBy }
-    onChangeMeasurementQuery(updatedQuery)
+    onChange({ ...state, measurementQuery: updatedQuery })
     onRunQuery()
   }
 
@@ -58,7 +57,7 @@ export const QueryOptions = ({
         Period: selected.value
       } as Aggregation
       const updatedQuery = { ...state.measurementQuery, Aggregation: aggregation }
-      onChangeMeasurementQuery(updatedQuery)
+      onChange({ ...state, measurementQuery: updatedQuery })
       onRunQuery()
     }
   }
@@ -76,7 +75,7 @@ export const QueryOptions = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="WHERE" labelWidth={20} tooltip="Specify an aggregation, leave empty to query raw data">
+        <InlineField label="Aggregation" labelWidth={20} tooltip="Specify an aggregation, leave empty to query raw data">
           <Select
             value={state.measurementQuery.Aggregation?.Name}
             placeholder="select an aggregation"
@@ -85,10 +84,14 @@ export const QueryOptions = ({
             onChange={onAggregationChange}
           />
         </InlineField>
-        <TagsSection
-          tags={state.tags}
-          onChange={handleTagsSectionChange}
-        />
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="Tags" labelWidth={20}>
+          <TagsSection
+            tags={state.tags}
+            onChange={handleTagsSectionChange}
+          />
+        </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineField label="GROUP BY" labelWidth={20} tooltip="Enter a list of tags to group by separated by ','">
