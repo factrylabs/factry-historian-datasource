@@ -7,20 +7,7 @@ import { Measurements } from 'QueryEditor/Measurements'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { DataSource } from './datasource'
 import type { CascaderOption } from 'components/Cascader/Cascader'
-import type { HistorianDataSourceOptions, MeasurementQuery, Query, MeasurementFilter, RawQuery, AssetProperty, Measurement, Asset, Pagination, TimeseriesDatabase, Attributes } from './types'
-
-interface State {
-  tabIndex: number
-  databases: TimeseriesDatabase[]
-  filter: MeasurementFilter
-  pagination: Pagination
-  measurements: Measurement[]
-  assetProperties: AssetProperty[]
-  assets: CascaderOption[]
-  measurementQuery: MeasurementQuery
-  rawQuery: RawQuery
-  tags: any
-}
+import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, Asset, TimeseriesDatabase, Attributes, State } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -32,6 +19,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     this.onChangeRawQuery = this.onChangeRawQuery.bind(this)
     this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
     this.onUpdateTags = this.onUpdateTags.bind(this)
+    this.onAssetChange = this.onAssetChange.bind(this)
   }
 
   state = {
@@ -58,53 +46,61 @@ export class QueryEditor extends PureComponent<Props, State> {
       Query: '',
       TimeseriesDatabase: ''
     },
+    selectedProperties: []
   } as State
 
-  componentDidMount() {
-    // TODO somehow fill in selected value on reload
-    // TODO better way to determine tab to open
-    let tabIndex = 0
+  UNSAFE_componentWillMount() {
     const { query } = this.props
-    switch (query.queryType) {
-      case 'MeasurementQuery':
-        tabIndex = 0
-        break
-      case 'RawQuery':
-        tabIndex = 2
-        break
+    if (query.state) {
+      this.saveState({ ...query.state })
     }
-    const databases = this.getTimeseriesDatabases()
-    const assets = this.getAssets()
+  }
 
-    this.setState({ ...this.state, databases: databases, assets: assets, tabIndex: tabIndex })
+  componentDidMount(): void {
+    this.getTimeSeriesDatabases().then((databases) => {
+      this.saveState({ ...this.state, databases: databases })
+    })
+    this.getAssets().then((assets) => {
+      this.saveState({ ...this.state, assets: assets })
+    })
   }
 
   setTabIndex(index: number) {
-    this.setState({ ...this.state, tabIndex: index })
+    switch (index) {
+      case 0:
+      case 1:
+        if (this.state.measurementQuery) {
+          this.onChangeMeasurementQuery(this.state.measurementQuery)
+          this.onRunQuery(this.props)
+        }
+        break
+      case 2:
+        if (this.state.rawQuery?.Query) {
+          this.onChangeRawQuery(this.state.rawQuery.Query)
+          this.onRunQuery(this.props)
+        }
+        break
+    }
+    this.saveState({ ...this.state, tabIndex: index })
   }
 
-  getTimeseriesDatabases(): TimeseriesDatabase[] {
-    const result: TimeseriesDatabase[] = []
-    this.props.datasource.getTimeseriesDatabases().then((timeseriesDatabases) => {
-      timeseriesDatabases.forEach((timeseriesDatabase) => {
-        if (timeseriesDatabase.Name !== '_internal_factry') {
-          result.push(timeseriesDatabase)
+  async getTimeSeriesDatabases(): Promise<TimeseriesDatabase[]> {
+    return this.props.datasource.getTimeseriesDatabases().then((timeSeriesDatabases) => {
+      const result: TimeseriesDatabase[] = []
+      timeSeriesDatabases.forEach((timeSeriesDatabase) => {
+        if (timeSeriesDatabase.Name !== '_internal_factry') {
+          result.push(timeSeriesDatabase)
         }
       })
+      return result
     })
-
-    return result
-  }
-
-  onTimeseriesDatabaseChange = (event: SelectableValue<string>) => {
-    this.setState({ ...this.state, filter: { ...this.state.filter, Database: event.value } })
   }
 
   async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
     const result: Array<SelectableValue<string>> = []
     const filter = { ...this.state.filter, Keyword: query }
     await this.props.datasource.getMeasurements(filter, this.state.pagination).then((measurements) => {
-      this.setState({ ...this.state, measurements: measurements })
+      this.saveState({ ...this.state, measurements: measurements })
       measurements.forEach((measurement) => {
         const database = this.state.databases.find(e => e.UUID === measurement.DatabaseUUID)
         result.push({ label: measurement.Name, value: measurement.UUID, description: `(${database?.Name}) ${measurement.Description}` })
@@ -113,16 +109,13 @@ export class QueryEditor extends PureComponent<Props, State> {
     return result
   }
 
-  getAssets(): CascaderOption[] {
-    const result: CascaderOption[] = []
-    this.props.datasource.getAssets().then((assets) => {
-      this.props.datasource.getAssetProperties().then((assetProperties) => {
-        this.setState({ ...this.state, assetProperties: assetProperties })
-        result.push(...this.getChildAssets(null, assets))
+  async getAssets(): Promise<CascaderOption[]> {
+    return this.props.datasource.getAssets().then((assets) => {
+      return this.props.datasource.getAssetProperties().then((assetProperties) => {
+        this.saveState({ ...this.state, assetProperties: assetProperties })
+        return this.getChildAssets(null, assets)
       })
     })
-
-    return result
   }
 
   getChildAssets(parent: string | null, assets: Asset[]): CascaderOption[] {
@@ -141,14 +134,22 @@ export class QueryEditor extends PureComponent<Props, State> {
     return result
   }
 
-  onUpdateTags(updatedTags: Attributes): void {
-    this.setState({ ...this.state, tags: updatedTags })
+  onTimeseriesDatabaseChange = (event: SelectableValue<string>): void => {
+    this.saveState({ ...this.state, filter: { ...this.state.filter, Database: event.value } })
   }
 
-  onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
+  onAssetChange = (value: string): void => {
+    this.saveState({ ...this.state, filter: { ...this.state.filter, Asset: value } })
+  }
+
+  onUpdateTags(updatedTags: Attributes): void {
+    this.saveState({ ...this.state, tags: updatedTags })
+  }
+
+  onChangeMeasurementQuery(measurementQuery: MeasurementQuery, selectedProperties?: Array<SelectableValue<string>>): void {
     const { onChange, query } = this.props
     query.queryType = 'MeasurementQuery'
-    this.setState({ ...this.state, measurementQuery: measurementQuery })
+    this.saveState({ ...this.state, measurementQuery: measurementQuery, selectedProperties: selectedProperties ? selectedProperties : this.state.selectedProperties })
     query.query = measurementQuery
     onChange(query)
   }
@@ -163,7 +164,15 @@ export class QueryEditor extends PureComponent<Props, State> {
       TimeseriesDatabase: this.state.filter.Database,
       Query: queryString,
     } as RawQuery
+    this.saveState({ ...this.state, rawQuery: query.query })
     onChange(query)
+  }
+
+  saveState(state: State): void {
+    const { onChange, query } = this.props
+    query.state = state
+    onChange(query)
+    this.setState(state)
   }
 
   onRunQuery(
@@ -194,11 +203,13 @@ export class QueryEditor extends PureComponent<Props, State> {
           <Assets
             assetProperties={this.state.assetProperties}
             assets={this.state.assets}
-            query={this.props.query}
+            filter={this.state.filter}
             measurementQuery={this.state.measurementQuery}
             tags={this.state.tags}
+            selectedProperties={this.state.selectedProperties}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
             onUpdateTags={this.onUpdateTags}
+            onAssetChange={this.onAssetChange}
             onRunQuery={() => this.onRunQuery(this.props)}
           />
         ),
@@ -208,9 +219,9 @@ export class QueryEditor extends PureComponent<Props, State> {
         content: (
           <Measurements
             databases={this.state.databases}
+            measurements={this.state.measurements}
             filter={this.state.filter}
             measurementQuery={this.state.measurementQuery}
-            query={this.props.query}
             tags={this.state.tags}
             onLoadMeasurementOptions={this.loadMeasurementOptions}
             onTimeseriesDatabaseChange={this.onTimeseriesDatabaseChange}
@@ -226,6 +237,7 @@ export class QueryEditor extends PureComponent<Props, State> {
           <RawQueryEditor
             databases={this.state.databases}
             filter={this.state.filter}
+            query={this.state.rawQuery?.Query}
             onChangeRawQuery={this.onChangeRawQuery}
             onRunQuery={() => this.onRunQuery(this.props)}
             onTimeseriesDatabaseChange={this.onTimeseriesDatabaseChange}

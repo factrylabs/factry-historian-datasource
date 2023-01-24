@@ -7,13 +7,14 @@ import type { MeasurementFilter, TimeseriesDatabase } from 'types'
 export interface Props {
   databases: TimeseriesDatabase[]
   filter: MeasurementFilter
+  query: string
   onChangeRawQuery(queryString: string): void
   onRunQuery: () => void
   onTimeseriesDatabaseChange: (database: SelectableValue<string>) => void
 }
 
 export const RawQueryEditor = ({
-  databases, filter,
+  databases, filter, query,
   onRunQuery, onChangeRawQuery,
   onTimeseriesDatabaseChange
 }: Props): JSX.Element => {
@@ -57,7 +58,7 @@ export const RawQueryEditor = ({
               showMiniMap={false}
               showLineNumbers={true}
               readOnly={filter.Database === ''}
-              value=""
+              value={query}
             />
           </InlineField>
         </InlineFieldRow>

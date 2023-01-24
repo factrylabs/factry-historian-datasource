@@ -1,11 +1,27 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data'
+import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data'
+import type { CascaderOption } from 'components/Cascader/Cascader'
 
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Attributes = Record<string, any>
 
+export interface State {
+  tabIndex: number
+  databases: TimeseriesDatabase[]
+  filter: MeasurementFilter
+  pagination: Pagination
+  measurements: Measurement[]
+  assetProperties: AssetProperty[]
+  assets: CascaderOption[]
+  measurementQuery: MeasurementQuery
+  rawQuery: RawQuery
+  tags: any
+  selectedProperties: Array<SelectableValue<string>>
+}
+
 export interface Query extends DataQuery {
   query: MeasurementQuery | RawQuery;
+  state: State
 }
 
 export const defaultQuery: Partial<Query> = {
