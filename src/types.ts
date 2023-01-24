@@ -8,15 +8,34 @@ export type Attributes = Record<string, any>
 export interface State {
   tabIndex: number
   databases: TimeseriesDatabase[]
-  filter: MeasurementFilter
   pagination: Pagination
   measurements: Measurement[]
   assetProperties: AssetProperty[]
   assets: CascaderOption[]
-  measurementQuery: MeasurementQuery
-  rawQuery: RawQuery
-  tags: any
+  assetsState: AssetsTabState
+  measurementsState: MeasurementsTabState
+  rawState: RawTabState
+}
+
+export interface AssetsTabState {
+  queryOptions: MeasurementQueryState
   selectedProperties: Array<SelectableValue<string>>
+}
+
+export interface MeasurementsTabState {
+  queryOptions: MeasurementQueryState
+  selectedMeasurement: SelectableValue<string>
+}
+
+export interface RawTabState {
+  rawQuery: RawQuery
+  filter: MeasurementFilter
+}
+
+export interface MeasurementQueryState {
+  measurementQuery: MeasurementQuery
+  filter: MeasurementFilter
+  tags: any
 }
 
 export interface Query extends DataQuery {

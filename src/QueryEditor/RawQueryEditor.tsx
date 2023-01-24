@@ -2,21 +2,19 @@ import React from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CodeEditor, InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { selectable } from './util'
-import type { MeasurementFilter, TimeseriesDatabase } from 'types'
+import type { State, TimeseriesDatabase } from 'types'
 
 export interface Props {
   databases: TimeseriesDatabase[]
-  filter: MeasurementFilter
-  query: string
+  state: State
+  saveState(state: State): void
   onChangeRawQuery(queryString: string): void
   onRunQuery: () => void
-  onTimeseriesDatabaseChange: (database: SelectableValue<string>) => void
 }
 
 export const RawQueryEditor = ({
-  databases, filter, query,
-  onRunQuery, onChangeRawQuery,
-  onTimeseriesDatabaseChange
+  databases, state, saveState,
+  onRunQuery, onChangeRawQuery
 }: Props): JSX.Element => {
   const selectableTimeseriesDatabases = (databases: TimeseriesDatabase[]): Array<SelectableValue<string>> => {
     const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
@@ -35,21 +33,31 @@ export const RawQueryEditor = ({
     onRunQuery()
   }
 
+  const onTimeseriesDatabaseChange = (event: SelectableValue<string>): void => {
+    saveState({
+      ...state,
+      rawState: {
+        ...state.rawState,
+        filter: { ...state.rawState.filter, Database: event.value }
+      }
+    })
+  }
+
   return (
     <div>
       <InlineFieldRow>
         <InlineField label="Database" grow labelWidth={20} tooltip="Specify a time series database to work with">
           <Select
-            value={selectable(selectableTimeseriesDatabases(databases), filter.Database)}
+            value={selectable(selectableTimeseriesDatabases(databases), state.rawState.filter.Database)}
             placeholder="select timeseries database"
             options={selectableTimeseriesDatabases(databases)}
             onChange={onTimeseriesDatabaseChange}
           />
         </InlineField>
       </InlineFieldRow>
-      {filter.Database &&
+      {state.rawState.filter.Database &&
         <InlineFieldRow>
-          <InlineField label={`${getTimeseriesDatabaseType(filter.Database)} query`} grow labelWidth={20} tooltip="">
+          <InlineField label={`${getTimeseriesDatabaseType(state.rawState.filter.Database)} query`} grow labelWidth={20} tooltip="">
             <CodeEditor
               height={'200px'}
               language="sql"
@@ -57,8 +65,8 @@ export const RawQueryEditor = ({
               onSave={onUpdateQuery}
               showMiniMap={false}
               showLineNumbers={true}
-              readOnly={filter.Database === ''}
-              value={query}
+              readOnly={state.rawState.filter.Database === ''}
+              value={state.rawState.rawQuery.Query}
             />
           </InlineField>
         </InlineFieldRow>

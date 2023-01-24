@@ -7,7 +7,7 @@ import { Measurements } from 'QueryEditor/Measurements'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { DataSource } from './datasource'
 import type { CascaderOption } from 'components/Cascader/Cascader'
-import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, Asset, TimeseriesDatabase, Attributes, State } from './types'
+import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, Asset, TimeseriesDatabase, State } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -15,11 +15,9 @@ export class QueryEditor extends PureComponent<Props, State> {
   constructor(props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>) {
     super(props)
     this.loadMeasurementOptions = this.loadMeasurementOptions.bind(this)
-    this.onTimeseriesDatabaseChange = this.onTimeseriesDatabaseChange.bind(this)
     this.onChangeRawQuery = this.onChangeRawQuery.bind(this)
     this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
-    this.onUpdateTags = this.onUpdateTags.bind(this)
-    this.onAssetChange = this.onAssetChange.bind(this)
+    this.saveState = this.saveState.bind(this)
   }
 
   state = {
@@ -33,20 +31,47 @@ export class QueryEditor extends PureComponent<Props, State> {
     },
     databases: [],
     measurements: [],
-    measurementQuery: {
-      GroupBy: ['status'],
-      Aggregation: {
-        Name: 'mean',
-      },
-    },
-    tags: [],
     assetProperties: [],
     assets: [],
-    rawQuery: {
-      Query: '',
-      TimeseriesDatabase: ''
+    assetsState: {
+      queryOptions: {
+        measurementQuery: {
+          GroupBy: ['status'],
+          Aggregation: {
+            Name: 'mean',
+          },
+        },
+        filter: {
+          Database: '',
+        },
+        tags: [],
+      },
+      selectedProperties: []
     },
-    selectedProperties: []
+    measurementsState: {
+      queryOptions: {
+        measurementQuery: {
+          GroupBy: ['status'],
+          Aggregation: {
+            Name: 'mean',
+          },
+        },
+        filter: {
+          Database: '',
+        },
+        tags: [],
+      },
+      selectedMeasurement: {},
+    },
+    rawState: {
+      rawQuery: {
+        Query: '',
+        TimeseriesDatabase: ''
+      },
+      filter: {
+        Database: '',
+      },
+    }
   } as State
 
   UNSAFE_componentWillMount() {
@@ -68,15 +93,20 @@ export class QueryEditor extends PureComponent<Props, State> {
   setTabIndex(index: number) {
     switch (index) {
       case 0:
+        if (this.state.assetsState.queryOptions.measurementQuery) {
+          this.onChangeMeasurementQuery(this.state.assetsState.queryOptions.measurementQuery)
+          this.onRunQuery(this.props)
+        }
+        break
       case 1:
-        if (this.state.measurementQuery) {
-          this.onChangeMeasurementQuery(this.state.measurementQuery)
+        if (this.state.measurementsState.queryOptions.measurementQuery) {
+          this.onChangeMeasurementQuery(this.state.measurementsState.queryOptions.measurementQuery)
           this.onRunQuery(this.props)
         }
         break
       case 2:
-        if (this.state.rawQuery?.Query) {
-          this.onChangeRawQuery(this.state.rawQuery.Query)
+        if (this.state.rawState.rawQuery?.Query) {
+          this.onChangeRawQuery(this.state.rawState.rawQuery.Query)
           this.onRunQuery(this.props)
         }
         break
@@ -98,7 +128,7 @@ export class QueryEditor extends PureComponent<Props, State> {
 
   async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
     const result: Array<SelectableValue<string>> = []
-    const filter = { ...this.state.filter, Keyword: query }
+    const filter = { ...this.state.measurementsState.queryOptions.filter, Keyword: query }
     await this.props.datasource.getMeasurements(filter, this.state.pagination).then((measurements) => {
       this.saveState({ ...this.state, measurements: measurements })
       measurements.forEach((measurement) => {
@@ -134,22 +164,9 @@ export class QueryEditor extends PureComponent<Props, State> {
     return result
   }
 
-  onTimeseriesDatabaseChange = (event: SelectableValue<string>): void => {
-    this.saveState({ ...this.state, filter: { ...this.state.filter, Database: event.value } })
-  }
-
-  onAssetChange = (value: string): void => {
-    this.saveState({ ...this.state, filter: { ...this.state.filter, Asset: value } })
-  }
-
-  onUpdateTags(updatedTags: Attributes): void {
-    this.saveState({ ...this.state, tags: updatedTags })
-  }
-
-  onChangeMeasurementQuery(measurementQuery: MeasurementQuery, selectedProperties?: Array<SelectableValue<string>>): void {
+  onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'MeasurementQuery'
-    this.saveState({ ...this.state, measurementQuery: measurementQuery, selectedProperties: selectedProperties ? selectedProperties : this.state.selectedProperties })
     query.query = measurementQuery
     onChange(query)
   }
@@ -161,10 +178,16 @@ export class QueryEditor extends PureComponent<Props, State> {
       queryString = getTemplateSrv().replace(queryString)
     }
     query.query = {
-      TimeseriesDatabase: this.state.filter.Database,
+      TimeseriesDatabase: this.state.rawState.filter.Database,
       Query: queryString,
     } as RawQuery
-    this.saveState({ ...this.state, rawQuery: query.query })
+    this.saveState({
+      ...this.state,
+      rawState: {
+        ...this.state.rawState,
+        rawQuery: query.query,
+      }
+    })
     onChange(query)
   }
 
@@ -172,7 +195,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     const { onChange, query } = this.props
     query.state = state
     onChange(query)
-    this.setState(state)
+    this.setState(state) // TODO tabIndex gets updated late in URL
   }
 
   onRunQuery(
@@ -185,13 +208,6 @@ export class QueryEditor extends PureComponent<Props, State> {
       return
     }
 
-    if (props.query.queryType === 'MeasurementQuery') {
-      const query = props.query.query as MeasurementQuery
-      if (query.Measurements?.length === 0) {
-        return
-      }
-    }
-
     this.props.onRunQuery()
   }
 
@@ -201,15 +217,9 @@ export class QueryEditor extends PureComponent<Props, State> {
         title: 'Assets',
         content: (
           <Assets
-            assetProperties={this.state.assetProperties}
-            assets={this.state.assets}
-            filter={this.state.filter}
-            measurementQuery={this.state.measurementQuery}
-            tags={this.state.tags}
-            selectedProperties={this.state.selectedProperties}
+            state={this.state}
+            saveState={this.saveState}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
-            onUpdateTags={this.onUpdateTags}
-            onAssetChange={this.onAssetChange}
             onRunQuery={() => this.onRunQuery(this.props)}
           />
         ),
@@ -218,15 +228,10 @@ export class QueryEditor extends PureComponent<Props, State> {
         title: 'Measurements',
         content: (
           <Measurements
-            databases={this.state.databases}
-            measurements={this.state.measurements}
-            filter={this.state.filter}
-            measurementQuery={this.state.measurementQuery}
-            tags={this.state.tags}
+            state={this.state}
+            saveState={this.saveState}
             onLoadMeasurementOptions={this.loadMeasurementOptions}
-            onTimeseriesDatabaseChange={this.onTimeseriesDatabaseChange}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
-            onUpdateTags={this.onUpdateTags}
             onRunQuery={() => this.onRunQuery(this.props)}
           />
         ),
@@ -235,12 +240,11 @@ export class QueryEditor extends PureComponent<Props, State> {
         title: 'Raw',
         content: (
           <RawQueryEditor
+            state={this.state}
+            saveState={this.saveState}
             databases={this.state.databases}
-            filter={this.state.filter}
-            query={this.state.rawQuery?.Query}
             onChangeRawQuery={this.onChangeRawQuery}
             onRunQuery={() => this.onRunQuery(this.props)}
-            onTimeseriesDatabaseChange={this.onTimeseriesDatabaseChange}
           />
         )
       }

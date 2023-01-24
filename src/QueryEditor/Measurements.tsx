@@ -3,29 +3,23 @@ import { SelectableValue } from '@grafana/data'
 import { AsyncSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { selectable } from './util'
 import { QueryOptions } from './QueryOptions'
-import type { Attributes, Measurement, MeasurementFilter, MeasurementQuery, TimeseriesDatabase } from 'types'
+import type { MeasurementQuery, State, TimeseriesDatabase } from 'types'
 
 export interface Props {
-  databases: TimeseriesDatabase[]
-  measurements: Measurement[]
-  filter: MeasurementFilter
-  measurementQuery: MeasurementQuery
-  tags: any
+  state: State
+  saveState(state: State): void
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
   onRunQuery: () => void
-  onTimeseriesDatabaseChange: (database: SelectableValue<string>) => void
   onLoadMeasurementOptions: (query: string) => Promise<Array<SelectableValue<string>>>
-  onUpdateTags(updatedTags: Attributes): void
 }
 
 export const Measurements = ({
-  databases, measurements, filter, measurementQuery, tags,
+  state, saveState,
   onRunQuery, onChangeMeasurementQuery,
-  onTimeseriesDatabaseChange,
-  onLoadMeasurementOptions,
-  onUpdateTags
+  onLoadMeasurementOptions
 }: Props): JSX.Element => {
   const selectedMeasurement = (): SelectableValue<string> => {
+    const measurementQuery = state.measurementsState.queryOptions.measurementQuery
     if (measurementQuery.Measurements === undefined) {
       return {}
     }
@@ -35,12 +29,12 @@ export const Measurements = ({
     }
 
     const measurementUUID = measurementQuery.Measurements[0]
-    const measurement = measurements.find(m => m.UUID === measurementUUID)
+    const measurement = state.measurements.find(m => m.UUID === measurementUUID)
     if (!measurement) {
       return {}
     }
 
-    const database = databases.find(e => e.UUID === measurement.DatabaseUUID)
+    const database = state.databases.find(e => e.UUID === measurement.DatabaseUUID)
     return { label: measurement.Name, value: measurement.UUID, description: `(${database?.Name}) ${measurement.Description}` }
   }
 
@@ -58,19 +52,56 @@ export const Measurements = ({
     setMeasurement(event)
     if (event.value) {
       const measurements = [event.value]
-      const updatedQuery = { ...measurementQuery, Measurements: measurements }
+      const updatedQuery = { ...state.measurementsState.queryOptions.measurementQuery, Measurements: measurements }
+      saveState({
+        ...state,
+        measurementsState: {
+          ...state.measurementsState,
+          queryOptions: {
+            ...state.measurementsState.queryOptions,
+            measurementQuery: updatedQuery
+          }
+        }
+      })
       onChangeMeasurementQuery(updatedQuery)
       onRunQuery()
     }
   }
 
+  const onTimeseriesDatabaseChange = (event: SelectableValue<string>): void => {
+    saveState({
+      ...state,
+      measurementsState: {
+        ...state.measurementsState,
+        queryOptions: {
+          ...state.measurementsState.queryOptions,
+          filter: { ...state.measurementsState.queryOptions.filter, Database: event.value }
+        }
+      }
+    })
+  }
+
   const defaultMeasurementOptions = (): Array<SelectableValue<string>> => {
     const result: Array<SelectableValue<string>> = []
-    measurements.forEach((measurement) => {
-      const database = databases.find(e => e.UUID === measurement.DatabaseUUID)
+    state.measurements.forEach((measurement) => {
+      const database = state.databases.find(e => e.UUID === measurement.DatabaseUUID)
       result.push({ label: measurement.Name, value: measurement.UUID, description: `(${database?.Name}) ${measurement.Description}` })
     })
     return result
+  }
+
+  const handleChangeMeasurementQuery = (updatedQuery: MeasurementQuery): void => {
+    saveState({
+      ...state,
+      measurementsState: {
+        ...state.measurementsState,
+        queryOptions: {
+          ...state.measurementsState.queryOptions,
+          measurementQuery: updatedQuery
+        }
+      }
+    })
+    onChangeMeasurementQuery(updatedQuery)
   }
 
   return (
@@ -78,9 +109,9 @@ export const Measurements = ({
       <InlineFieldRow>
         <InlineField label="Database" labelWidth={20} tooltip="Specify a time series database to work with">
           <Select
-            value={selectable(selectableTimeseriesDatabases(databases), filter.Database)}
+            value={selectable(selectableTimeseriesDatabases(state.databases), state.measurementsState.queryOptions.filter.Database)}
             placeholder="select time series database"
-            options={selectableTimeseriesDatabases(databases)}
+            options={selectableTimeseriesDatabases(state.databases)}
             onChange={onTimeseriesDatabaseChange}
           />
         </InlineField>
@@ -98,10 +129,8 @@ export const Measurements = ({
         </InlineField>
       </InlineFieldRow>
       <QueryOptions
-        measurementQuery={measurementQuery}
-        tags={tags}
-        onChangeMeasurementQuery={onChangeMeasurementQuery}
-        onUpdateTags={onUpdateTags}
+        state={state.measurementsState.queryOptions}
+        onChangeMeasurementQuery={handleChangeMeasurementQuery}
         onRunQuery={onRunQuery}
       />
     </div>
