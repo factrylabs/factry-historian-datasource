@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
 import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
-import { Cascader, CascaderOption } from 'components/Cascader/Cascader'
-import { AssetProperty, Attributes, MeasurementQuery, Query } from 'types'
 import type { SelectableValue } from '@grafana/data'
+import { Cascader, CascaderOption } from 'components/Cascader/Cascader'
 import { QueryOptions } from './QueryOptions'
-
+import type { AssetProperty, Attributes, MeasurementQuery, Query } from 'types'
 
 export interface Props {
   assets: CascaderOption[]

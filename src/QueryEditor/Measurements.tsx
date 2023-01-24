@@ -1,9 +1,9 @@
 import React from 'react'
 import { SelectableValue } from '@grafana/data'
 import { AsyncSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
-import { Attributes, MeasurementFilter, MeasurementQuery, Query, TimeseriesDatabase } from 'types'
 import { selectable } from './util'
 import { QueryOptions } from './QueryOptions'
+import type { Attributes, MeasurementFilter, MeasurementQuery, Query, TimeseriesDatabase } from 'types'
 
 export interface Props {
   databases: TimeseriesDatabase[]
