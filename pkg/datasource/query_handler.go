@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
-	historianSchemas "gitlab.com/factry/historian/historian-server.git/v5/pkg/schemas"
 )
 
 // QueryTypes are a list of query types
@@ -58,6 +58,8 @@ func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery bac
 		response.Frames, response.Error = handleRawQuery(query, backendQuery, api)
 		return response
 	case QueryTypeEvent:
+		response.Frames, response.Error = handleEventQuery(query, backendQuery, api)
+		return response
 	}
 
 	response.Error = fmt.Errorf("unsupported query type %s", backendQuery.QueryType)
@@ -98,12 +100,46 @@ func handleRawQuery(query Query, backendQuery backend.DataQuery, api *api.API) (
 
 	rawQuery.Query = fillQueryVariables(rawQuery.Query, "Influx", backendQuery)
 
-	result, err := api.RawQuery(rawQuery.TimeseriesDatabase, historianSchemas.RawQuery{Query: rawQuery.Query})
+	result, err := api.RawQuery(rawQuery.TimeseriesDatabase, schemas.RawQuery{Query: rawQuery.Query})
 	if err != nil {
 		return nil, err
 	}
 
 	return QueryResultToDataFrame(nil, result)
+}
+
+func handleEventQuery(query Query, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
+	eventQuery := schemas.EventQuery{}
+
+	if err := json.Unmarshal(query.Query, &eventQuery); err != nil {
+		return nil, err
+	}
+
+	filter := schemas.EventFilter{
+		StartTime:         backendQuery.TimeRange.From,
+		StopTime:          backendQuery.TimeRange.To,
+		Assets:            eventQuery.Assets,
+		EventTypes:        eventQuery.EventTypes,
+		PreloadProperties: true,
+		Limit:             math.MaxInt32,
+	}
+
+	events, err := api.EventQuery(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	eventTypes, err := api.GetEventTypes()
+	if err != nil {
+		return nil, err
+	}
+
+	eventTypeProperties, err := api.GetEventTypeProperties()
+	if err != nil {
+		return nil, err
+	}
+
+	return EventQueryResultToDataFrame(events, eventTypes, eventTypeProperties)
 }
 
 func fillQueryVariables(query string, databaseType string, backendQuery backend.DataQuery) string {
@@ -119,10 +155,10 @@ func fillQueryVariables(query string, databaseType string, backendQuery backend.
 	return query
 }
 
-func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQuery) historianSchemas.Query {
+func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQuery) schemas.Query {
 	start := backendQuery.TimeRange.From.Truncate(time.Second)
 	end := backendQuery.TimeRange.To.Truncate(time.Second)
-	historianQuery := historianSchemas.Query{
+	historianQuery := schemas.Query{
 		MeasurementUUIDs: query.Measurements,
 		Start:            start,
 		End:              &end,

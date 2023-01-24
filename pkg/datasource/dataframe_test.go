@@ -7,7 +7,7 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/datasource"
-	"gitlab.com/factry/historian/historian-server.git/v5/pkg/schemas"
+	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 )
 
 func TestQueryResultToDataFrame(t *testing.T) {

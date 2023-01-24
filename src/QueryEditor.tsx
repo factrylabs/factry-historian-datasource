@@ -4,9 +4,10 @@ import { RadioButtonGroup, InlineField, InlineFieldRow } from '@grafana/ui'
 import { QueryEditorProps, SelectableValue } from '@grafana/data'
 import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
+import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { DataSource } from './datasource'
-import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, QueryEditorState, MeasurementQueryState } from './types'
+import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, QueryEditorState, MeasurementQueryState, EventQuery } from './types'
 import { getSelectedAssetProperties, tagsToQueryTags } from 'QueryEditor/util'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -17,6 +18,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     this.loadMeasurementOptions = this.loadMeasurementOptions.bind(this)
     this.onChangeRawQuery = this.onChangeRawQuery.bind(this)
     this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
+    this.onChangeEventQuery = this.onChangeEventQuery.bind(this)
     this.saveState = this.saveState.bind(this)
   }
 
@@ -65,6 +67,9 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       },
       selectedMeasurement: '',
     },
+    eventsState: {
+      eventQuery: {},
+    },
     rawState: {
       rawQuery: {
         Query: '',
@@ -73,7 +78,10 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       filter: {
         Database: '',
       },
-    }
+    },
+    eventTypes: [],
+    eventConfigurations: [],
+    selectedEventTypes: []
   } as QueryEditorState
 
   componentDidMount(): void {
@@ -93,13 +101,20 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     Promise.all([
       this.getTimeSeriesDatabases(),
       this.getAssets(),
+      this.getEventTypes(),
+      this.getEventConfigurations(),
       this.loadMeasurementOptions(query.selectedMeasurement || '')
     ]).then(() => {
       if (!query.query) {
+        this.saveState({
+          ...this.state,
+          loading: false,
+          tabIndex: 0
+        })
         return
       }
       switch (query.tabIndex) {
-        case 0: {// assets
+        case 0: { // assets
           const measurementQuery = query.query as MeasurementQuery
           const queryOptions: MeasurementQueryState = {
             tags: tagsToQueryTags(measurementQuery.Tags),
@@ -121,7 +136,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           })
           break
         }
-        case 1: {// measurements
+        case 1: { // measurements
           const measurementQuery = query.query as MeasurementQuery
           const queryOptions: MeasurementQueryState = {
             tags: tagsToQueryTags(measurementQuery.Tags),
@@ -142,7 +157,20 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           })
           break
         }
-        case 2: // raw query
+        case 2: // events
+          const eventQuery = query.query as EventQuery
+          this.saveState({
+            ...this.state,
+            loading: false,
+            tabIndex: query.tabIndex,
+            eventsState: {
+              ...this.state.eventsState,
+              selectedAsset: eventQuery.Assets && eventQuery.Assets.length > 0 ? eventQuery.Assets[0] : undefined,
+              selectedEventTypes: eventQuery.EventTypes ? eventQuery.EventTypes.map(e => { return { label: this.state.eventTypes.find(et => et.UUID === e)?.Name, value: e } }) : undefined
+            }
+          })
+          break
+        case 3: // raw query
           const rawQuery = query.query as RawQuery
           this.saveState({
             ...this.state,
@@ -175,7 +203,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           this.onChangeMeasurementQuery(this.state.measurementsState.queryOptions.measurementQuery)
         }
         break
-      case 2:
+      case 3:
         if (this.state.rawState.rawQuery?.Query) {
           this.onChangeRawQuery(this.state.rawState.rawQuery.Query)
         }
@@ -210,6 +238,18 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     })
   }
 
+  async getEventTypes(): Promise<void> {
+    this.props.datasource.getEventTypes().then((eventTypes) => {
+      this.saveState({ ...this.state, eventTypes: eventTypes })
+    })
+  }
+
+  async getEventConfigurations(): Promise<void> {
+    this.props.datasource.getEventConfigurations().then((eventConfigurations) => {
+      this.saveState({ ...this.state, eventConfigurations: eventConfigurations })
+    })
+  }
+
   onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'MeasurementQuery'
@@ -235,6 +275,14 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         rawQuery: query.query,
       }
     })
+    onChange(query)
+    this.onRunQuery(this.props)
+  }
+
+  onChangeEventQuery(eventQuery: EventQuery): void {
+    const { onChange, query } = this.props
+    query.queryType = 'EventQuery'
+    query.query = eventQuery
     onChange(query)
     this.onRunQuery(this.props)
   }
@@ -265,6 +313,12 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       }
     }
 
+    if (props.query.queryType === 'EventQuery') {
+      const query = props.query.query as EventQuery
+      if (!query?.EventTypes || !query?.Assets) {
+        return
+      }
+    }
     this.props.onRunQuery()
   }
 
@@ -288,6 +342,16 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             saveState={this.saveState}
             onLoadMeasurementOptions={this.loadMeasurementOptions}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
+          />
+        ),
+      },
+      {
+        title: 'Events',
+        content: (
+          <Events
+            state={this.state}
+            saveState={this.saveState}
+            onChangeEventQuery={this.onChangeEventQuery}
           />
         ),
       },

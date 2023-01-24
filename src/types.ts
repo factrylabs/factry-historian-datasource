@@ -15,7 +15,10 @@ export interface QueryEditorState {
   assets: Asset[]
   assetsState: AssetsTabState
   measurementsState: MeasurementsTabState
+  eventsState: EventsTabState
   rawState: RawTabState
+  eventTypes: EventType[]
+  eventConfigurations: EventConfiguration[]
 }
 
 export interface AssetsTabState {
@@ -34,6 +37,12 @@ export interface RawTabState {
   filter: MeasurementFilter
 }
 
+export interface EventsTabState {
+  eventQuery: EventQuery
+  selectedAsset?: string
+  selectedEventTypes?: Array<SelectableValue<string>>
+}
+
 export interface MeasurementQueryState {
   measurementQuery: MeasurementQuery
   filter: MeasurementFilter
@@ -41,7 +50,7 @@ export interface MeasurementQueryState {
 }
 
 export interface Query extends DataQuery {
-  query: MeasurementQuery | RawQuery
+  query: MeasurementQuery | RawQuery | EventQuery
   tabIndex: number
   selectedMeasurement?: string
   selectedAssetPath?: string
@@ -98,6 +107,11 @@ export interface MeasurementQuery {
   Tags?: Attributes
   GroupBy?: string[]
   Aggregation?: Aggregation
+}
+
+export interface EventQuery {
+  Assets?: string[]
+  EventTypes?: string[]
 }
 
 export interface MeasurementFilter {
@@ -165,4 +179,17 @@ export interface AssetProperty {
   UUID: string
   AssetUUID: string
   MeasurementUUID: string
+}
+
+export interface EventType {
+  Name: string
+  UUID: string
+  Description: string
+}
+
+export interface EventConfiguration {
+  Name: string
+  UUID: string
+  AssetUUID: string
+  EventTypeUUID: string
 }

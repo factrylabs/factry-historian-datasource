@@ -7,11 +7,10 @@ import (
 
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
-	historianSchemas "gitlab.com/factry/historian/historian-server.git/v5/pkg/schemas"
 )
 
 // QueryResultToDataFrame converts a query result to data frames
-func QueryResultToDataFrame(measurements []schemas.Measurement, queryResult *historianSchemas.QueryResult) (data.Frames, error) {
+func QueryResultToDataFrame(measurements []schemas.Measurement, queryResult *schemas.QueryResult) (data.Frames, error) {
 	dataFrames := data.Frames{}
 
 	for _, series := range queryResult.Series {
@@ -29,7 +28,7 @@ func QueryResultToDataFrame(measurements []schemas.Measurement, queryResult *his
 	return dataFrames, nil
 }
 
-func seriesToFields(series *historianSchemas.Series, measurement schemas.Measurement) []*data.Field {
+func seriesToFields(series *schemas.Series, measurement schemas.Measurement) []*data.Field {
 	fields := []*data.Field{}
 	labels := data.Labels{}
 	for k, v := range series.Tags {

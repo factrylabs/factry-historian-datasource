@@ -2,8 +2,6 @@ package schemas
 
 import (
 	"github.com/google/uuid"
-
-	historianSchemas "gitlab.com/factry/historian/historian-server.git/v5/pkg/schemas"
 )
 
 // Collector has the fields of a collector that are used by the data source
@@ -38,7 +36,7 @@ type Measurement struct {
 	Collector     *Collector
 	DatabaseUUID  uuid.UUID
 	Database      *TimeseriesDatabase
-	Attributes    historianSchemas.Attributes
+	Attributes    Attributes
 }
 
 // Asset has the fields of an asset that are used by the data source
@@ -57,4 +55,48 @@ type AssetProperty struct {
 	UUID            uuid.UUID
 	AssetUUID       uuid.UUID
 	MeasurementUUID uuid.UUID
+}
+
+// EventType has the fields of an event type that are used by the data source
+type EventType struct {
+	Name        string
+	UUID        uuid.UUID
+	Description string
+	Properties  []EventTypeProperty
+}
+
+// PropertyDatatype enum for the event type property datatype
+type PropertyDatatype string
+
+// PropertyType enum for the event type property type
+type PropertyType string
+
+// The order determines how EventTypePropertyDatatype gets sorted
+const (
+	EventTypePropertyDatatypeNumber PropertyDatatype = "number"
+	EventTypePropertyDatatypeBool   PropertyDatatype = "boolean"
+	EventTypePropertyDatatypeString PropertyDatatype = "string"
+)
+
+// The order determines how EventTypePropertyType gets sorted
+const (
+	EventTypePropertyTypeSimple   PropertyType = "simple"
+	EventTypePropertyTypePeriodic PropertyType = "periodic"
+)
+
+// EventTypeProperty has the fields of an event type property that are used by the data source
+type EventTypeProperty struct {
+	Name          string
+	UUID          uuid.UUID
+	EventTypeUUID uuid.UUID
+	Datatype      PropertyDatatype
+	Type          PropertyType
+}
+
+// EventConfiguration has the fields of an event configuration that are used by the data source
+type EventConfiguration struct {
+	Name          string
+	UUID          uuid.UUID
+	AssetUUID     uuid.UUID
+	EventTypeUUID uuid.UUID
 }

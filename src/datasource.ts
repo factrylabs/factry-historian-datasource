@@ -1,6 +1,6 @@
 import { DataSourceInstanceSettings } from '@grafana/data'
 import { DataSourceWithBackend } from '@grafana/runtime'
-import { Asset, AssetProperty, Collector, HistorianDataSourceOptions, Measurement, MeasurementFilter, Pagination, Query, TimeseriesDatabase } from './types'
+import { Asset, AssetProperty, Collector, EventConfiguration, EventType, HistorianDataSourceOptions, Measurement, MeasurementFilter, Pagination, Query, TimeseriesDatabase } from './types'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   constructor(instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>) {
@@ -34,5 +34,13 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
 
   async getAssetProperties(): Promise<AssetProperty[]> {
     return this.getResource('asset-properties')
+  }
+
+  async getEventTypes(): Promise<EventType[]> {
+    return this.getResource('event-types')
+  }
+
+  async getEventConfigurations(): Promise<EventConfiguration[]> {
+    return this.getResource('event-configurations')
   }
 }

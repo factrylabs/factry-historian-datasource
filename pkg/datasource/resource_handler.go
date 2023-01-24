@@ -11,11 +11,13 @@ import (
 
 // ResourceTypes is a list of resource that can be queried
 const (
-	ResourceTypeAssets          = "assets"
-	ResourceTypeMeasurements    = "measurements"
-	ResourceTypeCollectors      = "collectors"
-	ResourceTypeDatabases       = "databases"
-	ResourceTypeAssetProperties = "asset-properties"
+	ResourceTypeAssets              = "assets"
+	ResourceTypeMeasurements        = "measurements"
+	ResourceTypeCollectors          = "collectors"
+	ResourceTypeDatabases           = "databases"
+	ResourceTypeAssetProperties     = "asset-properties"
+	ResourceTypeEventTypes          = "event-types"
+	ResourceTypeEventConfigurations = "event-configurations"
 )
 
 // HistorianResourceQuery is a struct for a resource query
@@ -82,6 +84,20 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 		return resource.SendJSON(sender, o)
 	case ResourceTypeAssetProperties:
 		o, err := dsi.API.GetAssetProperties()
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, o)
+	case ResourceTypeEventTypes:
+		o, err := dsi.API.GetEventTypes()
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, o)
+	case ResourceTypeEventConfigurations:
+		o, err := dsi.API.GetEventConfigurations()
 		if err != nil {
 			return err
 		}
