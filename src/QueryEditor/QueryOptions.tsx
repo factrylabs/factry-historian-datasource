@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { InlineField, InlineFieldRow, Input, Select } from '@grafana/ui'
 import { Aggregation, Attributes, MeasurementQuery } from 'types'
@@ -19,6 +19,7 @@ export const QueryOptions = ({
   onRunQuery, onChangeMeasurementQuery,
   onUpdateTags
 }: Props): JSX.Element => {
+  const [periods, setPeriods] = useState(getPeriods())
   const onAggregationChange = (event: SelectableValue<string>) => {
     let aggregation = undefined
     if (event?.value) {
@@ -66,6 +67,16 @@ export const QueryOptions = ({
     }
   }
 
+  const onCreatePeriod = (value: string): void => {
+    if (!/^([\d]+[h,m,s])+$/.test(value)) {
+      return
+    }
+
+    const customValue: SelectableValue<string> = { value: value, label: value }
+    setPeriods([...periods, customValue])
+    onPeriodChange(customValue)
+  }
+
   return (
     <div>
       <InlineFieldRow>
@@ -94,8 +105,10 @@ export const QueryOptions = ({
         <InlineField>
           <Select
             value={measurementQuery.Aggregation?.Period || "$__interval"}
-            options={getPeriods()}
-            onChange={onPeriodChange} // TODO allow custom options
+            options={periods}
+            allowCustomValue
+            onChange={onPeriodChange}
+            onCreateOption={onCreatePeriod}
           />
         </InlineField>
       </InlineFieldRow>
