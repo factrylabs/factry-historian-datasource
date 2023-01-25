@@ -9,6 +9,7 @@ import { Icon, Input } from '@grafana/ui'
 
 import { onChangeCascader } from './optionMappings';
 import { Autocomplete } from '../Autocomplete/Autocomplete'
+import { findOption } from 'QueryEditor/util'
 
 export interface CascaderProps {
   /** The separator between levels in the search */
@@ -187,6 +188,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       showSuggestions: true,
       filteredSuggestions: filteredSuggestions
     })
+    // TODO add handler for custom asset paths
   }
 
   onClickSuggestion = (e: any) => {
@@ -196,6 +198,10 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       showSuggestions: false,
       activeLabel: e.currentTarget.innerText
     })
+    const option = findOption(this.getSearchableOptions(this.props.options), e.currentTarget.innerText)
+    if (option && option.value && option.value.length > 0) {
+      this.props.onSelect(option.value[option.value.length - 1])
+    }
   }
 
   onKeyDown = (e: any) => {

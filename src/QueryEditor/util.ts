@@ -68,3 +68,20 @@ export function getChildAssets(parent: string | null, assets: Asset[]): Cascader
 
   return result
 }
+
+export function findOption(options: Array<SelectableValue<string[]>>, label: string): SelectableValue<string[]> | undefined {
+  for (const option of options) {
+    if (option.label === label) {
+      return option
+    }
+
+    if (option.items && option.items.length > 0) {
+      const res = findOption(option.items, label)
+      if (res) {
+        return res
+      }
+    }
+  }
+
+  return undefined
+}
