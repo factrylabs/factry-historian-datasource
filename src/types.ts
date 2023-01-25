@@ -1,5 +1,4 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data'
-import type { CascaderOption } from 'components/Cascader/Cascader'
 import { QueryTag } from 'TagsSection'
 
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
@@ -12,7 +11,7 @@ export interface State {
   pagination: Pagination
   measurements: Measurement[]
   assetProperties: AssetProperty[]
-  assets: CascaderOption[]
+  assets: Asset[]
   assetsState: AssetsTabState
   measurementsState: MeasurementsTabState
   rawState: RawTabState

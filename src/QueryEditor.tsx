@@ -6,8 +6,7 @@ import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { DataSource } from './datasource'
-import type { CascaderOption } from 'components/Cascader/Cascader'
-import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, Asset, TimeseriesDatabase, State } from './types'
+import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, TimeseriesDatabase, State } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -85,12 +84,12 @@ export class QueryEditor extends PureComponent<Props, State> {
     this.getTimeSeriesDatabases().then((databases) => {
       this.saveState({ ...this.state, databases: databases })
     })
-    this.getAssets().then((assets) => {
-      this.saveState({ ...this.state, assets: assets })
-    })
+    this.getAssets()
   }
 
   setTabIndex(index: number) {
+    this.saveState({ ...this.state, tabIndex: index })
+
     switch (index) {
       case 0:
         if (this.state.assetsState.queryOptions.measurementQuery) {
@@ -111,7 +110,6 @@ export class QueryEditor extends PureComponent<Props, State> {
         }
         break
     }
-    this.saveState({ ...this.state, tabIndex: index })
   }
 
   async getTimeSeriesDatabases(): Promise<TimeseriesDatabase[]> {
@@ -139,29 +137,12 @@ export class QueryEditor extends PureComponent<Props, State> {
     return result
   }
 
-  async getAssets(): Promise<CascaderOption[]> {
-    return this.props.datasource.getAssets().then((assets) => {
+  async getAssets(): Promise<void> {
+    await this.props.datasource.getAssets().then((assets) => {
       return this.props.datasource.getAssetProperties().then((assetProperties) => {
-        this.saveState({ ...this.state, assetProperties: assetProperties })
-        return this.getChildAssets(null, assets)
+        this.saveState({ ...this.state, assetProperties: assetProperties, assets: assets })
       })
     })
-  }
-
-  getChildAssets(parent: string | null, assets: Asset[]): CascaderOption[] {
-    const result: CascaderOption[] = []
-
-    assets.filter((asset) => asset.ParentUUID === parent).forEach((asset) => {
-      let items = this.getChildAssets(asset.UUID, assets)
-      const cascaderOption: CascaderOption = {
-        label: asset.Name,
-        value: asset.UUID,
-        items: items
-      }
-      result.push(cascaderOption)
-    })
-
-    return result
   }
 
   onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
@@ -195,7 +176,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     const { onChange, query } = this.props
     query.state = state
     onChange(query)
-    this.setState(state) // TODO tabIndex gets updated late in URL
+    this.setState(state)
   }
 
   onRunQuery(

@@ -1,5 +1,6 @@
 import { SelectableValue } from "@grafana/data"
-import { AggregationName } from "types"
+import { CascaderOption } from "components/Cascader/Cascader"
+import { AggregationName, Asset } from "types"
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -50,4 +51,20 @@ export function getPeriods(): Array<SelectableValue<string>> {
       label: "1h", value: "1h"
     }
   ]
+}
+
+export function getChildAssets(parent: string | null, assets: Asset[]): CascaderOption[] {
+  const result: CascaderOption[] = []
+
+  assets.filter((asset) => asset.ParentUUID === parent).forEach((asset) => {
+    let items = getChildAssets(asset.UUID, assets)
+    const cascaderOption: CascaderOption = {
+      label: asset.Name,
+      value: asset.UUID,
+      items: items
+    }
+    result.push(cascaderOption)
+  })
+
+  return result
 }

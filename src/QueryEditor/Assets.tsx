@@ -3,6 +3,7 @@ import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryOptions } from './QueryOptions'
+import { getChildAssets } from './util'
 import type { MeasurementQuery, MeasurementQueryState, State } from 'types'
 
 export interface Props {
@@ -17,6 +18,8 @@ export const Assets = ({
   onChangeMeasurementQuery,
   onRunQuery
 }: Props): JSX.Element => {
+  const assetOptions = getChildAssets(null, state.assets)
+
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const selectedAssetProperties = state.assetProperties.filter(e => items.map(e => e.value).includes(e.Name))
     const measurements = selectedAssetProperties.map(e => e.MeasurementUUID)
@@ -73,7 +76,7 @@ export const Assets = ({
         <InlineField label="Asset" grow labelWidth={20} tooltip="Specify an asset to work with">
           <Cascader
             initialValue={state.assetsState.queryOptions.filter.Asset}
-            options={state.assets}
+            options={assetOptions}
             displayAllSelectedLevels
             onSelect={onAssetChange}
             separator='\'
