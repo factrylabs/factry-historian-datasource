@@ -9,13 +9,12 @@ export interface Props {
   state: State
   saveState(state: State): void
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
-  onRunQuery: () => void
   onLoadMeasurementOptions: (query: string) => Promise<Array<SelectableValue<string>>>
 }
 
 export const Measurements = ({
   state, saveState,
-  onRunQuery, onChangeMeasurementQuery,
+  onChangeMeasurementQuery,
   onLoadMeasurementOptions
 }: Props): JSX.Element => {
   const selectedMeasurement = (): SelectableValue<string> => {
@@ -64,7 +63,6 @@ export const Measurements = ({
         }
       })
       onChangeMeasurementQuery(updatedQuery)
-      onRunQuery()
     }
   }
 
@@ -128,7 +126,6 @@ export const Measurements = ({
       <QueryOptions
         state={state.measurementsState.queryOptions}
         onChange={handleChangeMeasurementQuery}
-        onRunQuery={onRunQuery}
       />
     </div>
   )

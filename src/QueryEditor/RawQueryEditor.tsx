@@ -8,12 +8,11 @@ export interface Props {
   state: State
   saveState(state: State): void
   onChangeRawQuery(queryString: string): void
-  onRunQuery: () => void
 }
 
 export const RawQueryEditor = ({
   state, saveState,
-  onRunQuery, onChangeRawQuery
+  onChangeRawQuery
 }: Props): JSX.Element => {
   const selectableTimeseriesDatabases = (databases: TimeseriesDatabase[]): Array<SelectableValue<string>> => {
     const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
@@ -29,7 +28,6 @@ export const RawQueryEditor = ({
 
   const onUpdateQuery = (query: string): void => {
     onChangeRawQuery(query)
-    onRunQuery()
   }
 
   const onTimeseriesDatabaseChange = (event: SelectableValue<string>): void => {

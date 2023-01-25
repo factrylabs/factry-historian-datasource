@@ -150,6 +150,7 @@ export class QueryEditor extends PureComponent<Props, State> {
     query.queryType = 'MeasurementQuery'
     query.query = measurementQuery
     onChange(query)
+    this.onRunQuery(this.props)
   }
 
   onChangeRawQuery(queryString: string): void {
@@ -170,6 +171,7 @@ export class QueryEditor extends PureComponent<Props, State> {
       }
     })
     onChange(query)
+    this.onRunQuery(this.props)
   }
 
   saveState(state: State): void {
@@ -201,7 +203,6 @@ export class QueryEditor extends PureComponent<Props, State> {
             state={this.state}
             saveState={this.saveState}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
-            onRunQuery={() => this.onRunQuery(this.props)}
           />
         ),
       },
@@ -213,7 +214,6 @@ export class QueryEditor extends PureComponent<Props, State> {
             saveState={this.saveState}
             onLoadMeasurementOptions={this.loadMeasurementOptions}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
-            onRunQuery={() => this.onRunQuery(this.props)}
           />
         ),
       },
@@ -224,7 +224,6 @@ export class QueryEditor extends PureComponent<Props, State> {
             state={this.state}
             saveState={this.saveState}
             onChangeRawQuery={this.onChangeRawQuery}
-            onRunQuery={() => this.onRunQuery(this.props)}
           />
         )
       }

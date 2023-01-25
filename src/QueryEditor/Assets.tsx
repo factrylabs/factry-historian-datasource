@@ -10,13 +10,11 @@ export interface Props {
   state: State
   saveState(state: State): void
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
-  onRunQuery: () => void
 }
 
 export const Assets = ({
   state, saveState,
-  onChangeMeasurementQuery,
-  onRunQuery
+  onChangeMeasurementQuery
 }: Props): JSX.Element => {
   const assetOptions = getChildAssets(null, state.assets)
 
@@ -36,7 +34,6 @@ export const Assets = ({
       }
     })
     onChangeMeasurementQuery(updatedQuery)
-    onRunQuery()
   }
 
   const availableProperties = (selected: string | undefined): Array<SelectableValue<string>> => {
@@ -95,7 +92,6 @@ export const Assets = ({
       <QueryOptions
         state={state.assetsState.queryOptions}
         onChange={handleChangeMeasurementQuery}
-        onRunQuery={onRunQuery}
       />
     </div>
   )

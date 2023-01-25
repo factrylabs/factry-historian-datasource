@@ -8,12 +8,11 @@ import { getAggregations, getPeriods } from './util'
 export interface Props {
   state: MeasurementQueryState
   onChange: (options: MeasurementQueryState) => void
-  onRunQuery: () => void
 }
 
 export const QueryOptions = ({
   state,
-  onRunQuery, onChange
+  onChange
 }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
   const onAggregationChange = (event: SelectableValue<string>) => {
@@ -26,7 +25,6 @@ export const QueryOptions = ({
     }
     const updatedQuery = { ...state.measurementQuery, Aggregation: aggregation }
     onChange({ ...state, measurementQuery: updatedQuery })
-    onRunQuery()
   }
 
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
@@ -36,7 +34,6 @@ export const QueryOptions = ({
     })
     const updatedQuery = { ...state.measurementQuery, Tags: tags }
     onChange({ ...state, measurementQuery: updatedQuery, tags: updatedTags })
-    onRunQuery()
   }
 
   const onGroupByChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -47,7 +44,6 @@ export const QueryOptions = ({
     const groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
     const updatedQuery = { ...state.measurementQuery, GroupBy: groupBy }
     onChange({ ...state, measurementQuery: updatedQuery })
-    onRunQuery()
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
@@ -58,7 +54,6 @@ export const QueryOptions = ({
       } as Aggregation
       const updatedQuery = { ...state.measurementQuery, Aggregation: aggregation }
       onChange({ ...state, measurementQuery: updatedQuery })
-      onRunQuery()
     }
   }
 
