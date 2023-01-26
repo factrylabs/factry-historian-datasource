@@ -5,7 +5,8 @@ import { QueryTag } from 'TagsSection'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Attributes = Record<string, any>
 
-export interface State {
+export interface QueryEditorState {
+  loading: boolean
   tabIndex: number
   databases: TimeseriesDatabase[]
   pagination: Pagination
@@ -19,12 +20,13 @@ export interface State {
 
 export interface AssetsTabState {
   queryOptions: MeasurementQueryState
+  selectedAsset?: string
   selectedProperties: Array<SelectableValue<string>>
 }
 
 export interface MeasurementsTabState {
   queryOptions: MeasurementQueryState
-  selectedMeasurement: SelectableValue<string>
+  selectedMeasurement?: string
 }
 
 export interface RawTabState {
@@ -39,8 +41,10 @@ export interface MeasurementQueryState {
 }
 
 export interface Query extends DataQuery {
-  query: MeasurementQuery | RawQuery;
-  state: State
+  query: MeasurementQuery | RawQuery
+  tabIndex: number
+  selectedMeasurement?: string
+  selectedAssetPath?: string
 }
 
 export const defaultQuery: Partial<Query> = {

@@ -1,13 +1,13 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { SelectableValue } from '@grafana/data'
 import { AsyncSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { selectable } from './util'
 import { QueryOptions } from './QueryOptions'
-import type { MeasurementQuery, MeasurementQueryState, State, TimeseriesDatabase } from 'types'
+import type { MeasurementQuery, MeasurementQueryState, QueryEditorState, TimeseriesDatabase } from 'types'
 
 export interface Props {
-  state: State
-  saveState(state: State): void
+  state: QueryEditorState
+  saveState(state: QueryEditorState): void
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
   onLoadMeasurementOptions: (query: string) => Promise<Array<SelectableValue<string>>>
 }
@@ -32,12 +32,9 @@ export const Measurements = ({
     if (!measurement) {
       return {}
     }
-
     const database = state.databases.find(e => e.UUID === measurement.DatabaseUUID)
     return { label: measurement.Name, value: measurement.UUID, description: `(${database?.Name}) ${measurement.Description}` }
   }
-
-  const [measurement, setMeasurement] = useState<SelectableValue<string>>(selectedMeasurement());
 
   const selectableTimeseriesDatabases = (databases: TimeseriesDatabase[]): Array<SelectableValue<string>> => {
     const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
@@ -48,7 +45,6 @@ export const Measurements = ({
   }
 
   const onMeasurementChange = (event: SelectableValue<string>): void => {
-    setMeasurement(event)
     if (event.value) {
       const measurements = [event.value]
       const updatedQuery = { ...state.measurementsState.queryOptions.measurementQuery, Measurements: measurements }
@@ -59,7 +55,8 @@ export const Measurements = ({
           queryOptions: {
             ...state.measurementsState.queryOptions,
             measurementQuery: updatedQuery
-          }
+          },
+          selectedMeasurement: event.label
         }
       })
       onChangeMeasurementQuery(updatedQuery)
@@ -114,7 +111,7 @@ export const Measurements = ({
       <InlineFieldRow>
         <InlineField label="Measurement" labelWidth={20} tooltip="Specify measurement to work with">
           <AsyncSelect
-            value={measurement}
+            value={selectedMeasurement()}
             placeholder="select measurement"
             loadOptions={onLoadMeasurementOptions}
             defaultOptions={defaultMeasurementOptions()}

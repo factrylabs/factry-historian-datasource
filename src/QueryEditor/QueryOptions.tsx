@@ -37,10 +37,6 @@ export const QueryOptions = ({
   }
 
   const onGroupByChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    if (!event.target.value) {
-      return
-    }
-
     const groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
     const updatedQuery = { ...state.measurementQuery, GroupBy: groupBy }
     onChange({ ...state, measurementQuery: updatedQuery })
@@ -92,8 +88,8 @@ export const QueryOptions = ({
         <InlineField label="GROUP BY" labelWidth={20} tooltip="Enter a list of tags to group by separated by ','">
           <Input
             placeholder="group by"
-            onChange={onGroupByChange}
-            defaultValue="status"
+            onBlur={onGroupByChange}
+            defaultValue={state.measurementQuery.GroupBy?.join(', ') || 'status'}
           />
         </InlineField>
         <InlineField>

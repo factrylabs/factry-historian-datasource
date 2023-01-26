@@ -2,11 +2,11 @@ import React from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CodeEditor, InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { selectable } from './util'
-import type { State, TimeseriesDatabase } from 'types'
+import type { QueryEditorState, TimeseriesDatabase } from 'types'
 
 export interface Props {
-  state: State
-  saveState(state: State): void
+  state: QueryEditorState
+  saveState(state: QueryEditorState): void
   onChangeRawQuery(queryString: string): void
 }
 

@@ -4,11 +4,11 @@ import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryOptions } from './QueryOptions'
 import { getChildAssets } from './util'
-import type { MeasurementQuery, MeasurementQueryState, State } from 'types'
+import type { MeasurementQuery, MeasurementQueryState, QueryEditorState } from 'types'
 
 export interface Props {
-  state: State
-  saveState(state: State): void
+  state: QueryEditorState
+  saveState(state: QueryEditorState): void
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
 }
 
@@ -19,7 +19,8 @@ export const Assets = ({
   const assetOptions = getChildAssets(null, state.assets)
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
-    const selectedAssetProperties = state.assetProperties.filter(e => items.map(e => e.value).includes(e.Name))
+    // TODO update filter when selectedAsset can also contain a custom regex asset path or multiple assets...
+    const selectedAssetProperties = state.assetProperties.filter(e => e.AssetUUID === state.assetsState.selectedAsset && items.map(e => e.value).includes(e.Name))
     const measurements = selectedAssetProperties.map(e => e.MeasurementUUID)
     const updatedQuery = { ...state.assetsState.queryOptions.measurementQuery, Measurements: measurements }
     saveState({
@@ -51,7 +52,8 @@ export const Assets = ({
         queryOptions: {
           ...state.assetsState.queryOptions,
           filter: { ...state.assetsState.queryOptions.filter, Asset: value }
-        }
+        },
+        selectedAsset: value
       }
     })
   }
@@ -72,7 +74,7 @@ export const Assets = ({
       <InlineFieldRow>
         <InlineField label="Asset" grow labelWidth={20} tooltip="Specify an asset to work with">
           <Cascader
-            initialValue={state.assetsState.queryOptions.filter.Asset}
+            initialValue={state.assetsState.selectedAsset}
             options={assetOptions}
             displayAllSelectedLevels
             onSelect={onAssetChange}
@@ -84,7 +86,7 @@ export const Assets = ({
         <InlineField label="Properties" grow labelWidth={20} tooltip="Specify one or more asset properties to work with">
           <MultiSelect
             value={state.assetsState.selectedProperties}
-            options={availableProperties(state.assetsState.queryOptions.filter.Asset)}
+            options={availableProperties(state.assetsState.selectedAsset)}
             onChange={onSelectProperties}
           />
         </InlineField>

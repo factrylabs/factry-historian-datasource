@@ -1,6 +1,7 @@
 import { SelectableValue } from "@grafana/data"
 import { CascaderOption } from "components/Cascader/Cascader"
-import { AggregationName, Asset } from "types"
+import { QueryTag } from "TagsSection"
+import { AggregationName, Asset, AssetProperty, Attributes } from "types"
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -84,4 +85,35 @@ export function findOption(options: Array<SelectableValue<string[]>>, label: str
   }
 
   return undefined
+}
+
+export function tagsToQueryTags(tags: Attributes | undefined): QueryTag[] {
+  if (!tags) {
+    return []
+  }
+
+  let queryTags: QueryTag[] = []
+
+  Object.entries(tags).forEach(([key, value]) => {
+    const queryTag: QueryTag = {
+      key: key,
+      value: value,
+      condition: "AND",
+      operator: "="
+    }
+    queryTags = [...queryTags, queryTag]
+  })
+
+  return queryTags
+}
+
+export function getSelectedAssetProperties(measurements: string[] | undefined, assetProperties: AssetProperty[]): Array<SelectableValue<string>> {
+  if (!measurements) {
+    return []
+  }
+
+  return assetProperties.
+    filter(e => measurements.includes(e.MeasurementUUID)).
+    map(e => { return { label: e.Name, value: e.Name} as SelectableValue<string>}).
+    filter((value, index, self) => self.indexOf(value) === index)
 }
