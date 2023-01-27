@@ -2,7 +2,7 @@ import React from 'react'
 import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
-import { getChildAssets } from './util'
+import { getChildAssets, matchedAssets } from './util'
 import type { EventQuery, QueryEditorState } from 'types'
 
 export interface Props {
@@ -33,12 +33,12 @@ export const Events = ({
 
   const availableEventTypes = (selected: string | undefined): Array<SelectableValue<string>> => {
     return state.eventTypes.
-      filter(e => state.eventConfigurations.some(ec => ec.AssetUUID === selected && ec.EventTypeUUID === e.UUID)).
+      filter(e => state.eventConfigurations.some(ec => (ec.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === ec.AssetUUID)) && ec.EventTypeUUID === e.UUID)).
       map(e => { return { label: e.Name, value: e.UUID } })
   }
 
   const onAssetChange = (value: string): void => {
-    const updatedQuery = { ...state.eventsState.eventQuery, Assets: [value] }
+    const updatedQuery = { ...state.eventsState.eventQuery, Assets: matchedAssets(value, state.assets).map(e => e.UUID) }
     saveState({
       ...state,
       eventsState: {
@@ -58,7 +58,7 @@ export const Events = ({
             options={assetOptions}
             displayAllSelectedLevels
             onSelect={onAssetChange}
-            separator='\'
+            separator='\\'
           />
         </InlineField>
       </InlineFieldRow>

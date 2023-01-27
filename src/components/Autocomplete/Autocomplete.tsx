@@ -36,12 +36,6 @@ export const Autocomplete = ({ showSuggestions, activeLabel, filteredSuggestions
           })}
         </ul>
       );
-    } else {
-      suggestionsListComponent = (
-        <div className={styles.no_suggestions}>
-          <em>No suggestions available.</em>
-        </div>
-      )
     }
   }
 

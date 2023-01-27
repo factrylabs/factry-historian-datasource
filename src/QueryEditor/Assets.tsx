@@ -3,7 +3,7 @@ import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryOptions } from './QueryOptions'
-import { getChildAssets } from './util'
+import { getChildAssets, matchedAssets } from './util'
 import type { MeasurementQuery, MeasurementQueryState, QueryEditorState } from 'types'
 
 export interface Props {
@@ -19,7 +19,6 @@ export const Assets = ({
   const assetOptions = getChildAssets(null, state.assets)
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
-    // TODO update filter when selectedAsset can also contain a custom regex asset path or multiple assets...
     const selectedAssetProperties = state.assetProperties.filter(e => e.AssetUUID === state.assetsState.selectedAsset && items.map(e => e.value).includes(e.Name))
     const measurements = selectedAssetProperties.map(e => e.MeasurementUUID)
     const updatedQuery = { ...state.assetsState.queryOptions.measurementQuery, Measurements: measurements }
@@ -39,7 +38,7 @@ export const Assets = ({
 
   const availableProperties = (selected: string | undefined): Array<SelectableValue<string>> => {
     return state.assetProperties.
-      filter(e => e.AssetUUID === selected).
+      filter(e => e.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === e.AssetUUID)).
       map(e => { return { label: e.Name, value: e.Name } }).
       filter((value, index, self) => self.indexOf(value) === index)
   }
@@ -78,7 +77,7 @@ export const Assets = ({
             options={assetOptions}
             displayAllSelectedLevels
             onSelect={onAssetChange}
-            separator='\'
+            separator='\\'
           />
         </InlineField>
       </InlineFieldRow>

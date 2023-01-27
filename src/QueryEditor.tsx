@@ -97,7 +97,11 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       },
       assetsState: {
         ...this.state.assetsState,
-        selectedAsset: query.selectedAssetPath
+        selectedAsset: query.tabIndex === 0 ? query.selectedAssetPath : undefined
+      },
+      eventsState: {
+        ...this.state.eventsState,
+        selectedAsset: query.tabIndex === 2 ? query.selectedAssetPath : undefined
       }
     })
     Promise.all([
@@ -167,7 +171,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             tabIndex: query.tabIndex,
             eventsState: {
               ...this.state.eventsState,
-              selectedAsset: eventQuery.Assets && eventQuery.Assets.length > 0 ? eventQuery.Assets[0] : undefined,
+              selectedAsset: query.selectedAssetPath,
               selectedEventTypes: eventQuery.EventTypes ? eventQuery.EventTypes.map(e => { return { label: this.state.eventTypes.find(et => et.UUID === e)?.Name, value: e } }) : undefined
             }
           })
@@ -293,7 +297,14 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     const { onChange, query } = this.props
     query.tabIndex = state.tabIndex
     query.selectedMeasurement = state.measurementsState.selectedMeasurement
-    query.selectedAssetPath = state.assetsState.selectedAsset
+    switch (state.tabIndex) {
+      case 0:
+        query.selectedAssetPath = state.assetsState.selectedAsset
+        break
+      case 2:
+        query.selectedAssetPath = state.eventsState.selectedAsset
+        break
+    }
     onChange(query)
     this.setState(state)
   }

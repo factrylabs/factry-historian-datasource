@@ -117,3 +117,41 @@ export function getSelectedAssetProperties(measurements: string[] | undefined, a
     map(e => { return { label: e.Name, value: e.Name} as SelectableValue<string>}).
     filter((value, index, self) => self.indexOf(value) === index)
 }
+
+export function matchedAssets(regex: string | undefined, assets: Asset[]): Asset[] {
+  if (!regex) {
+    return []
+  }
+
+  let re: RegExp | undefined = undefined
+  try {
+    re = new RegExp(`^${regex}$`)
+  } catch(e) {
+    void e
+  }
+
+  const matched: Asset[] = []
+  for (const asset of assets) {
+    const assetPath = getAssetPath(asset, assets)
+    if (asset.UUID === regex || re?.test(assetPath)) {
+      matched.push(asset)
+    }
+  }
+
+  return matched
+}
+
+export function getAssetPath(asset: Asset, assets: Asset[]): string {
+  if (!asset.ParentUUID) {
+    return asset.Name
+  }
+
+  const parent = assets.find(
+    (item) => item.UUID === asset.ParentUUID
+  )
+  if (parent) {
+    return `${getAssetPath(parent, assets)}\\\\${asset.Name}`
+  }
+
+  return asset.Name
+}

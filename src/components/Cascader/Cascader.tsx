@@ -77,8 +77,8 @@ const DEFAULT_SEPARATOR = '/'
 export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   constructor(props: CascaderProps) {
     super(props);
-    const searchableOptions = this.getSearchableOptions(props.options);
-    const { rcValue, activeLabel } = this.setInitialValue(searchableOptions, props.initialValue);
+    const rcValue = [props.initialValue]
+    const activeLabel = props.initialValue || ''
     this.state = {
       isSearching: false,
       focusCascade: false,
@@ -188,7 +188,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       showSuggestions: true,
       filteredSuggestions: filteredSuggestions
     })
-    // TODO add handler for custom asset paths
+    this.props.onSelect(userInput)
   }
 
   onClickSuggestion = (e: any) => {
