@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
-import { InlineField, InlineFieldRow, Input, Select } from '@grafana/ui'
+import { InlineField, InlineFieldRow, InlineSwitch, Input, Select } from '@grafana/ui'
 import { Aggregation, Attributes, MeasurementQueryState } from 'types'
 import { QueryTag, TagsSection } from 'TagsSection'
 import { getAggregations, getPeriods } from './util'
@@ -63,6 +63,11 @@ export const QueryOptions = ({
     onPeriodChange(customValue)
   }
 
+  const onChangeIncludeLastKnownPoint = (e: any): void => {
+    const updatedQuery = { ...state.measurementQuery, IncludeLastKnownPoint: e.target.checked }
+    onChange({ ...state, measurementQuery: updatedQuery })
+  }
+
   return (
     <div>
       <InlineFieldRow>
@@ -99,6 +104,14 @@ export const QueryOptions = ({
             allowCustomValue
             onChange={onPeriodChange}
             onCreateOption={onCreatePeriod}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="Include last known point" labelWidth={20}>
+          <InlineSwitch
+            value={state.measurementQuery.IncludeLastKnownPoint}
+            onChange={onChangeIncludeLastKnownPoint}
           />
         </InlineField>
       </InlineFieldRow>

@@ -6,10 +6,11 @@ import (
 
 // MeasurementQuery is used to build the time series query to send to the historian
 type MeasurementQuery struct {
-	Measurements []uuid.UUID
-	Tags         map[string]string
-	GroupBy      []string
-	Aggregation  *Aggregation
+	Measurements          []uuid.UUID
+	Tags                  map[string]string
+	GroupBy               []string
+	Aggregation           *Aggregation
+	IncludeLastKnownPoint bool
 }
 
 // RawQuery is used to query raw time series data

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 	"time"
 
@@ -73,9 +74,43 @@ func handleQuery(query Query, backendQuery backend.DataQuery, api *api.API) (dat
 		return nil, err
 	}
 
-	result, err := api.MeasurementQuery(historianQuery(measurementQuery, backendQuery))
+	q := historianQuery(measurementQuery, backendQuery)
+	result, err := api.MeasurementQuery(q)
 	if err != nil {
 		return nil, err
+	}
+
+	if measurementQuery.IncludeLastKnownPoint {
+		start := q.Start
+		q.End = &start
+		q.Start = time.Time{}.Add(time.Millisecond)
+		q.Aggregation = &schemas.Aggregation{
+			Name: "last",
+		}
+		lastKnownPointResult, err := api.MeasurementQuery(q)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, series := range lastKnownPointResult.Series {
+			found := false
+			for i, baseSeries := range result.Series {
+				if baseSeries.Measurement != series.Measurement {
+					continue
+				}
+
+				if !reflect.DeepEqual(baseSeries.Tags, series.Tags) {
+					continue
+				}
+
+				result.Series[i].DataPoints = append(series.DataPoints, result.Series[i].DataPoints...)
+				found = true
+				break
+			}
+			if !found {
+				result.Series = append(result.Series, series)
+			}
+		}
 	}
 
 	measurements := make([]schemas.Measurement, len(measurementQuery.Measurements))

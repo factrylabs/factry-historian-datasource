@@ -107,6 +107,7 @@ export interface MeasurementQuery {
   Tags?: Attributes
   GroupBy?: string[]
   Aggregation?: Aggregation
+  IncludeLastKnownPoint: boolean
 }
 
 export interface EventQuery {

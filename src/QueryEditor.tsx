@@ -43,6 +43,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           Aggregation: {
             Name: 'mean',
           },
+          IncludeLastKnownPoint: false
         },
         filter: {
           Database: '',
@@ -59,6 +60,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           Aggregation: {
             Name: 'mean',
           },
+          IncludeLastKnownPoint: false
         },
         filter: {
           Database: '',
@@ -73,7 +75,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     rawState: {
       rawQuery: {
         Query: '',
-        TimeseriesDatabase: ''
+        TimeseriesDatabase: '',
       },
       filter: {
         Database: '',
