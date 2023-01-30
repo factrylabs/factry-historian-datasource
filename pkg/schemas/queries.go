@@ -21,6 +21,7 @@ type RawQuery struct {
 
 // EventQuery is used to query events
 type EventQuery struct {
-	Assets     []uuid.UUID
-	EventTypes []uuid.UUID
+	Assets         []uuid.UUID
+	EventTypes     []uuid.UUID
+	PropertyFilter []EventPropertyValueFilter
 }

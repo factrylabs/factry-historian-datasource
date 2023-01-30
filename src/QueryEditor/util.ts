@@ -1,7 +1,7 @@
 import { SelectableValue } from "@grafana/data"
 import { CascaderOption } from "components/Cascader/Cascader"
-import { QueryTag } from "TagsSection"
-import { AggregationName, Asset, AssetProperty, Attributes } from "types"
+import { QueryTag } from "components/TagsSection/TagsSection"
+import { AggregationName, Asset, AssetProperty, Attributes, EventPropertyFilter } from "types"
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -102,6 +102,21 @@ export function tagsToQueryTags(tags: Attributes | undefined): QueryTag[] {
       operator: "="
     }
     queryTags = [...queryTags, queryTag]
+  })
+
+  return queryTags
+}
+
+export function propertyFilterToQueryTags(filter: EventPropertyFilter[]): QueryTag[] {
+  let queryTags: QueryTag[] = []
+
+  filter.forEach(f => {
+    queryTags.push({
+      key: f.Property,
+      value: f.Value?.toString() || '',
+      condition: f.Condition,
+      operator: f.Operator
+    })
   })
 
   return queryTags

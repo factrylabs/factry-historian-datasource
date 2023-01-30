@@ -6,9 +6,9 @@ import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
+import { getSelectedAssetProperties, propertyFilterToQueryTags, tagsToQueryTags } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, QueryEditorState, MeasurementQueryState, EventQuery } from './types'
-import { getSelectedAssetProperties, tagsToQueryTags } from 'QueryEditor/util'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -70,7 +70,10 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       selectedMeasurement: '',
     },
     eventsState: {
-      eventQuery: {},
+      eventQuery: {
+        PropertyFilter: []
+      },
+      tags: [],
     },
     rawState: {
       rawQuery: {
@@ -82,6 +85,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       },
     },
     eventTypes: [],
+    eventTypeProperties: [],
     eventConfigurations: [],
     selectedEventTypes: []
   } as QueryEditorState
@@ -108,6 +112,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       this.getTimeSeriesDatabases(),
       this.getAssets(),
       this.getEventTypes(),
+      this.getEventTypeProperties(),
       this.getEventConfigurations(),
       this.loadMeasurementOptions(query.selectedMeasurement || '')
     ]).then(() => {
@@ -158,7 +163,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             measurementsState: {
               ...this.state.measurementsState,
               queryOptions: queryOptions,
-              selectedMeasurement: query.selectedMeasurement
+              selectedMeasurement: query.selectedMeasurement,
             }
           })
           break
@@ -171,6 +176,8 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             tabIndex: query.tabIndex,
             eventsState: {
               ...this.state.eventsState,
+              eventQuery: eventQuery,
+              tags: propertyFilterToQueryTags(eventQuery.PropertyFilter),
               selectedAsset: query.selectedAssetPath,
               selectedEventTypes: eventQuery.EventTypes ? eventQuery.EventTypes.map(e => { return { label: this.state.eventTypes.find(et => et.UUID === e)?.Name, value: e } }) : undefined
             }
@@ -247,6 +254,12 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
   async getEventTypes(): Promise<void> {
     this.props.datasource.getEventTypes().then((eventTypes) => {
       this.saveState({ ...this.state, eventTypes: eventTypes })
+    })
+  }
+
+  async getEventTypeProperties(): Promise<void> {
+    this.props.datasource.getEventTypeProperties().then((eventTypeProperties) => {
+      this.saveState({ ...this.state, eventTypeProperties: eventTypeProperties })
     })
   }
 

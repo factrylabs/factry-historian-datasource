@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { InlineField, InlineFieldRow, InlineSwitch, Input, Select } from '@grafana/ui'
 import { Aggregation, Attributes, MeasurementQueryState } from 'types'
-import { QueryTag, TagsSection } from 'TagsSection'
+import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { getAggregations, getPeriods } from './util'
 
 export interface Props {
@@ -85,6 +85,7 @@ export const QueryOptions = ({
         <InlineField label="Tags" labelWidth={20}>
           <TagsSection
             tags={state.tags}
+            conditions={['AND']}
             onChange={handleTagsSectionChange}
           />
         </InlineField>

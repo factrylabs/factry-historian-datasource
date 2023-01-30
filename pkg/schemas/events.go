@@ -42,18 +42,28 @@ type Event struct {
 type EventFilter struct {
 	StartTime           time.Time
 	StopTime            time.Time
-	Assets              []uuid.UUID `url:",brackets"`
-	EventTypes          []uuid.UUID `url:",brackets"`
+	Assets              []uuid.UUID
+	EventTypes          []uuid.UUID
 	Status              []string
 	EventConfigurations []uuid.UUID
 	ExcludeManualEvents bool
 	Ascending           bool
 	PreloadProperties   bool
-	Limit               int `url:"limit"`
+	PropertyFilter      []EventPropertyValueFilter
+	Limit               int
 }
 
 // EventProperties is the database representation of event properties
 type EventProperties struct {
 	Properties Attributes
 	EventUUID  uuid.UUID
+}
+
+// EventPropertyValueFilter us used to filter event property values
+type EventPropertyValueFilter struct {
+	Property  string
+	Datatype  string
+	Value     interface{}
+	Operator  string
+	Condition string
 }

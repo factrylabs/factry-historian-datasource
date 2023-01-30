@@ -17,6 +17,7 @@ const (
 	ResourceTypeDatabases           = "databases"
 	ResourceTypeAssetProperties     = "asset-properties"
 	ResourceTypeEventTypes          = "event-types"
+	ResourceTypeEventTypeProperties = "event-type-properties"
 	ResourceTypeEventConfigurations = "event-configurations"
 )
 
@@ -96,6 +97,13 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 		}
 
 		return resource.SendJSON(sender, o)
+	case ResourceTypeEventTypeProperties:
+		o, err := dsi.API.GetEventTypeProperties()
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, o)
 	case ResourceTypeEventConfigurations:
 		o, err := dsi.API.GetEventConfigurations()
 		if err != nil {
@@ -104,5 +112,6 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 
 		return resource.SendJSON(sender, o)
 	}
+
 	return ErrorInvalidResourceCallQuery
 }

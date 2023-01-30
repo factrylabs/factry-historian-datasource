@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 
-	qs "github.com/google/go-querystring/query"
 	"github.com/google/uuid"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 )
@@ -31,12 +30,8 @@ func (api *API) RawQuery(timeseriesDatabase uuid.UUID, query schemas.RawQuery) (
 // EventQuery executes an event query
 func (api *API) EventQuery(filter schemas.EventFilter) ([]schemas.Event, error) {
 	queryResult := []schemas.Event{}
-	queryString, err := qs.Values(filter)
-	if err != nil {
-		return nil, err
-	}
 
-	if err := api.client.Get(fmt.Sprintf("/api/events?%s", queryString.Encode()), &queryResult); err != nil {
+	if err := api.client.Post("/api/events", filter, &queryResult); err != nil {
 		return nil, err
 	}
 

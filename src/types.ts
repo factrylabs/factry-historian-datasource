@@ -1,5 +1,5 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data'
-import { QueryTag } from 'TagsSection'
+import { QueryTag } from 'components/TagsSection/TagsSection'
 
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +18,7 @@ export interface QueryEditorState {
   eventsState: EventsTabState
   rawState: RawTabState
   eventTypes: EventType[]
+  eventTypeProperties: EventTypeProperty[]
   eventConfigurations: EventConfiguration[]
 }
 
@@ -41,6 +42,7 @@ export interface EventsTabState {
   eventQuery: EventQuery
   selectedAsset?: string
   selectedEventTypes?: Array<SelectableValue<string>>
+  tags: QueryTag[]
 }
 
 export interface MeasurementQueryState {
@@ -113,6 +115,7 @@ export interface MeasurementQuery {
 export interface EventQuery {
   Assets?: string[]
   EventTypes?: string[]
+  PropertyFilter: EventPropertyFilter[]
 }
 
 export interface MeasurementFilter {
@@ -123,6 +126,14 @@ export interface MeasurementFilter {
   Statuses?: string[]
   WithBadQualityOnly?: boolean
   ExcludeCalculations?: boolean
+}
+
+export interface EventPropertyFilter {
+  Property: string
+  Datatype: string
+  Value: string | number | boolean
+  Operator: string
+  Condition: string
 }
 
 export interface Pagination {
@@ -186,6 +197,19 @@ export interface EventType {
   Name: string
   UUID: string
   Description: string
+}
+
+export enum PropertyDatatype {
+  Number = 'number',
+  Bool = 'boolean',
+  String = 'string'
+}
+
+export interface EventTypeProperty {
+  Name: string
+  UUID: string
+  EventTypeUUID: string
+  Datatype: PropertyDatatype
 }
 
 export interface EventConfiguration {

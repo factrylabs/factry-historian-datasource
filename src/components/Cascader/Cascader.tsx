@@ -22,6 +22,7 @@ export interface CascaderProps {
   /** Sets the width to a multiple of 8px. Should only be used with inline forms. Setting width of the container is preferred in other cases.*/
   width?: number;
   initialValue?: string;
+  initialLabel?: string
   allowCustomValue?: boolean;
   /** A function for formatting the message for custom value creation. Only applies when allowCustomValue is set to true*/
   formatCreateLabel?: (val: string) => string;
@@ -78,7 +79,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   constructor(props: CascaderProps) {
     super(props);
     const rcValue = [props.initialValue]
-    const activeLabel = props.initialValue || ''
+    const activeLabel = props.initialLabel || ''
     this.state = {
       isSearching: false,
       focusCascade: false,

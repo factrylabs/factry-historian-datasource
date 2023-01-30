@@ -157,6 +157,7 @@ func handleEventQuery(query Query, backendQuery backend.DataQuery, api *api.API)
 		EventTypes:        eventQuery.EventTypes,
 		PreloadProperties: true,
 		Limit:             math.MaxInt32,
+		PropertyFilter:    eventQuery.PropertyFilter,
 	}
 
 	events, err := api.EventQuery(filter)

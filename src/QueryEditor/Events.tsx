@@ -2,8 +2,9 @@ import React from 'react'
 import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
-import { getChildAssets, matchedAssets } from './util'
-import type { EventQuery, QueryEditorState } from 'types'
+import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
+import { getAssetPath, getChildAssets, matchedAssets } from './util'
+import { EventPropertyFilter, EventQuery, PropertyDatatype, QueryEditorState } from 'types'
 
 export interface Props {
   state: QueryEditorState
@@ -49,12 +50,94 @@ export const Events = ({
     })
   }
 
+  const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
+    const filter: EventPropertyFilter[] = []
+    updatedTags.forEach(tag => {
+      if (tag.value === undefined || tag.value === 'select tag value') {
+        return
+      }
+
+      const dataType = getDatatype(tag.key)
+      let eventPropertyFilter: EventPropertyFilter = {
+        Property: tag.key,
+        Datatype: dataType,
+        Condition: tag.condition || '',
+        Operator: tag.operator || '=',
+        Value: ''
+      }
+      switch (dataType) {
+        case PropertyDatatype.Number:
+          eventPropertyFilter.Value = parseFloat(tag.value)
+          break
+        case PropertyDatatype.Bool:
+          eventPropertyFilter.Value = tag.value.toLowerCase() === 'true'
+          break
+        case PropertyDatatype.String:
+          eventPropertyFilter.Value = tag.value
+          break
+      }
+      filter.push(eventPropertyFilter)
+    })
+    const updatedQuery = { ...state.eventsState.eventQuery, PropertyFilter: filter } as EventQuery
+    onChangeEventQuery(updatedQuery)
+    saveState({
+      ...state, eventsState: {
+        ...state.eventsState,
+        tags: updatedTags
+      }
+    } as QueryEditorState)
+  }
+
+  const getDatatype = (property: string): PropertyDatatype => {
+    const datatype = state.eventTypeProperties.
+      filter(e => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID)).
+      find(e => e.Name === property)?.Datatype
+
+    if (!datatype) {
+      return PropertyDatatype.Number
+    }
+
+    return datatype
+  }
+
+  const availableProperties = (): string[] => {
+    return [...new Set(state.eventTypeProperties.
+      filter(e => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID)).
+      map(e => e.Name))]
+  }
+
+  const availablePropertyValues = (key: string): string[] => {
+    const eventTypeProperty = state.eventTypeProperties.
+      filter(e => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID)).
+      find(e => e.Name === key)
+
+    if (!eventTypeProperty) {
+      return []
+    }
+
+    if (eventTypeProperty.Datatype !== PropertyDatatype.Bool) {
+      return []
+    }
+
+    return ['true', 'false']
+  }
+
+  const initialLabel = (): string => {
+    const asset = state.assets.find(e => e.UUID === state.eventsState.selectedAsset)
+    if (asset) {
+      return getAssetPath(asset, state.assets)
+    }
+
+    return state.eventsState.selectedAsset || ''
+  }
+
   return (
     <div>
       <InlineFieldRow>
         <InlineField label="Asset" grow labelWidth={20} tooltip="Specify an asset to work with">
           <Cascader
             initialValue={state.eventsState.selectedAsset}
+            initialLabel={initialLabel()}
             options={assetOptions}
             displayAllSelectedLevels
             onSelect={onAssetChange}
@@ -68,6 +151,17 @@ export const Events = ({
             value={state.eventsState.selectedEventTypes}
             options={availableEventTypes(state.eventsState.selectedAsset)}
             onChange={onSelectEventTypes}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="WHERE" labelWidth={20}>
+          <TagsSection
+            tags={state.eventsState.tags}
+            operators={["=", '!=', '<', '<=', '>', '>=']}
+            getTagKeyOptions={() => Promise.resolve(availableProperties())}
+            getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
+            onChange={handleTagsSectionChange}
           />
         </InlineField>
       </InlineFieldRow>
