@@ -6,9 +6,9 @@ import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
-import { getSelectedAssetProperties, propertyFilterToQueryTags, tagsToQueryTags } from 'QueryEditor/util'
+import { propertyFilterToQueryTags, tagsToQueryTags } from 'QueryEditor/util'
 import { DataSource } from './datasource'
-import type { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, QueryEditorState, MeasurementQueryState, EventQuery } from './types'
+import { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, QueryEditorState, MeasurementQueryState, EventQuery, AssetMeasurementQuery, AssetMeasurementQueryState, TabIndex } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -18,13 +18,14 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     this.loadMeasurementOptions = this.loadMeasurementOptions.bind(this)
     this.onChangeRawQuery = this.onChangeRawQuery.bind(this)
     this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
+    this.onChangeAssetMeasurementQuery = this.onChangeAssetMeasurementQuery.bind(this)
     this.onChangeEventQuery = this.onChangeEventQuery.bind(this)
     this.saveState = this.saveState.bind(this)
   }
 
   state = {
     loading: true,
-    tabIndex: 0,
+    tabIndex: TabIndex.Assets,
     filter: {
       Database: '',
     },
@@ -37,17 +38,19 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     assetProperties: [],
     assets: [],
     assetsState: {
-      queryOptions: {
-        measurementQuery: {
-          GroupBy: ['status'],
-          Aggregation: {
-            Name: 'mean',
+      options: {
+        query: {
+          Asset: '',
+          AssetProperties: [],
+          Options: {
+            Database: '',
+            GroupBy: ['status'],
+            Aggregation: {
+              Name: 'mean',
+            },
+            IncludeLastKnownPoint: false,
+            UseEngineeringSpecs: true
           },
-          IncludeLastKnownPoint: false,
-          UseEngineeringSpecs: true
-        },
-        filter: {
-          Database: '',
         },
         tags: [],
       },
@@ -55,19 +58,22 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       selectedProperties: []
     },
     measurementsState: {
-      queryOptions: {
-        measurementQuery: {
-          GroupBy: ['status'],
-          Aggregation: {
-            Name: 'mean',
-          },
-          IncludeLastKnownPoint: false,
-          UseEngineeringSpecs: true
+      options: {
+        query: {
+          Database: '',
+          Options: {
+            GroupBy: ['status'],
+            Aggregation: {
+              Name: 'mean',
+            },
+            IncludeLastKnownPoint: false,
+            UseEngineeringSpecs: true
+          }
         },
         filter: {
           Database: '',
         },
-        tags: [],
+        tags: []
       },
       selectedMeasurement: '',
     },
@@ -103,11 +109,11 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       },
       assetsState: {
         ...this.state.assetsState,
-        selectedAsset: query.tabIndex === 0 ? query.selectedAssetPath : undefined
+        selectedAsset: query.tabIndex === TabIndex.Assets ? query.selectedAssetPath : undefined
       },
       eventsState: {
         ...this.state.eventsState,
-        selectedAsset: query.tabIndex === 2 ? query.selectedAssetPath : undefined
+        selectedAsset: query.tabIndex === TabIndex.Events ? query.selectedAssetPath : undefined
       }
     })
 
@@ -116,19 +122,16 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         this.saveState({
           ...this.state,
           loading: false,
-          tabIndex: 0
+          tabIndex: TabIndex.Assets
         })
         return
       }
       switch (query.tabIndex) {
-        case 0: { // assets
-          const measurementQuery = query.query as MeasurementQuery
-          const queryOptions: MeasurementQueryState = {
-            tags: tagsToQueryTags(measurementQuery.Tags),
-            filter: {
-              Database: ''
-            },
-            measurementQuery: measurementQuery
+        case TabIndex.Assets: {
+          const assetMeasurementQuery = query.query as AssetMeasurementQuery
+          const queryOptions: AssetMeasurementQueryState = {
+            tags: tagsToQueryTags(assetMeasurementQuery.Options.Tags),
+            query: assetMeasurementQuery
           }
           this.saveState({
             ...this.state,
@@ -136,21 +139,21 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             tabIndex: query.tabIndex,
             assetsState: {
               ...this.state.assetsState,
-              queryOptions: queryOptions,
+              options: queryOptions,
               selectedAsset: query.selectedAssetPath,
-              selectedProperties: getSelectedAssetProperties(measurementQuery.Measurements, this.state.assetProperties)
+              selectedProperties: assetMeasurementQuery.AssetProperties.map(e => { return { label: e, value: e } as SelectableValue<string> })
             }
           })
           break
         }
-        case 1: { // measurements
+        case TabIndex.Measurements: {
           const measurementQuery = query.query as MeasurementQuery
           const queryOptions: MeasurementQueryState = {
-            tags: tagsToQueryTags(measurementQuery.Tags),
+            tags: tagsToQueryTags(measurementQuery.Options.Tags),
             filter: {
-              Database: ''
+              Database: measurementQuery.Database
             },
-            measurementQuery: measurementQuery
+            query: measurementQuery
           }
           this.saveState({
             ...this.state,
@@ -158,13 +161,13 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             tabIndex: query.tabIndex,
             measurementsState: {
               ...this.state.measurementsState,
-              queryOptions: queryOptions,
+              options: queryOptions,
               selectedMeasurement: query.selectedMeasurement,
             }
           })
           break
         }
-        case 2: // events
+        case TabIndex.Events:
           const eventQuery = query.query as EventQuery
           this.saveState({
             ...this.state,
@@ -179,7 +182,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             }
           })
           break
-        case 3: // raw query
+        case TabIndex.RawQuery:
           const rawQuery = query.query as RawQuery
           this.saveState({
             ...this.state,
@@ -200,21 +203,21 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
 
   loadDataForTab(query: Query): Promise<void> {
     let promises = []
-    switch (query.tabIndex || 0) {
-      case 0:
+    switch (query.tabIndex || TabIndex.Assets) {
+      case TabIndex.Assets:
         promises.push(this.getAssets())
         break
-      case 1:
+      case TabIndex.Measurements:
         promises.push(this.getTimeSeriesDatabases())
-        promises.push(this.loadMeasurementOptions(query.selectedMeasurement || ''))
+        promises.push(this.loadMeasurementOptions(getTemplateSrv().replace(query.selectedMeasurement) || ''))
         break
-      case 2:
+      case TabIndex.Events:
         promises.push(this.getAssets())
         promises.push(this.getEventTypes())
         promises.push(this.getEventTypeProperties())
         promises.push(this.getEventConfigurations())
         break
-      case 3:
+      case TabIndex.RawQuery:
         promises.push(this.getTimeSeriesDatabases())
         break
     }
@@ -227,17 +230,17 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     const { query } = this.props
     this.loadDataForTab(query)
     switch (index) {
-      case 0:
-        if (this.state.assetsState.queryOptions.measurementQuery) {
-          this.onChangeMeasurementQuery(this.state.assetsState.queryOptions.measurementQuery)
+      case TabIndex.Assets:
+        if (this.state.assetsState.options.query) {
+          this.onChangeAssetMeasurementQuery(this.state.assetsState.options.query)
         }
         break
-      case 1:
-        if (this.state.measurementsState.queryOptions.measurementQuery) {
-          this.onChangeMeasurementQuery(this.state.measurementsState.queryOptions.measurementQuery)
+      case TabIndex.Measurements:
+        if (this.state.measurementsState.options.query) {
+          this.onChangeMeasurementQuery(this.state.measurementsState.options.query)
         }
         break
-      case 3:
+      case TabIndex.RawQuery:
         if (this.state.rawState.rawQuery?.Query) {
           this.onChangeRawQuery(this.state.rawState.rawQuery.Query)
         }
@@ -253,7 +256,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
 
   async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
     const result: Array<SelectableValue<string>> = []
-    const filter = { ...this.state.measurementsState.queryOptions.filter, Keyword: query }
+    const filter = { ...this.state.measurementsState.options.filter, Keyword: query }
     await this.props.datasource.getMeasurements(filter, this.state.pagination).then((measurements) => {
       this.saveState({ ...this.state, measurements: measurements })
       measurements.forEach((measurement) => {
@@ -290,6 +293,14 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     })
   }
 
+  onChangeAssetMeasurementQuery(assetMeasurementQuery: AssetMeasurementQuery): void {
+    const { onChange, query } = this.props
+    query.queryType = 'AssetMeasurementQuery'
+    query.query = assetMeasurementQuery
+    onChange(query)
+    this.onRunQuery(this.props)
+  }
+
   onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'MeasurementQuery'
@@ -301,9 +312,6 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
   onChangeRawQuery(queryString: string): void {
     const { onChange, query } = this.props
     query.queryType = 'RawQuery'
-    if (getTemplateSrv().getVariables().length > 0) {
-      queryString = getTemplateSrv().replace(queryString)
-    }
     query.query = {
       TimeseriesDatabase: this.state.rawState.filter.Database,
       Query: queryString,
@@ -332,10 +340,11 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     query.tabIndex = state.tabIndex
     query.selectedMeasurement = state.measurementsState.selectedMeasurement
     switch (state.tabIndex) {
-      case 0:
+      case TabIndex.Assets:
         query.selectedAssetPath = state.assetsState.selectedAsset
+        query.selectedAssetProperties = state.assetsState.selectedProperties.map(e => e.value || '')
         break
-      case 2:
+      case TabIndex.Events:
         query.selectedAssetPath = state.eventsState.selectedAsset
         break
     }
@@ -360,6 +369,13 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       }
     }
 
+    if (props.query.queryType === 'AssetMeasurementQuery') {
+      const query = props.query.query as AssetMeasurementQuery
+      if (!query.Asset || !query?.AssetProperties) {
+        return
+      }
+    }
+
     if (props.query.queryType === 'EventQuery') {
       const query = props.query.query as EventQuery
       if (!query?.EventTypes || !query?.Assets) {
@@ -377,7 +393,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           <Assets
             state={this.state}
             saveState={this.saveState}
-            onChangeMeasurementQuery={this.onChangeMeasurementQuery}
+            onChangeAssetMeasurementQuery={this.onChangeAssetMeasurementQuery}
           />
         ),
       },

@@ -1,7 +1,8 @@
 import { SelectableValue } from "@grafana/data"
+import { getTemplateSrv } from "@grafana/runtime"
 import { CascaderOption } from "components/Cascader/Cascader"
 import { QueryTag } from "components/TagsSection/TagsSection"
-import { AggregationName, Asset, AssetProperty, Attributes, EventPropertyFilter } from "types"
+import { AggregationName, Asset, Attributes, EventPropertyFilter } from "types"
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -122,17 +123,6 @@ export function propertyFilterToQueryTags(filter: EventPropertyFilter[]): QueryT
   return queryTags
 }
 
-export function getSelectedAssetProperties(measurements: string[] | undefined, assetProperties: AssetProperty[]): Array<SelectableValue<string>> {
-  if (!measurements) {
-    return []
-  }
-
-  return assetProperties.
-    filter(e => measurements.includes(e.MeasurementUUID)).
-    map(e => { return { label: e.Name, value: e.Name} as SelectableValue<string>}).
-    filter((value, index, self) => self.indexOf(value) === index)
-}
-
 export function matchedAssets(regex: string | undefined, assets: Asset[]): Asset[] {
   if (!regex) {
     return []
@@ -169,4 +159,17 @@ export function getAssetPath(asset: Asset, assets: Asset[]): string {
   }
 
   return asset.Name
+}
+
+export function replaceAsset(value: string | undefined, assets: Asset[]): string | undefined {
+  const template = getTemplateSrv()
+  if (template.containsTemplate(value)) {
+    const replacedValue = template.replace(value)
+    const asset = assets.find(e => getAssetPath(e, assets) === replacedValue || e.UUID === replacedValue)
+    if (asset) {
+      return asset.UUID
+    }
+  }
+
+  return value
 }

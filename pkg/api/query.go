@@ -18,9 +18,9 @@ func (api *API) MeasurementQuery(query schemas.Query) (*schemas.QueryResult, err
 }
 
 // RawQuery executes a raw time series query
-func (api *API) RawQuery(timeseriesDatabase uuid.UUID, query schemas.RawQuery) (*schemas.QueryResult, error) {
+func (api *API) RawQuery(timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuery) (*schemas.QueryResult, error) {
 	queryResult := &schemas.QueryResult{}
-	if err := api.client.Post(fmt.Sprintf("/api/timeseries/%v/raw_query", timeseriesDatabase), query, queryResult); err != nil {
+	if err := api.client.Post(fmt.Sprintf("/api/timeseries/%v/raw-query", timeseriesDatabaseUUID), query, queryResult); err != nil {
 		return nil, err
 	}
 
@@ -30,8 +30,7 @@ func (api *API) RawQuery(timeseriesDatabase uuid.UUID, query schemas.RawQuery) (
 // EventQuery executes an event query
 func (api *API) EventQuery(filter schemas.EventFilter) ([]schemas.Event, error) {
 	queryResult := []schemas.Event{}
-
-	if err := api.client.Post("/api/events", filter, &queryResult); err != nil {
+	if err := api.client.Post("/api/events/query", filter, &queryResult); err != nil {
 		return nil, err
 	}
 

@@ -5,6 +5,13 @@ import { QueryTag } from 'components/TagsSection/TagsSection'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Attributes = Record<string, any>
 
+export enum TabIndex {
+  Assets,
+  Measurements,
+  Events,
+  RawQuery
+}
+
 export interface QueryEditorState {
   loading: boolean
   tabIndex: number
@@ -23,13 +30,13 @@ export interface QueryEditorState {
 }
 
 export interface AssetsTabState {
-  queryOptions: MeasurementQueryState
+  options: AssetMeasurementQueryState
   selectedAsset?: string
   selectedProperties: Array<SelectableValue<string>>
 }
 
 export interface MeasurementsTabState {
-  queryOptions: MeasurementQueryState
+  options: MeasurementQueryState
   selectedMeasurement?: string
 }
 
@@ -46,16 +53,22 @@ export interface EventsTabState {
 }
 
 export interface MeasurementQueryState {
-  measurementQuery: MeasurementQuery
+  query: MeasurementQuery
   filter: MeasurementFilter
   tags: QueryTag[]
 }
 
+export interface AssetMeasurementQueryState {
+  query: AssetMeasurementQuery
+  tags: QueryTag[]
+}
+
 export interface Query extends DataQuery {
-  query: MeasurementQuery | RawQuery | EventQuery
+  query: MeasurementQuery | AssetMeasurementQuery | RawQuery | EventQuery
   tabIndex: number
   selectedMeasurement?: string
   selectedAssetPath?: string
+  selectedAssetProperties?: string[]
 }
 
 export const defaultQuery: Partial<Query> = {
@@ -104,13 +117,24 @@ export interface Aggregation {
   Fill?: string
 }
 
-export interface MeasurementQuery {
-  Measurements?: string[]
+export interface MeasurementQueryOptions {
   Tags?: Attributes
   GroupBy?: string[]
   Aggregation?: Aggregation
   IncludeLastKnownPoint: boolean
   UseEngineeringSpecs: boolean
+}
+
+export interface MeasurementQuery {
+  Database: string
+  Measurements?: string[]
+  Options: MeasurementQueryOptions
+}
+
+export interface AssetMeasurementQuery {
+  Asset: string
+  AssetProperties: string[]
+  Options: MeasurementQueryOptions
 }
 
 export interface EventQuery {

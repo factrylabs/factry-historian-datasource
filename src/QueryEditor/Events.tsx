@@ -1,6 +1,7 @@
 import React from 'react'
 import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
+import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { getAssetPath, getChildAssets, matchedAssets } from './util'
@@ -19,7 +20,14 @@ export const Events = ({
   const assetOptions = getChildAssets(null, state.assets)
 
   const onSelectEventTypes = (items: Array<SelectableValue<string>>): void => {
-    const eventTypes = state.eventTypes.filter(e => items.map(e => e.value).includes(e.UUID)).map(e => e.UUID)
+    const eventTypes = items.map(e => {
+      const eventType = state.eventTypes.find(et => et.Name === e.value)
+      if (eventType) {
+        return eventType.UUID
+      }
+
+      return e.value || ''
+    })
     const updatedQuery = { ...state.eventsState.eventQuery, EventTypes: eventTypes }
     saveState({
       ...state,
@@ -35,11 +43,12 @@ export const Events = ({
   const availableEventTypes = (selected: string | undefined): Array<SelectableValue<string>> => {
     return state.eventTypes.
       filter(e => state.eventConfigurations.some(ec => (ec.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === ec.AssetUUID)) && ec.EventTypeUUID === e.UUID)).
-      map(e => { return { label: e.Name, value: e.UUID } })
+      map(e => { return { label: e.Name, value: e.UUID } }).
+      concat(getTemplateSrv().getVariables().map((e => { return { label: `$${e.name}`, value: `$${e.name}` } })))
   }
 
   const onAssetChange = (value: string): void => {
-    const updatedQuery = { ...state.eventsState.eventQuery, Assets: matchedAssets(value, state.assets).map(e => e.UUID) }
+    const updatedQuery = { ...state.eventsState.eventQuery, Assets: matchedAssets(getTemplateSrv().replace(value), state.assets).map(e => e.UUID) }
     saveState({
       ...state,
       eventsState: {
@@ -149,7 +158,7 @@ export const Events = ({
         <InlineField label="Event type" grow labelWidth={20} tooltip="Specify one or more event type to work with">
           <MultiSelect
             value={state.eventsState.selectedEventTypes}
-            options={availableEventTypes(state.eventsState.selectedAsset)}
+            options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
             onChange={onSelectEventTypes}
           />
         </InlineField>

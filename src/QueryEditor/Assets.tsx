@@ -1,71 +1,86 @@
 import React from 'react'
 import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
+import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
+import { QueryTag } from 'components/TagsSection/types'
 import { QueryOptions } from './QueryOptions'
-import { getAssetPath, getChildAssets, matchedAssets } from './util'
-import type { MeasurementQuery, MeasurementQueryState, QueryEditorState } from 'types'
+import { getAssetPath, getChildAssets, matchedAssets, replaceAsset } from './util'
+import type { AssetMeasurementQuery, MeasurementQueryOptions, QueryEditorState } from 'types'
 
 export interface Props {
   state: QueryEditorState
   saveState(state: QueryEditorState): void
-  onChangeMeasurementQuery: (query: MeasurementQuery) => void
+  onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
 }
 
 export const Assets = ({
   state, saveState,
-  onChangeMeasurementQuery
+  onChangeAssetMeasurementQuery
 }: Props): JSX.Element => {
+  const replacedAsset = replaceAsset(state.assetsState.selectedAsset, state.assets)
   const assetOptions = getChildAssets(null, state.assets)
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
-    const selectedAssetProperties = state.assetProperties.filter(e => e.AssetUUID === state.assetsState.selectedAsset && items.map(e => e.value).includes(e.Name))
-    const measurements = selectedAssetProperties.map(e => e.MeasurementUUID)
-    const updatedQuery = { ...state.assetsState.queryOptions.measurementQuery, Measurements: measurements }
+    const assetProperties = items.map(e => e.value)
+    const updatedQuery = { ...state.assetsState.options.query, AssetProperties: assetProperties } as AssetMeasurementQuery
     saveState({
       ...state,
       assetsState: {
         ...state.assetsState,
         selectedProperties: items,
-        queryOptions: {
-          ...state.assetsState.queryOptions,
-          measurementQuery: updatedQuery
+        options: {
+          ...state.assetsState.options,
+          query: updatedQuery
         }
-      }
+      },
     })
-    onChangeMeasurementQuery(updatedQuery)
+    onChangeAssetMeasurementQuery(updatedQuery)
   }
 
   const availableProperties = (selected: string | undefined): Array<SelectableValue<string>> => {
     return state.assetProperties.
       filter(e => e.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === e.AssetUUID)).
       map(e => { return { label: e.Name, value: e.Name } }).
-      filter((value, index, self) => self.indexOf(value) === index)
+      filter((value, index, self) => self.indexOf(value) === index).
+      concat(getTemplateSrv().getVariables().map(e => { return { label: `$${e.name}`, value: `$${e.name}` } }))
   }
 
   const onAssetChange = (value: string): void => {
+    const updatedQuery = { ...state.assetsState.options.query, Asset: value } as AssetMeasurementQuery
     saveState({
       ...state,
       assetsState: {
         ...state.assetsState,
-        queryOptions: {
-          ...state.assetsState.queryOptions,
-          filter: { ...state.assetsState.queryOptions.filter, Asset: value }
+        options: {
+          ...state.assetsState.options,
+          query: updatedQuery
         },
         selectedAsset: value
       }
     })
+    onChangeAssetMeasurementQuery(updatedQuery)
   }
 
-  const handleChangeMeasurementQuery = (options: MeasurementQueryState): void => {
+  const handleChangeMeasurementQueryOptions = (options: MeasurementQueryOptions, tags: QueryTag[]): void => {
     saveState({
       ...state,
       assetsState: {
         ...state.assetsState,
-        queryOptions: options
+        options: {
+          ...state.assetsState.options,
+          query: {
+            ...state.assetsState.options.query,
+            Options: options
+          },
+          tags: tags
+        }
       }
     })
-    onChangeMeasurementQuery(options.measurementQuery)
+    onChangeAssetMeasurementQuery({
+      ...state.assetsState.options.query,
+      Options: options
+    })
   }
 
   const initialLabel = (): string => {
@@ -95,14 +110,16 @@ export const Assets = ({
         <InlineField label="Properties" grow labelWidth={20} tooltip="Specify one or more asset properties to work with">
           <MultiSelect
             value={state.assetsState.selectedProperties}
-            options={availableProperties(state.assetsState.selectedAsset)}
+            options={availableProperties(replacedAsset)}
             onChange={onSelectProperties}
+            allowCustomValue
           />
         </InlineField>
       </InlineFieldRow>
       <QueryOptions
-        state={state.assetsState.queryOptions}
-        onChange={handleChangeMeasurementQuery}
+        state={state.assetsState.options.query.Options}
+        tags={state.assetsState.options.tags}
+        onChange={handleChangeMeasurementQueryOptions}
       />
     </div>
   )
