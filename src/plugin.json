@@ -6,6 +6,7 @@
   "metrics": true,
   "backend": true,
   "executable": "gpx_factry-historian-datasource",
+  "alerting": true,
   "info": {
     "description": "A datasource plugin for Factry Historian",
     "author": {
