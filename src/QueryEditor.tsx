@@ -108,14 +108,8 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         selectedAsset: query.tabIndex === 2 ? query.selectedAssetPath : undefined
       }
     })
-    Promise.all([
-      this.getTimeSeriesDatabases(),
-      this.getAssets(),
-      this.getEventTypes(),
-      this.getEventTypeProperties(),
-      this.getEventConfigurations(),
-      this.loadMeasurementOptions(query.selectedMeasurement || '')
-    ]).then(() => {
+
+    this.loadDataForTab(query).then(() => {
       if (!query.query) {
         this.saveState({
           ...this.state,
@@ -202,9 +196,34 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     })
   }
 
-  setTabIndex(index: number) {
-    this.saveState({ ...this.state, tabIndex: index })
+  loadDataForTab(query: Query): Promise<void> {
+    let promises = []
+    switch (query.tabIndex || 0) {
+      case 0:
+        promises.push(this.getAssets())
+        break
+      case 1:
+        promises.push(this.getTimeSeriesDatabases())
+        promises.push(this.loadMeasurementOptions(query.selectedMeasurement || ''))
+        break
+      case 2:
+        promises.push(this.getAssets())
+        promises.push(this.getEventTypes())
+        promises.push(this.getEventTypeProperties())
+        promises.push(this.getEventConfigurations())
+        break
+      case 3:
+        promises.push(this.getTimeSeriesDatabases())
+        break
+    }
 
+    return Promise.all(promises).then()
+  }
+
+  setTabIndex(index: number): void {
+    this.saveState({ ...this.state, tabIndex: index })
+    const { query } = this.props
+    this.loadDataForTab(query)
     switch (index) {
       case 0:
         if (this.state.assetsState.queryOptions.measurementQuery) {
