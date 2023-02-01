@@ -36,7 +36,7 @@ func TestQueryResultToDataFrame(t *testing.T) {
 		},
 	}
 
-	dataFrames, err := datasource.QueryResultToDataFrame(nil, queryResult)
+	dataFrames, err := datasource.QueryResultToDataFrame(nil, true, queryResult)
 	if assert.NoError(t, err) && assert.Len(t, dataFrames, 1) {
 		assert.Equal(t, "measurement name", dataFrames[0].Name)
 		if assert.Len(t, dataFrames[0].Fields, 2) {

@@ -11,6 +11,7 @@ type MeasurementQuery struct {
 	GroupBy               []string
 	Aggregation           *Aggregation
 	IncludeLastKnownPoint bool
+	UseEngineeringSpecs   bool
 }
 
 // RawQuery is used to query raw time series data

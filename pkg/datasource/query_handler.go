@@ -123,7 +123,7 @@ func handleQuery(query Query, backendQuery backend.DataQuery, api *api.API) (dat
 		measurements[i] = measurement
 	}
 
-	return QueryResultToDataFrame(measurements, result)
+	return QueryResultToDataFrame(measurements, measurementQuery.UseEngineeringSpecs, result)
 }
 
 func handleRawQuery(query Query, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
@@ -140,7 +140,7 @@ func handleRawQuery(query Query, backendQuery backend.DataQuery, api *api.API) (
 		return nil, err
 	}
 
-	return QueryResultToDataFrame(nil, result)
+	return QueryResultToDataFrame(nil, false, result)
 }
 
 func handleEventQuery(query Query, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {

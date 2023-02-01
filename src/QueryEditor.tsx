@@ -43,7 +43,8 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           Aggregation: {
             Name: 'mean',
           },
-          IncludeLastKnownPoint: false
+          IncludeLastKnownPoint: false,
+          UseEngineeringSpecs: true
         },
         filter: {
           Database: '',
@@ -60,7 +61,8 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           Aggregation: {
             Name: 'mean',
           },
-          IncludeLastKnownPoint: false
+          IncludeLastKnownPoint: false,
+          UseEngineeringSpecs: true
         },
         filter: {
           Database: '',

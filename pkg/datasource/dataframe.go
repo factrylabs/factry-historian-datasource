@@ -10,7 +10,7 @@ import (
 )
 
 // QueryResultToDataFrame converts a query result to data frames
-func QueryResultToDataFrame(measurements []schemas.Measurement, queryResult *schemas.QueryResult) (data.Frames, error) {
+func QueryResultToDataFrame(measurements []schemas.Measurement, useEngineeringSpecs bool, queryResult *schemas.QueryResult) (data.Frames, error) {
 	dataFrames := data.Frames{}
 
 	for _, series := range queryResult.Series {
@@ -21,14 +21,14 @@ func QueryResultToDataFrame(measurements []schemas.Measurement, queryResult *sch
 				break
 			}
 		}
-		frame := data.NewFrame(series.Measurement, seriesToFields(series, seriesMeasurement)...)
+		frame := data.NewFrame(series.Measurement, seriesToFields(series, seriesMeasurement, useEngineeringSpecs)...)
 		dataFrames = append(dataFrames, frame)
 	}
 
 	return dataFrames, nil
 }
 
-func seriesToFields(series *schemas.Series, measurement schemas.Measurement) []*data.Field {
+func seriesToFields(series *schemas.Series, measurement schemas.Measurement, useEngineeringSpecs bool) []*data.Field {
 	fields := []*data.Field{}
 	labels := data.Labels{}
 	for k, v := range series.Tags {
@@ -69,57 +69,60 @@ func seriesToFields(series *schemas.Series, measurement schemas.Measurement) []*
 		}
 		fields = append(fields, data.NewField("time", data.Labels{}, timestamps))
 		valueField := valueField(measurement.Name, values, labels)
-		valueField.Config = getFieldConfig(measurement)
+		valueField.Config = getFieldConfig(measurement, useEngineeringSpecs)
 		fields = append(fields, valueField)
 	}
 	return fields
 }
 
-func getFieldConfig(measurement schemas.Measurement) *data.FieldConfig {
+func getFieldConfig(measurement schemas.Measurement, useEngineeringSpecs bool) *data.FieldConfig {
 	fieldConfig := &data.FieldConfig{
 		Unit:        "none",
 		Description: measurement.Description,
 	}
 	config, err := measurement.Attributes.GetAttributes("Config")
-	if err == nil {
-		if uom := config.GetString("UoM"); uom != "" {
-			fieldConfig.Unit = uom
-		}
-		if min, err := config.GetFloat64("ValueMin"); err == nil {
-			fieldConfig.SetMin(min)
-		}
-		if max, err := config.GetFloat64("ValueMax"); err == nil {
-			fieldConfig.SetMax(max)
-		}
-
-		thresholdConfig := &data.ThresholdsConfig{
-			Mode: data.ThresholdsModeAbsolute,
-			Steps: []data.Threshold{
-				{
-					Value: data.ConfFloat64(math.NaN()),
-					Color: "red",
-				},
-			},
-		}
-
-		if LimitLo, err := config.GetFloat64("LimitLo"); err == nil {
-			threshold := data.Threshold{
-				Value: data.ConfFloat64(LimitLo),
-				Color: "green",
-			}
-			thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
-		}
-		if limitHi, err := config.GetFloat64("LimitHi"); err == nil {
-			threshold := data.Threshold{
-				Value: data.ConfFloat64(limitHi),
-				Color: "red",
-			}
-			thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
-		}
-		if len(thresholdConfig.Steps) > 1 {
-			fieldConfig.Thresholds = thresholdConfig
-		}
+	if err != nil || !useEngineeringSpecs {
+		return fieldConfig
 	}
+
+	if uom := config.GetString("UoM"); uom != "" {
+		fieldConfig.Unit = uom
+	}
+	if min, err := config.GetFloat64("ValueMin"); err == nil {
+		fieldConfig.SetMin(min)
+	}
+	if max, err := config.GetFloat64("ValueMax"); err == nil {
+		fieldConfig.SetMax(max)
+	}
+
+	thresholdConfig := &data.ThresholdsConfig{
+		Mode: data.ThresholdsModeAbsolute,
+		Steps: []data.Threshold{
+			{
+				Value: data.ConfFloat64(math.NaN()),
+				Color: "red",
+			},
+		},
+	}
+
+	if LimitLo, err := config.GetFloat64("LimitLo"); err == nil {
+		threshold := data.Threshold{
+			Value: data.ConfFloat64(LimitLo),
+			Color: "green",
+		}
+		thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
+	}
+	if limitHi, err := config.GetFloat64("LimitHi"); err == nil {
+		threshold := data.Threshold{
+			Value: data.ConfFloat64(limitHi),
+			Color: "red",
+		}
+		thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
+	}
+	if len(thresholdConfig.Steps) > 1 {
+		fieldConfig.Thresholds = thresholdConfig
+	}
+
 	return fieldConfig
 }
 

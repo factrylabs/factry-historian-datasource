@@ -68,6 +68,11 @@ export const QueryOptions = ({
     onChange({ ...state, measurementQuery: updatedQuery })
   }
 
+  const onChangeUseEngineeringSpecs = (e: any): void => {
+    const updatedQuery = { ...state.measurementQuery, UseEngineeringSpecs: e.target.checked }
+    onChange({ ...state, measurementQuery: updatedQuery })
+  }
+
   return (
     <div>
       <InlineFieldRow>
@@ -113,6 +118,14 @@ export const QueryOptions = ({
           <InlineSwitch
             value={state.measurementQuery.IncludeLastKnownPoint}
             onChange={onChangeIncludeLastKnownPoint}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="Use engineering specs" labelWidth={20}>
+          <InlineSwitch
+            value={state.measurementQuery.UseEngineeringSpecs}
+            onChange={onChangeUseEngineeringSpecs}
           />
         </InlineField>
       </InlineFieldRow>

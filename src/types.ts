@@ -110,6 +110,7 @@ export interface MeasurementQuery {
   GroupBy?: string[]
   Aggregation?: Aggregation
   IncludeLastKnownPoint: boolean
+  UseEngineeringSpecs: boolean
 }
 
 export interface EventQuery {
