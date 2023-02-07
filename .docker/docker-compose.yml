@@ -1,0 +1,15 @@
+version: '3.3'
+services:
+  grafana:
+    image: 'registry.gitlab.com/factry/historian/grafana-datasource:${TAG:-latest}'
+    hostname: 'grafana'
+    environment:
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: 'factry-historian-datasource'
+      GF_PLUGINS_ENABLE_ALPHA: 'true'
+      GF_SERVER_ROOT_URL: '${GF_SERVER_ROOT_URL}'
+    ports:
+      - '${GRAFANA_PORT:-3000}:3000'
+      - '2345:2345'
+    volumes:
+      - ../dist:/var/lib/grafana/plugins/factry-datasource
+    restart: "unless-stopped"
