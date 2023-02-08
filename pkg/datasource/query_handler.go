@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
@@ -225,25 +224,8 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 			return nil, err
 		}
 
-		for _, series := range lastKnownPointResult.Series {
-			found := false
-			for i, baseSeries := range result.Series {
-				if baseSeries.Measurement != series.Measurement {
-					continue
-				}
+		result = MergeFrames(lastKnownPointResult, result)
 
-				if !reflect.DeepEqual(baseSeries.Tags, series.Tags) {
-					continue
-				}
-
-				result.Series[i].DataPoints = append(series.DataPoints, result.Series[i].DataPoints...)
-				found = true
-				break
-			}
-			if !found {
-				result.Series = append(result.Series, series)
-			}
-		}
 	}
 
 	measurements := make([]schemas.Measurement, len(measurementQuery.Measurements))
@@ -256,18 +238,18 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 		measurements[i] = measurement
 	}
 
-	return QueryResultToDataFrame(measurements, measurementQuery.Options.UseEngineeringSpecs, result)
+	return AddMetaData(measurements, measurementQuery.Options.UseEngineeringSpecs, result), nil
 }
 
 func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
 	rawQuery.Query = fillQueryVariables(rawQuery.Query, "Influx", backendQuery)
 
-	result, err := api.RawQuery(rawQuery.TimeseriesDatabase, schemas.RawQuery{Query: rawQuery.Query})
+	result, err := api.RawQuery(rawQuery.TimeseriesDatabase, schemas.RawQuery{Query: rawQuery.Query, Format: schemas.ArrowFormat})
 	if err != nil {
 		return nil, err
 	}
 
-	return QueryResultToDataFrame(nil, false, result)
+	return result, nil
 }
 
 func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
@@ -339,6 +321,7 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 		End:              &end,
 		Tags:             query.Options.Tags,
 		GroupBy:          query.Options.GroupBy,
+		Format:           schemas.ArrowFormat,
 	}
 
 	if query.Options.Aggregation != nil {

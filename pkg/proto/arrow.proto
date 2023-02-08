@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/factry/historian/grafana-datasource.git/pkg/proto";
+
+package proto;
+
+message DataResponse {
+  // Arrow encoded DataFrames
+  // Frame has its own meta, warnings, and repeats refId
+  repeated bytes frames = 1;
+
+  // Error message
+  string error = 2;
+}

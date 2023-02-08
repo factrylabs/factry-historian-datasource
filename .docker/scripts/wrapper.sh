@@ -6,7 +6,7 @@ start_delve(){
     PID=`pgrep gpx_factry`
     if [[ ! -z "$PID" ]]
     then
-      /root/go/bin/dlv attach --api-version=2 --headless --listen=:2345 $PID
+      /root/go/bin/dlv attach --accept-multiclient --continue --api-version=2 --headless --listen=:2345 $PID
     else
       sleep 1
     fi

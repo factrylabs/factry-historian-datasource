@@ -4,6 +4,14 @@ import (
 	"time"
 )
 
+// Format is a string
+type Format string
+
+// Formats is a list of possible formats to return
+const (
+	ArrowFormat = "arrow"
+)
+
 // AggregationType is a string
 type AggregationType string
 
@@ -34,41 +42,6 @@ const (
 	Linear            = "linear"
 	Zero              = "0"
 )
-
-// DataPoint represents a single data point in a time series
-// @Description  DataPoint represents a single data point in a time series
-type DataPoint struct {
-	// The timestamp of the data point in unix milliseconds
-	Timestamp int64
-	// The value of the data point
-	Value interface{}
-}
-
-// Series a representation of time series data
-// @Description Series represents the result of data for a single time series
-type Series struct {
-	// The name the measurement
-	Measurement string
-	// The name of the database queried
-	Database string
-	// Fields is an optional list of of field names returned when the DataPoint value is an array of values
-	Fields []string
-	// Tags associated with the measurement
-	Tags map[string]interface{}
-	// DataPoints are all the data points for this time series
-	DataPoints []DataPoint
-	// The datatype of the values returned
-	Datatype string
-}
-
-// QueryResult contains the result of a query
-// @Description QueryResult contains the result of a query
-type QueryResult struct {
-	// An array of series
-	Series []*Series
-	// Optional metadata about the executed query
-	Attributes map[string]interface{}
-}
 
 // MeasurementByName is used to identify which measurement to query
 // @Description Identifier for a measurement
@@ -118,4 +91,6 @@ type Query struct {
 	Desc bool
 	// Join will join the results on time filling in null values so a data point will be available for every timestamp
 	Join bool
+	// Format
+	Format Format `json:",omitempty"`
 }

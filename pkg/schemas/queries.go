@@ -32,6 +32,7 @@ type MeasurementQuery struct {
 // RawQuery is used to query raw time series data
 type RawQuery struct {
 	Query              string
+	Format             Format
 	TimeseriesDatabase uuid.UUID
 }
 
