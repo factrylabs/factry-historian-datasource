@@ -3,12 +3,12 @@ module gitlab.com/factry/historian/grafana-datasource.git
 go 1.19
 
 require (
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.3.0
 	github.com/grafana/grafana-plugin-sdk-go v0.140.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cast v1.5.0
 	github.com/stretchr/testify v1.8.0
-	gitlab.com/factry/factry-core/rest.git v1.0.3
 )
 
 require (
