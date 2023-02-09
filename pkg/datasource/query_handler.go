@@ -295,7 +295,7 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 		return nil, err
 	}
 
-	return EventQueryResultToDataFrame(events, eventTypes, eventTypeProperties)
+	return EventQueryResultToDataFrame(assets, events, eventTypes, eventTypeProperties)
 }
 
 func fillQueryVariables(query string, databaseType string, backendQuery backend.DataQuery) string {

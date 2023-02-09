@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -8,73 +9,94 @@ import (
 )
 
 const (
-	StartTimeIndex     = 0
-	StopTimeIndex      = 1
-	AssetUUIDIndex     = 2
-	EventTypeUUIDIndex = 3
-	SourceIndex        = 4
-	StatusIndex        = 5
-	PropertiesIndex    = 6
+	StartTimeIndex  = 0
+	StopTimeIndex   = 1
+	PropertiesIndex = 2
 )
 
-// EventQueryResultToDataFrame converts a event query result to data frames
-func EventQueryResultToDataFrame(events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty) (data.Frames, error) {
-	dataFrames := data.Frames{}
+type EventLabels struct {
+	AssetUUID     string
+	EventTypeUUID string
+	Status        string
+}
 
+// EventQueryResultToDataFrame converts a event query result to data frames
+func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty) (data.Frames, error) {
+	dataFrames := data.Frames{}
+	groupedEvents := map[EventLabels][]schemas.Event{}
+	eventTypePropertiesForEventType := map[string][]schemas.EventTypeProperty{}
+
+	for _, event := range events {
+		eventLabels := EventLabels{
+			AssetUUID:     event.AssetUUID.String(),
+			EventTypeUUID: event.EventTypeUUID.String(),
+			Status:        string(event.Status),
+		}
+		if _, ok := groupedEvents[eventLabels]; ok {
+			groupedEvents[eventLabels] = append(groupedEvents[eventLabels], event)
+		} else {
+			groupedEvents[eventLabels] = []schemas.Event{event}
+		}
+	}
 	for _, eventType := range eventTypes {
-		eventsForEventType := []schemas.Event{}
-		for _, event := range events {
-			if event.EventTypeUUID == eventType.UUID {
-				eventsForEventType = append(eventsForEventType, event)
+		eventTypePropertiesForEventType[eventType.UUID.String()] = []schemas.EventTypeProperty{}
+		for _, eventTypeProperty := range eventTypeProperties {
+			if eventTypeProperty.EventTypeUUID == eventType.UUID {
+				eventTypePropertiesForEventType[eventType.UUID.String()] = append(eventTypePropertiesForEventType[eventType.UUID.String()], eventTypeProperty)
 			}
 		}
-		if len(eventsForEventType) > 0 {
-			eventTypePropertiesForEventType := []schemas.EventTypeProperty{}
-			for _, eventTypeProperty := range eventTypeProperties {
-				if eventTypeProperty.EventTypeUUID == eventType.UUID {
-					eventTypePropertiesForEventType = append(eventTypePropertiesForEventType, eventTypeProperty)
-				}
-			}
-			dataFrames = append(dataFrames, dataFrameForEventType(eventsForEventType, eventType, eventTypePropertiesForEventType))
-		}
+	}
+
+	for group, groupedEvents := range groupedEvents {
+		dataFrames = append(dataFrames, dataFrameForEventType(assets, eventTypes, groupedEvents, group, eventTypePropertiesForEventType[group.EventTypeUUID]))
 	}
 
 	return dataFrames, nil
 }
 
-func dataFrameForEventType(events []schemas.Event, eventType schemas.EventType, eventTypeProperties []schemas.EventTypeProperty) *data.Frame {
-	fields := []*data.Field{
-		data.NewField("StartTime", data.Labels{}, []*time.Time{}),
-		data.NewField("StopTime", data.Labels{}, []*time.Time{}),
-		data.NewField("AssetUUID", data.Labels{}, []string{}),
-		data.NewField("EventTypeUUID", data.Labels{}, []string{}),
-		data.NewField("Source", data.Labels{}, []string{}),
-		data.NewField("Status", data.Labels{}, []string{}),
+func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventType, events []schemas.Event, group EventLabels, eventTypeProperties []schemas.EventTypeProperty) *data.Frame {
+	assetPath := ""
+	for _, asset := range assets {
+		if asset.UUID.String() == group.AssetUUID {
+			assetPath = getAssetPath(asset, assets)
+			break
+		}
 	}
-
+	groupEventType := schemas.EventType{}
+	for _, eventType := range eventTypes {
+		if eventType.UUID.String() == group.EventTypeUUID {
+			groupEventType = eventType
+			break
+		}
+	}
+	labels := data.Labels{
+		"Asset":      assetPath,
+		"Event type": groupEventType.Name,
+		"Status":     group.Status,
+	}
+	fields := []*data.Field{
+		data.NewField("StartTime", labels, []*time.Time{}),
+		data.NewField("StopTime", labels, []*time.Time{}),
+	}
 	for _, eventTypeProperty := range eventTypeProperties {
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			continue // skip periodic properties for now
 		}
 		switch eventTypeProperty.Datatype {
 		case schemas.EventTypePropertyDatatypeBool:
-			fields = append(fields, data.NewField(eventTypeProperty.Name, data.Labels{}, []*bool{}))
+			fields = append(fields, data.NewField(eventTypeProperty.Name, labels, []*bool{}))
 		case schemas.EventTypePropertyDatatypeNumber:
-			fields = append(fields, data.NewField(eventTypeProperty.Name, data.Labels{}, []*float64{}))
+			fields = append(fields, data.NewField(eventTypeProperty.Name, labels, []*float64{}))
 		case schemas.EventTypePropertyDatatypeString:
-			fields = append(fields, data.NewField(eventTypeProperty.Name, data.Labels{}, []*string{}))
+			fields = append(fields, data.NewField(eventTypeProperty.Name, labels, []*string{}))
 		default:
-			fields = append(fields, data.NewField(eventTypeProperty.Name, data.Labels{}, []interface{}{}))
+			fields = append(fields, data.NewField(eventTypeProperty.Name, labels, []interface{}{}))
 		}
 	}
 
 	for _, event := range events {
 		fields[StartTimeIndex].Append(event.StartTime)
 		fields[StopTimeIndex].Append(event.StopTime)
-		fields[AssetUUIDIndex].Append(event.AssetUUID.String())
-		fields[EventTypeUUIDIndex].Append(event.EventTypeUUID.String())
-		fields[SourceIndex].Append(string(event.Source))
-		fields[StatusIndex].Append(string(event.Status))
 
 		if event.Properties == nil {
 			propertyIndexOffset := 0
@@ -130,5 +152,5 @@ func dataFrameForEventType(events []schemas.Event, eventType schemas.EventType, 
 		}
 	}
 
-	return data.NewFrame(eventType.Name, fields...)
+	return data.NewFrame(fmt.Sprintf("%s - %s - %s", assetPath, groupEventType.Name, group.Status), fields...)
 }
