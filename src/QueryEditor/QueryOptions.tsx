@@ -36,7 +36,10 @@ export const QueryOptions = ({
   }
 
   const onGroupByChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    const groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
+    let groupBy = undefined
+    if (event.target.value) {
+      groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
+    }
     onChange({ ...state, GroupBy: groupBy }, tags)
   }
 
@@ -80,6 +83,24 @@ export const QueryOptions = ({
             onChange={onAggregationChange}
           />
         </InlineField>
+        <InlineField>
+          <Select
+            value={state.Aggregation?.Period}
+            options={periods}
+            allowCustomValue
+            onChange={onPeriodChange}
+            onCreateOption={onCreatePeriod}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="Group by" labelWidth={20} tooltip="Enter a list of tags to group by separated by ','">
+          <Input
+            placeholder="group by"
+            onBlur={onGroupByChange}
+            defaultValue={state.GroupBy?.join(', ')}
+          />
+        </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineField label="Tags" labelWidth={20}>
@@ -87,24 +108,6 @@ export const QueryOptions = ({
             tags={tags}
             conditions={['AND']}
             onChange={handleTagsSectionChange}
-          />
-        </InlineField>
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="GROUP BY" labelWidth={20} tooltip="Enter a list of tags to group by separated by ','">
-          <Input
-            placeholder="group by"
-            onBlur={onGroupByChange}
-            defaultValue={state.GroupBy?.join(', ') || 'status'}
-          />
-        </InlineField>
-        <InlineField>
-          <Select
-            value={state.Aggregation?.Period || "$__interval"}
-            options={periods}
-            allowCustomValue
-            onChange={onPeriodChange}
-            onCreateOption={onCreatePeriod}
           />
         </InlineField>
       </InlineFieldRow>

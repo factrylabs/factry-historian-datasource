@@ -382,6 +382,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         return
       }
     }
+
     this.props.onRunQuery()
   }
 

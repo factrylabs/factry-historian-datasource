@@ -15,10 +15,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           const assetMeasurementQuery = query.query as AssetMeasurementQuery
           assetMeasurementQuery.Asset = getTemplateSrv().replace(query.selectedAssetPath)
           assetMeasurementQuery.AssetProperties = assetMeasurementQuery.AssetProperties.map(e => getTemplateSrv().replace(e))
-          assetMeasurementQuery.Options.GroupBy = assetMeasurementQuery.Options.GroupBy?.map(e => getTemplateSrv().replace(e))
-          assetMeasurementQuery.Options.Aggregation = {
-            Name: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Name),
-            Period: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Period)
+          if (assetMeasurementQuery.Options.GroupBy) {
+            assetMeasurementQuery.Options.GroupBy = assetMeasurementQuery.Options.GroupBy?.map(e => getTemplateSrv().replace(e))
+          }
+          if (assetMeasurementQuery.Options.Aggregation) {
+            assetMeasurementQuery.Options.Aggregation = {
+              Name: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Name),
+              Period: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Period)
+            }
           }
           request.targets[i].query = assetMeasurementQuery
           break
@@ -27,10 +31,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           const measurementQuery = query.query as MeasurementQuery
           measurementQuery.Database = getTemplateSrv().replace(measurementQuery.Database)
           measurementQuery.Measurements = measurementQuery.Measurements?.map(e => getTemplateSrv().replace(e))
-          measurementQuery.Options.GroupBy = measurementQuery.Options.GroupBy?.map(e => getTemplateSrv().replace(e))
-          measurementQuery.Options.Aggregation = {
-            Name: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Name),
-            Period: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Period)
+          if (measurementQuery.Options.GroupBy) {
+            measurementQuery.Options.GroupBy = measurementQuery.Options.GroupBy?.map(e => getTemplateSrv().replace(e))
+          }
+          if (measurementQuery.Options.Aggregation) {
+            measurementQuery.Options.Aggregation = {
+              Name: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Name),
+              Period: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Period)
+            }
           }
           request.targets[i].query = measurementQuery
           break
