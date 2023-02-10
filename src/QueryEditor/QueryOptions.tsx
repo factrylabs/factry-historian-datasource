@@ -44,6 +44,10 @@ export const QueryOptions = ({
     onChange({ ...state, GroupBy: groupBy }, tags)
   }
 
+  const onLimitChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    onChange({ ...state, Limit: event.target.valueAsNumber }, tags)
+  }
+
   const onPeriodChange = (selected: SelectableValue<string>): void => {
     if (selected.value) {
       const aggregation = {
@@ -109,6 +113,16 @@ export const QueryOptions = ({
             tags={tags}
             conditions={['AND']}
             onChange={handleTagsSectionChange}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="Limit" labelWidth={20}>
+          <Input
+            placeholder="(optional)"
+            type='number'
+            onBlur={onLimitChange}
+            defaultValue={state.Limit}
           />
         </InlineField>
       </InlineFieldRow>

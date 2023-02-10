@@ -11,6 +11,7 @@ type MeasurementQueryOptions struct {
 	Aggregation           *Aggregation
 	IncludeLastKnownPoint bool
 	UseEngineeringSpecs   bool
+	Limit                 *int
 }
 
 // AssetMeasurementQuery is used to build the time series query to send to the historian

@@ -123,6 +123,7 @@ export interface MeasurementQueryOptions {
   Aggregation?: Aggregation
   IncludeLastKnownPoint: boolean
   UseEngineeringSpecs: boolean
+  Limit?: number
 }
 
 export interface MeasurementQuery {

@@ -320,7 +320,6 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 		End:              &end,
 		Tags:             query.Options.Tags,
 		GroupBy:          query.Options.GroupBy,
-		Limit:            int(backendQuery.MaxDataPoints),
 	}
 
 	if query.Options.Aggregation != nil {
@@ -328,6 +327,10 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 		if query.Options.Aggregation.Period == "" || query.Options.Aggregation.Period == "$__interval" {
 			historianQuery.Aggregation.Period = backendQuery.Interval.String()
 		}
+	}
+
+	if query.Options.Limit != nil {
+		historianQuery.Limit = *query.Options.Limit
 	}
 
 	return historianQuery
