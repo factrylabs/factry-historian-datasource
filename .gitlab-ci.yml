@@ -2,10 +2,13 @@ image: golang:latest
 
 variables:
   PROJECT_NAME: grafana-datasource
-
+  REMOTE: "historian.factry.dev"
+  REMOTE_PATH: "/opt/factry/grafana-datasource"
 
 stages:
   - test
+  - build
+  - deploy
 
 before_script:
   - eval $(ssh-agent -s)
@@ -22,8 +25,8 @@ vet:
   script:
     - go vet -v ./pkg/...
 
-build:
-  stage: test
+build-frontend:
+  stage: build
   image: node:latest
   before_script:
     - curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm@7
@@ -31,3 +34,29 @@ build:
   script:
     - pnpm install
     - npm run build
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - $CI_PROJECT_DIR/dist
+
+build-backend:
+  stage: build
+  script:
+    - git clone https://github.com/magefile/mage
+    - cd mage && go run bootstrap.go && cd ..
+    - mage -v
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - $CI_PROJECT_DIR/dist
+
+deploy:
+  stage: deploy
+  script:
+    - scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$CI_COMMIT_BRANCH
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - $CI_PROJECT_DIR/dist
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'staging' || $CI_COMMIT_BRANCH == 'qa' || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
