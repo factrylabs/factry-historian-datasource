@@ -40,15 +40,16 @@ export const Assets = ({
   }
 
   const availableProperties = (selected: string | undefined): Array<SelectableValue<string>> => {
-    return state.assetProperties.
+    const props = state.assetProperties.
       filter(e => e.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === e.AssetUUID)).
-      map(e => { return { label: e.Name, value: e.Name } }).
-      filter((value, index, self) => self.indexOf(value) === index).
+      map(e => e.Name)
+    return props.filter((value, index, self) => self.indexOf(value) === index).
+      map(e => { return { label: e, value: e } }).
       concat(getTemplateSrv().getVariables().map(e => { return { label: `$${e.name}`, value: `$${e.name}` } }))
   }
 
   const onAssetChange = (value: string): void => {
-    const updatedQuery = { ...state.assetsState.options.query, Asset: value } as AssetMeasurementQuery
+    const updatedQuery = { ...state.assetsState.options.query, Assets: matchedAssets(getTemplateSrv().replace(value), state.assets).map(e => e.UUID) } as AssetMeasurementQuery
     saveState({
       ...state,
       assetsState: {
@@ -96,7 +97,7 @@ export const Assets = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Asset" grow labelWidth={20} tooltip="Specify an asset to work with">
+        <InlineField label="Assets" grow labelWidth={20} tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes">
           <Cascader
             initialValue={state.assetsState.selectedAsset}
             initialLabel={initialLabel()}

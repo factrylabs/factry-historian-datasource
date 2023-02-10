@@ -133,7 +133,7 @@ export interface MeasurementQuery {
 }
 
 export interface AssetMeasurementQuery {
-  Asset: string
+  Assets: string[]
   AssetProperties: string[]
   Options: MeasurementQueryOptions
 }

@@ -113,16 +113,20 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	}
 
 	measurements := []string{}
-	assetUUID, ok := filterAssetUUID(assets, assetMeasurementQuery.Asset)
-	if !ok {
-		assetUUID = assetMeasurementQuery.Asset
+	assetUUIDs := []string{}
+	for _, assetString := range assetMeasurementQuery.Assets {
+		if assetUUID, ok := filterAssetUUID(assets, assetString); ok {
+			assetUUIDs = append(assetUUIDs, assetUUID)
+		}
 	}
 
-	for _, property := range assetMeasurementQuery.AssetProperties {
-		for _, assetProperty := range assetProperties {
-			if assetProperty.Name == property && assetProperty.AssetUUID.String() == assetUUID {
-				measurements = append(measurements, assetProperty.MeasurementUUID.String())
-				break
+	for _, assetUUID := range assetUUIDs {
+		for _, property := range assetMeasurementQuery.AssetProperties {
+			for _, assetProperty := range assetProperties {
+				if assetProperty.Name == property && assetProperty.AssetUUID.String() == assetUUID {
+					measurements = append(measurements, assetProperty.MeasurementUUID.String())
+					break
+				}
 			}
 		}
 	}
@@ -338,7 +342,7 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 
 func filterAssetUUID(assets []schemas.Asset, searchValue string) (string, bool) {
 	for _, asset := range assets {
-		if getAssetPath(asset, assets) == searchValue {
+		if asset.UUID.String() == searchValue || getAssetPath(asset, assets) == searchValue {
 			return asset.UUID.String(), true
 		}
 	}

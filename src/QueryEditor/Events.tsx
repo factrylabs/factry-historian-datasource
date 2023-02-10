@@ -143,7 +143,7 @@ export const Events = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Asset" grow labelWidth={20} tooltip="Specify an asset to work with">
+        <InlineField label="Assets" grow labelWidth={20} tooltip="Specify an asset to work with">
           <Cascader
             initialValue={state.eventsState.selectedAsset}
             initialLabel={initialLabel()}
@@ -155,7 +155,7 @@ export const Events = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Event type" grow labelWidth={20} tooltip="Specify one or more event type to work with">
+        <InlineField label="Event types" grow labelWidth={20} tooltip="Specify one or more event type to work with">
           <MultiSelect
             value={state.eventsState.selectedEventTypes}
             options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}

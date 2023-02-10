@@ -16,7 +16,7 @@ type MeasurementQueryOptions struct {
 
 // AssetMeasurementQuery is used to build the time series query to send to the historian
 type AssetMeasurementQuery struct {
-	Asset           string
+	Assets          []string
 	AssetProperties []string
 	Options         MeasurementQueryOptions
 }

@@ -40,7 +40,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     assetsState: {
       options: {
         query: {
-          Asset: '',
+          Assets: [],
           AssetProperties: [],
           Options: {
             Database: '',
@@ -373,7 +373,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
 
     if (props.query.queryType === 'AssetMeasurementQuery') {
       const query = props.query.query as AssetMeasurementQuery
-      if (!query.Asset || !query?.AssetProperties || query?.AssetProperties.length === 0) {
+      if (!query.Assets || !query?.AssetProperties || query?.AssetProperties.length === 0) {
         return
       }
     }

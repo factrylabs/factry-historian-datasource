@@ -13,7 +13,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       switch (query.queryType) {
         case 'AssetMeasurementQuery': {
           const assetMeasurementQuery = query.query as AssetMeasurementQuery
-          assetMeasurementQuery.Asset = getTemplateSrv().replace(query.selectedAssetPath)
+          assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.map(e => getTemplateSrv().replace(e))
           assetMeasurementQuery.AssetProperties = assetMeasurementQuery.AssetProperties.map(e => getTemplateSrv().replace(e))
           if (assetMeasurementQuery.Options.GroupBy) {
             assetMeasurementQuery.Options.GroupBy = assetMeasurementQuery.Options.GroupBy?.map(e => getTemplateSrv().replace(e))
