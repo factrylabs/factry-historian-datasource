@@ -72,7 +72,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                 name="token"
                 isConfigured={(secureJsonFields && secureJsonFields.token) as boolean}
                 value={secureJsonData.token || ''}
-                placeholder="optional token"
+                placeholder="token"
                 width={61}
                 onReset={this.onSecureSettingReset('token')}
                 onChange={this.onSecureSettingChange('token')}
