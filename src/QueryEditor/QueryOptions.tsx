@@ -8,11 +8,12 @@ import { getAggregations, getPeriods } from './util'
 export interface Props {
   state: MeasurementQueryOptions
   tags: QueryTag[]
+  appIsAlertingType: boolean
   onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
 }
 
 export const QueryOptions = ({
-  state, tags,
+  state, tags, appIsAlertingType,
   onChange
 }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
@@ -119,14 +120,16 @@ export const QueryOptions = ({
           />
         </InlineField>
       </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="Use engineering specs" labelWidth={20}>
-          <InlineSwitch
-            value={state.UseEngineeringSpecs}
-            onChange={onChangeUseEngineeringSpecs}
-          />
-        </InlineField>
-      </InlineFieldRow>
+      {!appIsAlertingType &&
+        <InlineFieldRow>
+          <InlineField label="Use engineering specs" labelWidth={20} >
+            <InlineSwitch
+              value={state.UseEngineeringSpecs}
+              onChange={onChangeUseEngineeringSpecs}
+            />
+          </InlineField>
+        </InlineFieldRow>
+      }
     </div>
   )
 }

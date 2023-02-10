@@ -1,7 +1,7 @@
 import React, { PureComponent } from 'react'
 import { getTemplateSrv } from '@grafana/runtime'
 import { RadioButtonGroup, InlineField, InlineFieldRow } from '@grafana/ui'
-import { QueryEditorProps, SelectableValue } from '@grafana/data'
+import { CoreApp, QueryEditorProps, SelectableValue } from '@grafana/data'
 import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
 import { Events } from 'QueryEditor/Events'
@@ -47,9 +47,10 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             GroupBy: ['status'],
             Aggregation: {
               Name: 'mean',
+              Period: '$__interval'
             },
             IncludeLastKnownPoint: false,
-            UseEngineeringSpecs: true
+            UseEngineeringSpecs: false
           },
         },
         tags: [],
@@ -65,9 +66,10 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             GroupBy: ['status'],
             Aggregation: {
               Name: 'mean',
+              Period: '$__interval'
             },
             IncludeLastKnownPoint: false,
-            UseEngineeringSpecs: true
+            UseEngineeringSpecs: false
           }
         },
         filter: {
@@ -371,7 +373,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
 
     if (props.query.queryType === 'AssetMeasurementQuery') {
       const query = props.query.query as AssetMeasurementQuery
-      if (!query.Asset || !query?.AssetProperties) {
+      if (!query.Asset || !query?.AssetProperties || query?.AssetProperties.length === 0) {
         return
       }
     }
@@ -393,6 +395,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         content: (
           <Assets
             state={this.state}
+            appIsAlertingType={this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting}
             saveState={this.saveState}
             onChangeAssetMeasurementQuery={this.onChangeAssetMeasurementQuery}
           />
@@ -403,6 +406,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         content: (
           <Measurements
             state={this.state}
+            appIsAlertingType={this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting}
             saveState={this.saveState}
             onLoadMeasurementOptions={this.loadMeasurementOptions}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}

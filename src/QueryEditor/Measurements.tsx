@@ -9,13 +9,14 @@ import type { MeasurementQuery, MeasurementQueryOptions, QueryEditorState, Times
 
 export interface Props {
   state: QueryEditorState
+  appIsAlertingType: boolean
   saveState(state: QueryEditorState): void
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
   onLoadMeasurementOptions: (query: string) => Promise<Array<SelectableValue<string>>>
 }
 
 export const Measurements = ({
-  state, saveState,
+  state, appIsAlertingType, saveState,
   onChangeMeasurementQuery,
   onLoadMeasurementOptions
 }: Props): JSX.Element => {
@@ -194,6 +195,7 @@ export const Measurements = ({
         <QueryOptions
           state={state.measurementsState.options.query.Options}
           tags={state.measurementsState.options.tags}
+          appIsAlertingType={appIsAlertingType}
           onChange={handleChangeMeasurementQuery}
         />
       }

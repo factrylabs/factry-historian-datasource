@@ -10,12 +10,13 @@ import type { AssetMeasurementQuery, MeasurementQueryOptions, QueryEditorState }
 
 export interface Props {
   state: QueryEditorState
+  appIsAlertingType: boolean
   saveState(state: QueryEditorState): void
   onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
 }
 
 export const Assets = ({
-  state, saveState,
+  state, appIsAlertingType, saveState,
   onChangeAssetMeasurementQuery
 }: Props): JSX.Element => {
   const replacedAsset = replaceAsset(state.assetsState.selectedAsset, state.assets)
@@ -119,6 +120,7 @@ export const Assets = ({
       <QueryOptions
         state={state.assetsState.options.query.Options}
         tags={state.assetsState.options.tags}
+        appIsAlertingType={appIsAlertingType}
         onChange={handleChangeMeasurementQueryOptions}
       />
     </div>
