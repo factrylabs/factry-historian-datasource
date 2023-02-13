@@ -25,6 +25,7 @@ type AssetMeasurementQuery struct {
 type MeasurementQuery struct {
 	Database     string
 	Measurements []string
+	Measurement  string
 	Options      MeasurementQueryOptions
 }
 

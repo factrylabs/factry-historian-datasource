@@ -366,7 +366,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
 
     if (props.query.queryType === 'MeasurementQuery') {
       const query = props.query.query as MeasurementQuery
-      if (!query?.Measurements) {
+      if (!query?.Measurement) {
         return
       }
     }

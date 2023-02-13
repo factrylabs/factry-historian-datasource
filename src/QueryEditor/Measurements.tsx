@@ -22,15 +22,11 @@ export const Measurements = ({
 }: Props): JSX.Element => {
   const selectedMeasurement = (): SelectableValue<string> => {
     const measurementQuery = state.measurementsState.options.query
-    if (measurementQuery.Measurements === undefined) {
+    if (!measurementQuery.Measurement) {
       return { label: state.measurementsState.selectedMeasurement, value: state.measurementsState.selectedMeasurement }
     }
 
-    if (measurementQuery.Measurements.length === 0) {
-      return { label: state.measurementsState.selectedMeasurement, value: state.measurementsState.selectedMeasurement }
-    }
-
-    const measurementUUID = measurementQuery.Measurements[0]
+    const measurementUUID = measurementQuery.Measurement
     const measurement = state.measurements.find(m => m.UUID === measurementUUID)
     if (!measurement) {
       return { label: state.measurementsState.selectedMeasurement, value: state.measurementsState.selectedMeasurement }
@@ -70,8 +66,7 @@ export const Measurements = ({
 
   const onMeasurementChange = (event: SelectableValue<string>): void => {
     if (event.value) {
-      const measurements = [event.value]
-      const updatedQuery = { ...state.measurementsState.options.query, Measurements: measurements }
+      const updatedQuery = { ...state.measurementsState.options.query, Measurement: event.value }
       saveState({
         ...state,
         measurementsState: {
@@ -88,12 +83,11 @@ export const Measurements = ({
   }
 
   const handleCustomMeasurement = (value: string): void => {
-    if (!getTemplateSrv().containsTemplate(value)) {
+    if (!getTemplateSrv().containsTemplate(value) && !(value.startsWith('/') && value.endsWith('/'))) {
       return
     }
 
-    const measurements = [value]
-    const updatedQuery = { ...state.measurementsState.options.query, Measurements: measurements }
+    const updatedQuery = { ...state.measurementsState.options.query, Measurement: value }
     saveState({
       ...state,
       measurementsState: {
@@ -177,7 +171,7 @@ export const Measurements = ({
       </InlineFieldRow>
       {state.measurementsState.options.filter.Database &&
         <InlineFieldRow>
-          <InlineField label="Measurement" labelWidth={20} tooltip="Specify measurement to work with">
+          <InlineField label="Measurement" labelWidth={20} tooltip="Specify measurement to work with, you can use regex by entering your pattern between forward slashes">
             <AsyncSelect
               value={selectedMeasurement()}
               placeholder="select measurement"

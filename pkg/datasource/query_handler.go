@@ -73,6 +73,14 @@ func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery bac
 			}
 		}
 
+		measurements, err := getMeasurements(measurementQuery, backendQuery, api)
+		if err != nil {
+			return backend.DataResponse{
+				Error: err,
+			}
+		}
+
+		measurementQuery.Measurements = measurements
 		response.Frames, response.Error = handleQuery(measurementQuery, backendQuery, api)
 		return response
 	case QueryTypeRaw:
@@ -159,39 +167,46 @@ func getAssetPath(asset schemas.Asset, assets []schemas.Asset) string {
 	return asset.Name
 }
 
-func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	// check if every measurement is an UUID, get all measurement's missing uuid
-	for i, measurement := range measurementQuery.Measurements {
-		if _, err := uuid.Parse(measurement); err == nil {
-			continue
-		}
-		databaseUUID := measurementQuery.Database
-		if _, err := uuid.Parse(databaseUUID); err != nil {
-			databases, err := api.GetTimeseriesDatabases()
-			if err != nil {
-				return nil, err
-			}
+func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) ([]string, error) {
+	parsedMeasurements := []string{}
+	measurement := measurementQuery.Measurement
 
-			for _, database := range databases {
-				if database.Name == measurementQuery.Database {
-					databaseUUID = database.UUID.String()
-				}
-			}
-		}
+	if _, err := uuid.Parse(measurement); err == nil {
+		parsedMeasurements = append(parsedMeasurements, measurement)
+		return parsedMeasurements, nil
+	}
 
-		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&Database=%v", measurement, databaseUUID))
-		res, err := api.GetMeasurements(values.Encode())
+	databaseUUID := measurementQuery.Database
+	if _, err := uuid.Parse(databaseUUID); err != nil {
+		databases, err := api.GetTimeseriesDatabases()
 		if err != nil {
 			return nil, err
 		}
 
-		if len(res) == 0 {
-			return nil, fmt.Errorf("invalid measurement: %v", measurement)
+		for _, database := range databases {
+			if database.Name == measurementQuery.Database {
+				databaseUUID = database.UUID.String()
+			}
 		}
-
-		measurementQuery.Measurements[i] = res[0].UUID.String()
 	}
 
+	values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&Database=%v", measurement, databaseUUID))
+	res, err := api.GetMeasurements(values.Encode())
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res) == 0 {
+		return nil, fmt.Errorf("invalid measurement: %v", measurement)
+	}
+
+	for _, m := range res {
+		parsedMeasurements = append(parsedMeasurements, m.UUID.String())
+	}
+	return parsedMeasurements, nil
+}
+
+func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
 	q := historianQuery(measurementQuery, backendQuery)
 	result, err := api.MeasurementQuery(q)
 	if err != nil {

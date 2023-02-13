@@ -129,11 +129,14 @@ export function matchedAssets(regex: string | undefined, assets: Asset[]): Asset
   }
 
   let re: RegExp | undefined = undefined
-  try {
-    re = new RegExp(`^${regex}$`)
+  if (regex.startsWith('/') && regex.endsWith('/')) {
+    try {
+    re = new RegExp(`^${regex.substring(1, regex.length-1)}$`)
   } catch(e) {
     void e
   }
+  }
+
 
   const matched: Asset[] = []
   for (const asset of assets) {

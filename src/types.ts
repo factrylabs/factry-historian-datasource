@@ -128,7 +128,7 @@ export interface MeasurementQueryOptions {
 
 export interface MeasurementQuery {
   Database: string
-  Measurements?: string[]
+  Measurement?: string
   Options: MeasurementQueryOptions
 }
 
@@ -208,7 +208,7 @@ export interface Asset {
   UUID: string
   Description: string
   Status: string
-  ParentUUID: string
+  ParentUUID?: string
   Parent?: Asset
 }
 
