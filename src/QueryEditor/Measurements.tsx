@@ -108,6 +108,8 @@ export const Measurements = ({
       databaseUUID = state.databases.find(e => e.Name = getTemplateSrv().replace(event.value))?.UUID
     }
     const updatedQuery = { ...state.measurementsState.options.query, Database: event.value } as MeasurementQuery
+    state.measurementsState.options.filter = { ...state.measurementsState.options.filter, Database: databaseUUID }
+    onLoadMeasurementOptions('')
     saveState({
       ...state,
       measurementsState: {
