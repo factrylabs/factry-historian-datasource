@@ -20,7 +20,7 @@ export const Assets = ({
   onChangeAssetMeasurementQuery
 }: Props): JSX.Element => {
   const replacedAsset = replaceAsset(state.assetsState.selectedAsset, state.assets)
-  const assetOptions = getChildAssets(null, state.assets)
+  const assetOptions = getChildAssets(null, state.assets, state.assetProperties)
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const assetProperties = items.map(e => e.value)
@@ -48,17 +48,36 @@ export const Assets = ({
       concat(getTemplateSrv().getVariables().map(e => { return { label: `$${e.name}`, value: `$${e.name}` } }))
   }
 
-  const onAssetChange = (value: string): void => {
-    const updatedQuery = { ...state.assetsState.options.query, Assets: matchedAssets(getTemplateSrv().replace(value), state.assets).map(e => e.UUID) } as AssetMeasurementQuery
+  const onAssetChange = (asset: string, property?: string): void => {
+    let properties: string[] = []
+    let selectedProperties: Array<SelectableValue<string>> = []
+    if (property) {
+      const assetProperty = state.assetProperties.find(e => e.UUID === property)
+      if (assetProperty) {
+        selectedProperties = [
+          {
+            value: assetProperty.Name,
+            label: assetProperty.Name
+          } as SelectableValue<string>
+        ]
+        properties = [assetProperty.Name]
+      }
+    }
+    const updatedQuery = {
+      ...state.assetsState.options.query,
+      Assets: matchedAssets(getTemplateSrv().replace(asset), state.assets).map(e => e.UUID),
+      AssetProperties: properties
+    } as AssetMeasurementQuery
     saveState({
       ...state,
       assetsState: {
         ...state.assetsState,
+        selectedProperties: selectedProperties,
         options: {
           ...state.assetsState.options,
           query: updatedQuery
         },
-        selectedAsset: value
+        selectedAsset: asset
       }
     })
     onChangeAssetMeasurementQuery(updatedQuery)

@@ -6,7 +6,7 @@ import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
-import { propertyFilterToQueryTags, tagsToQueryTags } from 'QueryEditor/util'
+import { propertyFilterToQueryTags, sortByName, tagsToQueryTags } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import { HistorianDataSourceOptions, MeasurementQuery, Query, RawQuery, QueryEditorState, MeasurementQueryState, EventQuery, AssetMeasurementQuery, AssetMeasurementQueryState, TabIndex } from './types'
 
@@ -272,7 +272,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
   async getAssets(): Promise<void> {
     await this.props.datasource.getAssets().then((assets) => {
       return this.props.datasource.getAssetProperties().then((assetProperties) => {
-        this.saveState({ ...this.state, assetProperties: assetProperties, assets: assets })
+        this.saveState({ ...this.state, assetProperties: assetProperties.sort(sortByName), assets: assets })
       })
     })
   }

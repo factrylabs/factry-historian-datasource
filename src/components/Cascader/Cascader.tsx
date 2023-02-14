@@ -18,7 +18,7 @@ export interface CascaderProps {
   options: CascaderOption[];
   /** Changes the value for every selection, including branch nodes. Defaults to true. */
   changeOnSelect?: boolean;
-  onSelect(val: string): void;
+  onSelect(asset: string, property?: string): void;
   /** Sets the width to a multiple of 8px. Should only be used with inline forms. Setting width of the container is preferred in other cases.*/
   width?: number;
   initialValue?: string;
@@ -143,15 +143,19 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     const activeLabel = this.props.hideActiveLevelLabel
       ? ''
       : this.props.displayAllSelectedLevels
-        ? selectedOptions.map((option) => option.label).join(this.props.separator || DEFAULT_SEPARATOR)
+        ? selectedOptions.filter((option) => !option.label.startsWith('📏')).map((option) => option.label).join(this.props.separator || DEFAULT_SEPARATOR)
         : selectedOptions[selectedOptions.length - 1].label
+    const propertySelected = selectedOptions[selectedOptions.length - 1].label.startsWith('📏')
     this.setState({
       rcValue: value,
-      focusCascade: true,
+      focusCascade: !propertySelected,
       activeLabel,
     })
-
-    this.props.onSelect(selectedOptions[selectedOptions.length - 1].value)
+    if (propertySelected) {
+      this.props.onSelect(selectedOptions[selectedOptions.length - 2].value, selectedOptions[selectedOptions.length - 1].value)
+    } else {
+      this.props.onSelect(selectedOptions[selectedOptions.length - 1].value)
+    }
   }
 
   onBlur = () => {
@@ -193,26 +197,41 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   }
 
   onClickSuggestion = (e: any) => {
+    const option = findOption(this.getSearchableOptions(this.props.options), e.currentTarget.innerText)
+    let activeLabel: string = option?.label || e.currentTarget.innerText
+    if (option && option.value && option.value.length > 0) {
+      if (option.singleLabel?.startsWith('📏 ')) {
+        activeLabel = activeLabel.substring(0, activeLabel.length - (option.singleLabel.length + 2))
+        this.props.onSelect(option.value[option.value.length - 2], option.value[option.value.length - 1])
+      } else {
+        this.props.onSelect(option.value[option.value.length - 1])
+      }
+    }
     this.setState({
       activeSuggestion: 0,
       filteredSuggestions: [],
       showSuggestions: false,
-      activeLabel: e.currentTarget.innerText
+      activeLabel: activeLabel
     })
-    const option = findOption(this.getSearchableOptions(this.props.options), e.currentTarget.innerText)
-    if (option && option.value && option.value.length > 0) {
-      this.props.onSelect(option.value[option.value.length - 1])
-    }
   }
 
   onKeyDown = (e: any) => {
     const { activeSuggestion, filteredSuggestions } = this.state;
-
     if (e.keyCode === 13) {
+      const option = findOption(this.getSearchableOptions(this.props.options), filteredSuggestions[activeSuggestion])
+      let activeLabel: string = option?.label || filteredSuggestions[activeSuggestion]
+      if (option && option.value && option.value.length > 0) {
+        if (option.singleLabel?.startsWith('📏 ')) {
+          activeLabel = activeLabel.substring(0, activeLabel.length - (option.singleLabel.length + 2))
+          this.props.onSelect(option.value[option.value.length - 2], option.value[option.value.length - 1])
+        } else {
+          this.props.onSelect(option.value[option.value.length - 1])
+        }
+      }
       this.setState({
         activeSuggestion: 0,
         showSuggestions: false,
-        activeLabel: filteredSuggestions[activeSuggestion]
+        activeLabel: activeLabel
       });
     } else if (e.keyCode === 38) {
       if (activeSuggestion === 0) {

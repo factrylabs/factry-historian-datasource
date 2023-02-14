@@ -2,7 +2,7 @@ import { SelectableValue } from "@grafana/data"
 import { getTemplateSrv } from "@grafana/runtime"
 import { CascaderOption } from "components/Cascader/Cascader"
 import { QueryTag } from "components/TagsSection/TagsSection"
-import { AggregationName, Asset, Attributes, EventPropertyFilter } from "types"
+import { AggregationName, Asset, AssetProperty, Attributes, EventPropertyFilter } from "types"
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -55,15 +55,24 @@ export function getPeriods(): Array<SelectableValue<string>> {
   ]
 }
 
-export function getChildAssets(parent: string | null, assets: Asset[]): CascaderOption[] {
+export function getChildAssets(parent: string | null, assets: Asset[], assetProperties: AssetProperty[] = []): CascaderOption[] {
   const result: CascaderOption[] = []
 
   assets.filter((asset) => asset.ParentUUID === parent).forEach((asset) => {
-    let items = getChildAssets(asset.UUID, assets)
+    const children = getChildAssets(asset.UUID, assets, assetProperties)
+    const properties = assetProperties
+      .filter(assetProperty => assetProperty.AssetUUID === asset.UUID)
+      .map(assetProperty => {
+        return {
+          label: `📏 ${assetProperty.Name}`,
+          value: assetProperty.UUID,
+        } as CascaderOption
+      })
+
     const cascaderOption: CascaderOption = {
       label: asset.Name,
       value: asset.UUID,
-      items: items
+      items: children.concat(properties)
     }
     result.push(cascaderOption)
   })
@@ -131,10 +140,10 @@ export function matchedAssets(regex: string | undefined, assets: Asset[]): Asset
   let re: RegExp | undefined = undefined
   if (regex.startsWith('/') && regex.endsWith('/')) {
     try {
-    re = new RegExp(`^${regex.substring(1, regex.length-1)}$`)
-  } catch(e) {
-    void e
-  }
+      re = new RegExp(`^${regex.substring(1, regex.length - 1)}$`)
+    } catch (e) {
+      void e
+    }
   }
 
 
@@ -175,4 +184,14 @@ export function replaceAsset(value: string | undefined, assets: Asset[]): string
   }
 
   return value
+}
+
+interface Named {
+  Name: string
+}
+
+export const sortByName = (a: Named, b: Named): number => {
+  const idA = a.Name.toUpperCase()
+  const idB = b.Name.toUpperCase()
+  return idA.localeCompare(idB)
 }

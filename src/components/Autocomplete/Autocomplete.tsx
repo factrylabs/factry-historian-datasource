@@ -50,6 +50,8 @@ const getStyles = (theme: GrafanaTheme2) => {
       border-radius: ${theme.shape.borderRadius(2)};
       margin-bottom: ${theme.spacing(4)};
       list-style: none;
+      position: absolute;
+      z-index: 1000;
     `,
     no_suggestions: css`
       background-color: ${theme.colors.background.secondary};
