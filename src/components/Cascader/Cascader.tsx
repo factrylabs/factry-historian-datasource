@@ -282,7 +282,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
               width={width}
               placeholder={placeholder}
               onBlur={this.onBlurCascade}
-              value={activeLabel}
+              value={activeLabel?.replace(new RegExp('📦 ', 'g'), '')}
               onKeyDown={this.onKeyDown}
               onChange={this.handleChange.bind(this)}
               onFocus={this.openCascade}

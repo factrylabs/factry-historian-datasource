@@ -70,7 +70,7 @@ export function getChildAssets(parent: string | null, assets: Asset[], assetProp
       })
 
     const cascaderOption: CascaderOption = {
-      label: asset.Name,
+      label: `📦 ${asset.Name}`,
       value: asset.UUID,
       items: children.concat(properties)
     }
