@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { AddButton } from './AddButton'
+import { AddButton } from 'components/util/AddButton'
 import { Tag } from './Tag'
 import { KnownCondition, KnownOperator } from './types'
 import { getCondition, getOperator, toSelectableValue } from './util'

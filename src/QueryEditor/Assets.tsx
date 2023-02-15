@@ -6,7 +6,7 @@ import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag } from 'components/TagsSection/types'
 import { QueryOptions } from './QueryOptions'
 import { getAssetPath, getChildAssets, matchedAssets, replaceAsset } from './util'
-import type { AssetMeasurementQuery, MeasurementQueryOptions, QueryEditorState } from 'types'
+import { AssetMeasurementQuery, labelWidth, MeasurementQueryOptions, QueryEditorState } from 'types'
 
 export interface Props {
   state: QueryEditorState
@@ -116,7 +116,7 @@ export const Assets = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Assets" grow labelWidth={20} tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes">
+        <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes">
           <Cascader
             initialValue={state.assetsState.selectedAsset}
             initialLabel={initialLabel()}
@@ -128,7 +128,7 @@ export const Assets = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Properties" grow labelWidth={20} tooltip="Specify one or more asset properties to work with">
+        <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify one or more asset properties to work with">
           <MultiSelect
             value={state.assetsState.selectedProperties}
             options={availableProperties(replacedAsset)}

@@ -2,7 +2,7 @@ import React from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CodeEditor, InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { selectable } from './util'
-import type { QueryEditorState, TimeseriesDatabase } from 'types'
+import { labelWidth, QueryEditorState, TimeseriesDatabase } from 'types'
 
 export interface Props {
   state: QueryEditorState
@@ -43,7 +43,7 @@ export const RawQueryEditor = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Database" grow labelWidth={20} tooltip="Specify a time series database to work with">
+        <InlineField label="Database" grow labelWidth={labelWidth} tooltip="Specify a time series database to work with">
           <Select
             value={selectable(selectableTimeseriesDatabases(state.databases), state.rawState.filter.Database)}
             placeholder="select timeseries database"
@@ -54,7 +54,7 @@ export const RawQueryEditor = ({
       </InlineFieldRow>
       {state.rawState.filter.Database &&
         <InlineFieldRow>
-          <InlineField label={`${getTimeseriesDatabaseType(state.rawState.filter.Database)} query`} grow labelWidth={20} tooltip="">
+          <InlineField label={`${getTimeseriesDatabaseType(state.rawState.filter.Database)} query`} grow labelWidth={labelWidth} tooltip="">
             <CodeEditor
               height={'200px'}
               language="sql"

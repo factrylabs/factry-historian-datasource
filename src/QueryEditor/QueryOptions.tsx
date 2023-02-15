@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
-import { InlineField, InlineFieldRow, InlineSwitch, Input, Select } from '@grafana/ui'
-import { Aggregation, Attributes, MeasurementQueryOptions } from 'types'
+import { InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
+import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { getAggregations, getPeriods } from './util'
+import { GroupBySection } from 'components/GroupBySection/GroupBySection'
 
 export interface Props {
   state: MeasurementQueryOptions
@@ -36,12 +37,8 @@ export const QueryOptions = ({
     onChange({ ...state, Tags: tags }, updatedTags)
   }
 
-  const onGroupByChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    let groupBy = undefined
-    if (event.target.value) {
-      groupBy = event.target.value.split(',').map(groupBy => groupBy.trim())
-    }
-    onChange({ ...state, GroupBy: groupBy }, tags)
+  const onGroupByChange = (groups: string[]): void => {
+    onChange({ ...state, GroupBy: groups }, tags)
   }
 
   const onLimitChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -79,7 +76,7 @@ export const QueryOptions = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Aggregation" labelWidth={20} tooltip="Specify an aggregation, leave empty to query raw data">
+        <InlineField label="Aggregation" labelWidth={labelWidth} tooltip="Specify an aggregation, leave empty to query raw data">
           <Select
             value={state.Aggregation?.Name}
             placeholder="select an aggregation"
@@ -99,16 +96,16 @@ export const QueryOptions = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Group by" labelWidth={20} tooltip="Enter a list of tags to group by separated by ','">
-          <Input
-            placeholder="group by"
-            onBlur={onGroupByChange}
-            defaultValue={state.GroupBy?.join(', ')}
-          />
-        </InlineField>
+        <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
+          Group by
+        </InlineLabel>
+        <GroupBySection
+          groups={state.GroupBy || []}
+          onChange={onGroupByChange}
+        />
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Tags" labelWidth={20}>
+        <InlineField label="Filter tags" labelWidth={labelWidth}>
           <TagsSection
             tags={tags}
             conditions={['AND']}
@@ -117,7 +114,7 @@ export const QueryOptions = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Limit" labelWidth={20}>
+        <InlineField label="Limit" labelWidth={labelWidth}>
           <Input
             placeholder="(optional)"
             type='number'
@@ -127,7 +124,7 @@ export const QueryOptions = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Include last known point" labelWidth={20}>
+        <InlineField label="Include last known point" labelWidth={labelWidth} tooltip="Includes the last known point before the selected time range">
           <InlineSwitch
             value={state.IncludeLastKnownPoint}
             onChange={onChangeIncludeLastKnownPoint}
@@ -136,7 +133,7 @@ export const QueryOptions = ({
       </InlineFieldRow>
       {!appIsAlertingType &&
         <InlineFieldRow>
-          <InlineField label="Use engineering specs" labelWidth={20} >
+          <InlineField label="Use engineering specs" labelWidth={labelWidth} >
             <InlineSwitch
               value={state.UseEngineeringSpecs}
               onChange={onChangeUseEngineeringSpecs}

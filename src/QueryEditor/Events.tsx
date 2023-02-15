@@ -5,7 +5,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { getAssetPath, getChildAssets, matchedAssets } from './util'
-import { EventPropertyFilter, EventQuery, PropertyDatatype, QueryEditorState } from 'types'
+import { EventPropertyFilter, EventQuery, labelWidth, PropertyDatatype, QueryEditorState } from 'types'
 
 export interface Props {
   state: QueryEditorState
@@ -143,7 +143,7 @@ export const Events = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Assets" grow labelWidth={20} tooltip="Specify an asset to work with">
+        <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
           <Cascader
             initialValue={state.eventsState.selectedAsset}
             initialLabel={initialLabel()}
@@ -155,7 +155,7 @@ export const Events = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Event types" grow labelWidth={20} tooltip="Specify one or more event type to work with">
+        <InlineField label="Event types" grow labelWidth={labelWidth} tooltip="Specify one or more event type to work with">
           <MultiSelect
             value={state.eventsState.selectedEventTypes}
             options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
@@ -164,7 +164,7 @@ export const Events = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="WHERE" labelWidth={20}>
+        <InlineField label="WHERE" labelWidth={labelWidth}>
           <TagsSection
             tags={state.eventsState.tags}
             operators={["=", '!=', '<', '<=', '>', '>=']}

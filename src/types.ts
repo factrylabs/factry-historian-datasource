@@ -1,6 +1,8 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data'
 import { QueryTag } from 'components/TagsSection/TagsSection'
 
+
+export const labelWidth = 25
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Attributes = Record<string, any>

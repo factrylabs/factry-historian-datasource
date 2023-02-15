@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { SelectableValue } from '@grafana/data'
-import { Seg } from './Seg'
+import { Seg } from '../util/Seg'
 import { KnownCondition, KnownOperator, QueryTag } from './types'
 import { getCondition, getOperator, isRegex, toSelectableValue } from './util'
 

@@ -5,7 +5,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { QueryTag } from 'components/TagsSection/types'
 import { selectable } from './util'
 import { QueryOptions } from './QueryOptions'
-import type { MeasurementQuery, MeasurementQueryOptions, QueryEditorState, TimeseriesDatabase } from 'types'
+import { labelWidth, MeasurementQuery, MeasurementQueryOptions, QueryEditorState, TimeseriesDatabase } from 'types'
 
 export interface Props {
   state: QueryEditorState
@@ -162,7 +162,7 @@ export const Measurements = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Database" labelWidth={20} tooltip="Specify a time series database to work with">
+        <InlineField label="Database" labelWidth={labelWidth} tooltip="Specify a time series database to work with">
           <Select
             value={selectable(selectableTimeseriesDatabases(state.databases), state.measurementsState.options.query.Database)}
             placeholder="select time series database"
@@ -173,7 +173,7 @@ export const Measurements = ({
       </InlineFieldRow>
       {state.measurementsState.options.filter.Database &&
         <InlineFieldRow>
-          <InlineField label="Measurement" labelWidth={20} tooltip="Specify measurement to work with, you can use regex by entering your pattern between forward slashes">
+          <InlineField label="Measurement" labelWidth={labelWidth} tooltip="Specify measurement to work with, you can use regex by entering your pattern between forward slashes">
             <AsyncSelect
               value={selectedMeasurement()}
               placeholder="select measurement"
