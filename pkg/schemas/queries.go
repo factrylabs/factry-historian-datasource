@@ -11,6 +11,8 @@ type MeasurementQueryOptions struct {
 	Aggregation           *Aggregation
 	IncludeLastKnownPoint bool
 	UseEngineeringSpecs   bool
+	DisplayDatabaseName   bool
+	DisplayDescription    bool
 	Limit                 *int
 }
 

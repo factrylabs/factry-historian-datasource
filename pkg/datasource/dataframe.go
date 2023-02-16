@@ -11,8 +11,8 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// MergeFrames merges 2 set of frames based on the metadata and name of each frame
-func MergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
+// mergeFrames merges 2 set of frames based on the metadata and name of each frame
+func mergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
 	if len(lastKnown) == 0 {
 		return result
 	}
@@ -23,12 +23,12 @@ func MergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
 
 	frameMap := make(map[string]*data.Frame)
 	for _, aFrame := range lastKnown {
-		frameMap[GetFrameID(aFrame)] = aFrame
+		frameMap[getFrameID(aFrame)] = aFrame
 	}
 
 frameLoop:
 	for _, bFrame := range result {
-		bFrameID := GetFrameID(bFrame)
+		bFrameID := getFrameID(bFrame)
 		aFrame, ok := frameMap[bFrameID]
 		if !ok {
 			frameMap[bFrameID] = bFrame
@@ -55,8 +55,8 @@ frameLoop:
 	return maps.Values(frameMap)
 }
 
-// GetFrameSuffix returns the frame suffix for a given frame
-func GetFrameSuffix(frame *data.Frame) string {
+// getFrameSuffix returns the frame name for a given frame
+func getFrameSuffix(frame *data.Frame, includeDatabaseName, includeDescription bool) string {
 	if frame == nil || frame.Meta == nil {
 		return ""
 	}
@@ -73,7 +73,17 @@ func GetFrameSuffix(frame *data.Frame) string {
 
 	labelPairs := []string{}
 	for key, value := range labels {
-		labelPairs = append(labelPairs, fmt.Sprintf("%s=%s", key, value))
+		labelPairs = append(labelPairs, fmt.Sprintf("%s: %s", key, value))
+	}
+
+	if includeDescription && meta["Description"] != nil {
+		if description, ok := meta["Description"].(string); ok && description != "" {
+			labelPairs = append(labelPairs, fmt.Sprintf("Description=%s", description))
+		}
+	}
+
+	if includeDatabaseName && meta["DatabaseName"] != nil {
+		labelPairs = append(labelPairs, fmt.Sprintf("Database=%s", meta["DatabaseName"]))
 	}
 
 	if len(labelPairs) == 0 {
@@ -83,8 +93,8 @@ func GetFrameSuffix(frame *data.Frame) string {
 	return fmt.Sprintf(" {%s}", strings.Join(labelPairs, ", "))
 }
 
-// GetMeasurementFrameName returns the frame name for a given frame based on the measurement
-func GetMeasurementFrameName(frame *data.Frame) string {
+// getMeasurementFrameName returns the frame name for a given frame based on the measurement
+func getMeasurementFrameName(frame *data.Frame, includeDatabaseName, includeDescription bool) string {
 	if frame == nil {
 		return ""
 	}
@@ -103,11 +113,11 @@ func GetMeasurementFrameName(frame *data.Frame) string {
 		return frame.Name
 	}
 
-	return measurementName + GetFrameSuffix(frame)
+	return measurementName + getFrameSuffix(frame, includeDatabaseName, includeDescription)
 }
 
-// GetFrameID returns the frame ID for a given frame
-func GetFrameID(frame *data.Frame) string {
+// getFrameID returns the frame ID for a given frame
+func getFrameID(frame *data.Frame) string {
 	if frame == nil {
 		return ""
 	}
@@ -126,21 +136,11 @@ func GetFrameID(frame *data.Frame) string {
 		return frame.Name
 	}
 
-	labels, ok := meta["Labels"].(map[string]interface{})
-	if !ok {
-		return measurementUUID
-	}
-
-	labelString := ""
-	for key, value := range labels {
-		labelString += fmt.Sprintf("%s=%s", key, value)
-	}
-
-	return fmt.Sprintf("%s%s", measurementUUID, GetFrameSuffix(frame))
+	return fmt.Sprintf("%s%s", measurementUUID, getFrameSuffix(frame, false, false))
 }
 
-// GetAssetPath returns the asset path for a given asset
-func GetAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUID) string {
+// getAssetPath returns the asset path for a given asset
+func getAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUID) string {
 	asset, ok := uuidToAssetMap[assetUUID]
 	if !ok {
 		return ""
@@ -151,11 +151,56 @@ func GetAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUI
 		return asset.Name
 	}
 
-	return GetAssetPath(uuidToAssetMap, *parentUUID) + "\\\\" + asset.Name
+	return getAssetPath(uuidToAssetMap, *parentUUID) + "\\\\" + asset.Name
 }
 
-// SetFrameNamesByAsset sets the name of each frame to the asset path
-func SetFrameNamesByAsset(assets []schemas.Asset, assetProperties []schemas.AssetProperty, frames data.Frames) data.Frames {
+// setMeasurementFrameNames sets the name of each frame to the measurement name
+func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQueryOptions) data.Frames {
+	for _, frame := range frames {
+		if frame.Meta == nil {
+			continue
+		}
+
+		if field, _ := frame.FieldByName("value"); field != nil {
+			if field.Config == nil {
+				field.Config = &data.FieldConfig{}
+			}
+			field.Config.DisplayNameFromDS = getMeasurementFrameName(frame, options.DisplayDatabaseName, options.DisplayDescription)
+		}
+	}
+	return frames
+}
+
+// setMeasurementFrameNames sets the name of each frame to the measurement name
+func setRawFrameNames(frames data.Frames) data.Frames {
+	for _, frame := range frames {
+		for _, field := range frame.Fields {
+			if field.Name == "time" {
+				continue
+			}
+
+			if field.Config == nil {
+				field.Config = &data.FieldConfig{}
+			}
+
+			labelPairs := []string{}
+			for key, value := range field.Labels {
+				labelPairs = append(labelPairs, fmt.Sprintf("%s: %s", key, value))
+			}
+
+			suffix := ""
+			if len(labelPairs) > 0 {
+				suffix = fmt.Sprintf(" {%s}", strings.Join(labelPairs, ", "))
+			}
+
+			field.Config.DisplayNameFromDS = frame.Name + "." + field.Name + suffix
+		}
+	}
+	return frames
+}
+
+// setAssetFrameNames sets the name of each frame to the asset path
+func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetProperties []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
 	measurementUUIDToPropertyMap := make(map[uuid.UUID]schemas.AssetProperty)
 	for _, property := range assetProperties {
 		measurementUUIDToPropertyMap[property.MeasurementUUID] = property
@@ -189,7 +234,7 @@ func SetFrameNamesByAsset(assets []schemas.Asset, assetProperties []schemas.Asse
 
 				property, ok := measurementUUIDToPropertyMap[measurementUUID]
 				if ok {
-					field.Config.DisplayNameFromDS = GetAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + GetFrameSuffix(frame)
+					field.Config.DisplayNameFromDS = getAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
 				}
 			}
 		}
@@ -198,8 +243,8 @@ func SetFrameNamesByAsset(assets []schemas.Asset, assetProperties []schemas.Asse
 	return frames
 }
 
-// AddMetaData adds metadata from measurements to data frames
-func AddMetaData(frames data.Frames, useEngineeringSpecs bool) data.Frames {
+// addMetaData adds metadata from measurements to data frames
+func addMetaData(frames data.Frames, useEngineeringSpecs bool) data.Frames {
 	for _, frame := range frames {
 		setFieldConfig(frame, useEngineeringSpecs)
 	}
@@ -211,11 +256,13 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 	if field == nil {
 		return
 	}
-	fieldConfig := &data.FieldConfig{
-		Unit:              "none",
-		DisplayNameFromDS: GetMeasurementFrameName(frame),
+
+	if field.Config == nil {
+		field.Config = &data.FieldConfig{
+			Unit: "none",
+		}
+
 	}
-	field.Config = fieldConfig
 
 	if frame.Meta == nil || frame.Meta.Custom == nil {
 		return
@@ -238,13 +285,13 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 	}
 
 	if uom := config.GetString("UoM"); uom != "" {
-		fieldConfig.Unit = uom
+		field.Config.Unit = uom
 	}
 	if min, err := config.GetFloat64("ValueMin"); err == nil {
-		fieldConfig.SetMin(min)
+		field.Config.SetMin(min)
 	}
 	if max, err := config.GetFloat64("ValueMax"); err == nil {
-		fieldConfig.SetMax(max)
+		field.Config.SetMax(max)
 	}
 
 	thresholdConfig := &data.ThresholdsConfig{
@@ -272,6 +319,6 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 		thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
 	}
 	if len(thresholdConfig.Steps) > 1 {
-		fieldConfig.Thresholds = thresholdConfig
+		field.Config.Thresholds = thresholdConfig
 	}
 }

@@ -80,7 +80,7 @@ func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery bac
 		}
 
 		measurementQuery.Measurements = measurements
-		response.Frames, response.Error = handleQuery(measurementQuery, backendQuery, api)
+		response.Frames, response.Error = handleMeasurementQuery(measurementQuery, backendQuery, api)
 		return response
 	case QueryTypeRaw:
 		rawQuery := schemas.RawQuery{}
@@ -148,27 +148,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		return nil, err
 	}
 
-	return SetFrameNamesByAsset(assets, assetProperties, frames), nil
-}
-
-func getAssetPath(asset schemas.Asset, assets []schemas.Asset) string {
-	if asset.ParentUUID == nil {
-		return asset.Name
-	}
-
-	var parent *schemas.Asset
-	for _, item := range assets {
-		if item.UUID == *asset.ParentUUID {
-			parent = &item
-			break
-		}
-	}
-
-	if parent != nil {
-		return fmt.Sprintf("%v\\\\%v", getAssetPath(*parent, assets), asset.Name)
-	}
-
-	return asset.Name
+	return setAssetFrameNames(frames, assets, assetProperties, measurementQuery.Options), nil
 }
 
 func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) ([]string, error) {
@@ -210,6 +190,15 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery bac
 	return parsedMeasurements, nil
 }
 
+func handleMeasurementQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
+	frames, err := handleQuery(measurementQuery, backendQuery, api)
+	if err != nil {
+		return nil, err
+	}
+
+	return setMeasurementFrameNames(frames, measurementQuery.Options), nil
+}
+
 func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
 	q := historianQuery(measurementQuery, backendQuery)
 	result, err := api.MeasurementQuery(q)
@@ -229,10 +218,10 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 			return nil, err
 		}
 
-		result = MergeFrames(lastKnownPointResult, result)
+		result = mergeFrames(lastKnownPointResult, result)
 	}
 
-	return AddMetaData(result, measurementQuery.Options.UseEngineeringSpecs), nil
+	return addMetaData(result, measurementQuery.Options.UseEngineeringSpecs), nil
 }
 
 func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
@@ -243,7 +232,7 @@ func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, a
 		return nil, err
 	}
 
-	return result, nil
+	return setRawFrameNames(result), nil
 }
 
 func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
@@ -333,8 +322,13 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 }
 
 func filterAssetUUID(assets []schemas.Asset, searchValue string) (string, bool) {
+	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
-		if asset.UUID.String() == searchValue || getAssetPath(asset, assets) == searchValue {
+		UUIDToAssetMap[asset.UUID] = asset
+	}
+
+	for _, asset := range assets {
+		if asset.UUID.String() == searchValue || getAssetPath(UUIDToAssetMap, asset.UUID) == searchValue {
 			return asset.UUID.String(), true
 		}
 	}

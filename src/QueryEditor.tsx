@@ -52,6 +52,8 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             },
             IncludeLastKnownPoint: false,
             UseEngineeringSpecs: !this.appIsAlertingType,
+            DisplayDatabaseName: false,
+            DisplayDescription: false,
           },
         },
         tags: [],
@@ -71,6 +73,8 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             },
             IncludeLastKnownPoint: false,
             UseEngineeringSpecs: !this.appIsAlertingType,
+            DisplayDatabaseName: false,
+            DisplayDescription: false,
           }
         },
         filter: {

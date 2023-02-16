@@ -125,6 +125,8 @@ export interface MeasurementQueryOptions {
   Aggregation?: Aggregation
   IncludeLastKnownPoint: boolean
   UseEngineeringSpecs: boolean
+  DisplayDatabaseName: boolean
+  DisplayDescription: boolean
   Limit?: number
 }
 

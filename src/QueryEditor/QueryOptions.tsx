@@ -13,10 +13,7 @@ export interface Props {
   onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
 }
 
-export const QueryOptions = ({
-  state, tags, appIsAlertingType,
-  onChange
-}: Props): JSX.Element => {
+export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
   const onAggregationChange = (event: SelectableValue<string>) => {
     let aggregation = undefined
@@ -31,7 +28,7 @@ export const QueryOptions = ({
 
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
     const tags: Attributes = {}
-    updatedTags.forEach(tag => {
+    updatedTags.forEach((tag) => {
       tags[tag.key] = tag.value
     })
     onChange({ ...state, Tags: tags }, updatedTags)
@@ -49,7 +46,7 @@ export const QueryOptions = ({
     if (selected.value) {
       const aggregation = {
         ...state.Aggregation,
-        Period: selected.value
+        Period: selected.value,
       } as Aggregation
       onChange({ ...state, Aggregation: aggregation }, tags)
     }
@@ -73,10 +70,22 @@ export const QueryOptions = ({
     onChange({ ...state, UseEngineeringSpecs: e.target.checked }, tags)
   }
 
+  const onChangeDisplayDatabaseName = (e: any): void => {
+    onChange({ ...state, DisplayDatabaseName: e.target.checked }, tags)
+  }
+
+  const onChangeDisplayDescription = (e: any): void => {
+    onChange({ ...state, DisplayDescription: e.target.checked }, tags)
+  }
+
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Aggregation" labelWidth={labelWidth} tooltip="Specify an aggregation, leave empty to query raw data">
+        <InlineField
+          label="Aggregation"
+          labelWidth={labelWidth}
+          tooltip="Specify an aggregation, leave empty to query raw data"
+        >
           <Select
             value={state.Aggregation?.Name}
             placeholder="select an aggregation"
@@ -99,48 +108,40 @@ export const QueryOptions = ({
         <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
           Group by
         </InlineLabel>
-        <GroupBySection
-          groups={state.GroupBy || []}
-          onChange={onGroupByChange}
-        />
+        <GroupBySection groups={state.GroupBy || []} onChange={onGroupByChange} />
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineField label="Filter tags" labelWidth={labelWidth}>
-          <TagsSection
-            tags={tags}
-            conditions={['AND']}
-            onChange={handleTagsSectionChange}
-          />
+          <TagsSection tags={tags} conditions={['AND']} onChange={handleTagsSectionChange} />
+        </InlineField>
+      </InlineFieldRow>
+
+      <InlineFieldRow>
+        <InlineField
+          label="Include last known point"
+          tooltip="Includes the last known point before the selected time range"
+          labelWidth={labelWidth}
+        >
+          <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
+        </InlineField>
+        {!appIsAlertingType && (
+          <InlineField label="Use engineering specs">
+            <InlineSwitch value={state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
+          </InlineField>
+        )}
+        <InlineField label="Display database name">
+          <InlineSwitch value={state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
+        </InlineField>
+
+        <InlineField label="Display description">
+          <InlineSwitch value={state.DisplayDescription} onChange={onChangeDisplayDescription} />
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineField label="Limit" labelWidth={labelWidth}>
-          <Input
-            placeholder="(optional)"
-            type='number'
-            onBlur={onLimitChange}
-            defaultValue={state.Limit}
-          />
+          <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={state.Limit} />
         </InlineField>
       </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="Include last known point" labelWidth={labelWidth} tooltip="Includes the last known point before the selected time range">
-          <InlineSwitch
-            value={state.IncludeLastKnownPoint}
-            onChange={onChangeIncludeLastKnownPoint}
-          />
-        </InlineField>
-      </InlineFieldRow>
-      {!appIsAlertingType &&
-        <InlineFieldRow>
-          <InlineField label="Use engineering specs" labelWidth={labelWidth} >
-            <InlineSwitch
-              value={state.UseEngineeringSpecs}
-              onChange={onChangeUseEngineeringSpecs}
-            />
-          </InlineField>
-        </InlineFieldRow>
-      }
     </div>
   )
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 )
@@ -56,12 +57,18 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 
 func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventType, events []schemas.Event, group EventLabels, eventTypeProperties []schemas.EventTypeProperty) *data.Frame {
 	assetPath := ""
+	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
+	for _, asset := range assets {
+		UUIDToAssetMap[asset.UUID] = asset
+	}
+
 	for _, asset := range assets {
 		if asset.UUID.String() == group.AssetUUID {
-			assetPath = getAssetPath(asset, assets)
+			assetPath = getAssetPath(UUIDToAssetMap, asset.UUID)
 			break
 		}
 	}
+
 	groupEventType := schemas.EventType{}
 	for _, eventType := range eventTypes {
 		if eventType.UUID.String() == group.EventTypeUUID {
@@ -69,6 +76,7 @@ func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventTyp
 			break
 		}
 	}
+
 	labels := data.Labels{
 		"Asset":      assetPath,
 		"Event type": groupEventType.Name,
@@ -78,10 +86,12 @@ func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventTyp
 		data.NewField("StartTime", labels, []*time.Time{}),
 		data.NewField("StopTime", labels, []*time.Time{}),
 	}
+
 	for _, eventTypeProperty := range eventTypeProperties {
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			continue // skip periodic properties for now
 		}
+
 		switch eventTypeProperty.Datatype {
 		case schemas.EventTypePropertyDatatypeBool:
 			fields = append(fields, data.NewField(eventTypeProperty.Name, labels, []*bool{}))
@@ -104,6 +114,7 @@ func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventTyp
 				if eventType.Type == schemas.EventTypePropertyTypePeriodic {
 					continue // skip periodic properties for now
 				}
+
 				fields[PropertiesIndex+propertyIndexOffset].Append(nil)
 				propertyIndexOffset++
 			}
@@ -115,6 +126,7 @@ func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventTyp
 			if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 				continue // skip periodic properties for now
 			}
+
 			propertyFound := false
 			for property, value := range event.Properties.Properties {
 				if property == eventTypeProperty.Name {
@@ -145,6 +157,7 @@ func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventTyp
 					break
 				}
 			}
+
 			if !propertyFound {
 				fields[PropertiesIndex+propertyIndexOffset].Append(nil)
 			}
