@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
-import { AsyncSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
+import { AsyncSelect, InlineField, InlineFieldRow, InputActionMeta, Select } from '@grafana/ui'
 import { getTemplateSrv } from '@grafana/runtime'
 import { QueryTag } from 'components/TagsSection/types'
 import { selectable } from './util'
@@ -20,6 +20,11 @@ export const Measurements = ({
   onChangeMeasurementQuery,
   onLoadMeasurementOptions
 }: Props): JSX.Element => {
+  // TODO when grafana 9.4.x is released add createOptionPosition={'first'} to the measurement selection and any other select's that allow custom values
+  const [measurementOptions, setMeasurementOptions] = useState([] as Array<SelectableValue<string>>)
+  const [measurementInput, setMeasurementInput] = useState("")
+  const [measurementSelected, setMeasurementSelected] = useState(false)
+
   const selectedMeasurement = (): SelectableValue<string> => {
     const measurementQuery = state.measurementsState.options.query
     if (!measurementQuery.Measurement) {
@@ -55,7 +60,12 @@ export const Measurements = ({
   }
 
   const loadMeasurementOptions = async (query: string): Promise<Array<SelectableValue<string>>> => {
+    if (query === '/') {
+      return Promise.resolve([])
+    }
+
     const options = await onLoadMeasurementOptions(getTemplateSrv().replace(query))
+    setMeasurementOptions(options)
     return [
       ...getTemplateSrv().getVariables().map((e => {
         return { label: `$${e.name}`, value: `$${e.name}` }
@@ -66,6 +76,7 @@ export const Measurements = ({
 
   const onMeasurementChange = (event: SelectableValue<string>): void => {
     if (event.value) {
+      setMeasurementSelected(true)
       const updatedQuery = { ...state.measurementsState.options.query, Measurement: event.value }
       saveState({
         ...state,
@@ -82,8 +93,32 @@ export const Measurements = ({
     }
   }
 
+  const onMeasurementInput = (value: string, actionMeta: InputActionMeta): void => {
+    if (actionMeta.action === 'input-change' || actionMeta.action === 'set-value') {
+      setMeasurementInput(value)
+    }
+  }
+
+  const onMeasurementFocus = (): void => {
+    setMeasurementSelected(false)
+    setMeasurementInput("")
+  }
+
+  const onMeasurementBlur = (): void => {
+    if (!measurementInput || measurementSelected) {
+      return
+    }
+
+    handleCustomMeasurement(measurementInput)
+  }
+
   const handleCustomMeasurement = (value: string): void => {
+    setMeasurementSelected(true)
     if (!getTemplateSrv().containsTemplate(value) && !(value.startsWith('/') && value.endsWith('/'))) {
+      const measurementOption = measurementOptions.find((e => e.label === value))
+      if (measurementOption) {
+        onMeasurementChange(measurementOption)
+      }
       return
     }
 
@@ -183,6 +218,9 @@ export const Measurements = ({
               menuShouldPortal
               allowCustomValue
               onCreateOption={handleCustomMeasurement}
+              onInputChange={onMeasurementInput}
+              onFocus={onMeasurementFocus}
+              onBlur={onMeasurementBlur}
             />
           </InlineField>
         </InlineFieldRow>
