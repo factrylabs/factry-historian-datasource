@@ -35,7 +35,6 @@ func (api *API) MeasurementQuery(query schemas.Query) (data.Frames, error) {
 	}
 
 	frames, err := data.UnmarshalArrowFrames(dataResponse.Frames)
-
 	if err != nil {
 		return nil, err
 	}

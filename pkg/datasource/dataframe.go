@@ -3,39 +3,42 @@ package datasource
 import (
 	"fmt"
 	"math"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 	"golang.org/x/exp/maps"
 )
 
 // MergeFrames merges 2 set of frames based on the metadata and name of each frame
-func MergeFrames(a data.Frames, b data.Frames) data.Frames {
-	if len(a) == 0 {
-		return b
+func MergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
+	if len(lastKnown) == 0 {
+		return result
 	}
 
-	if len(b) == 0 {
-		return a
+	if len(result) == 0 {
+		return lastKnown
 	}
 
 	frameMap := make(map[string]*data.Frame)
-	for _, aFrame := range a {
-		frameMap[aFrame.Name] = aFrame
+	for _, aFrame := range lastKnown {
+		frameMap[GetFrameID(aFrame)] = aFrame
 	}
 
 frameLoop:
-	for _, bFrame := range b {
-		aFrame, ok := frameMap[bFrame.Name]
+	for _, bFrame := range result {
+		bFrameID := GetFrameID(bFrame)
+		aFrame, ok := frameMap[bFrameID]
 		if !ok {
-			frameMap[bFrame.Name] = bFrame
+			frameMap[bFrameID] = bFrame
 		} else {
 			if len(aFrame.Fields) != len(bFrame.Fields) {
 				continue
 			}
 
 			for i := 0; i < len(aFrame.Fields); i++ {
-				if aFrame.Fields[0].Type() != bFrame.Fields[i].Type() {
+				if aFrame.Fields[i].Type() != bFrame.Fields[i].Type() {
 					continue frameLoop
 				}
 			}
@@ -52,20 +55,142 @@ frameLoop:
 	return maps.Values(frameMap)
 }
 
-// AddMetaData adds metadata from measurements to data frames
-func AddMetaData(measurements []schemas.Measurement, useEngineeringSpecs bool, frames data.Frames) data.Frames {
+// GetFrameSuffix returns the frame suffix for a given frame
+func GetFrameSuffix(frame *data.Frame) string {
+	if frame == nil || frame.Meta == nil {
+		return ""
+	}
+
+	meta, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	labels, ok := meta["Labels"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	labelPairs := []string{}
+	for key, value := range labels {
+		labelPairs = append(labelPairs, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	if len(labelPairs) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf(" {%s}", strings.Join(labelPairs, ", "))
+}
+
+// GetMeasurementFrameName returns the frame name for a given frame based on the measurement
+func GetMeasurementFrameName(frame *data.Frame) string {
+	if frame == nil {
+		return ""
+	}
+
+	if frame.Meta == nil {
+		return frame.Name
+	}
+
+	meta, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return frame.Name
+	}
+
+	measurementName, ok := meta["MeasurementName"].(string)
+	if !ok {
+		return frame.Name
+	}
+
+	return measurementName + GetFrameSuffix(frame)
+}
+
+// GetFrameID returns the frame ID for a given frame
+func GetFrameID(frame *data.Frame) string {
+	if frame == nil {
+		return ""
+	}
+
+	if frame.Meta == nil {
+		return frame.Name
+	}
+
+	meta, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return frame.Name
+	}
+
+	measurementUUID, ok := meta["MeasurementUUID"].(string)
+	if !ok {
+		return frame.Name
+	}
+
+	labels, ok := meta["Labels"].(map[string]interface{})
+	if !ok {
+		return measurementUUID
+	}
+
+	labelString := ""
+	for key, value := range labels {
+		labelString += fmt.Sprintf("%s=%s", key, value)
+	}
+
+	return fmt.Sprintf("%s%s", measurementUUID, GetFrameSuffix(frame))
+}
+
+// GetAssetPath returns the asset path for a given asset
+func GetAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUID) string {
+	asset, ok := uuidToAssetMap[assetUUID]
+	if !ok {
+		return ""
+	}
+
+	parentUUID := asset.ParentUUID
+	if parentUUID == nil {
+		return asset.Name
+	}
+
+	return GetAssetPath(uuidToAssetMap, *parentUUID) + "\\\\" + asset.Name
+}
+
+// SetFrameNamesByAsset sets the name of each frame to the asset path
+func SetFrameNamesByAsset(assets []schemas.Asset, assetProperties []schemas.AssetProperty, frames data.Frames) data.Frames {
+	measurementUUIDToPropertyMap := make(map[uuid.UUID]schemas.AssetProperty)
+	for _, property := range assetProperties {
+		measurementUUIDToPropertyMap[property.MeasurementUUID] = property
+	}
+
+	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
+	for _, asset := range assets {
+		UUIDToAssetMap[asset.UUID] = asset
+	}
+
 	for _, frame := range frames {
-		seriesMeasurement := schemas.Measurement{}
-		for _, measurement := range measurements {
-			if measurement.Name == frame.Name {
-				seriesMeasurement = measurement
-				break
-			}
+		if frame.Meta == nil {
+			continue
 		}
 
-		for _, field := range frame.Fields {
-			if field.Name == "value" {
-				field.Config = getFieldConfig(frame.Name, seriesMeasurement, useEngineeringSpecs)
+		if field, _ := frame.FieldByName("value"); field != nil {
+			if field.Config == nil {
+				field.Config = &data.FieldConfig{}
+			}
+			custom, ok := frame.Meta.Custom.(map[string]interface{})
+			if ok {
+				measurementUUIDString, ok := custom["MeasurementUUID"].(string)
+				if !ok {
+					continue
+				}
+
+				measurementUUID, err := uuid.Parse(measurementUUIDString)
+				if err != nil {
+					continue
+				}
+
+				property, ok := measurementUUIDToPropertyMap[measurementUUID]
+				if ok {
+					field.Config.DisplayNameFromDS = GetAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + GetFrameSuffix(frame)
+				}
 			}
 		}
 	}
@@ -73,15 +198,43 @@ func AddMetaData(measurements []schemas.Measurement, useEngineeringSpecs bool, f
 	return frames
 }
 
-func getFieldConfig(frameName string, measurement schemas.Measurement, useEngineeringSpecs bool) *data.FieldConfig {
+// AddMetaData adds metadata from measurements to data frames
+func AddMetaData(frames data.Frames, useEngineeringSpecs bool) data.Frames {
+	for _, frame := range frames {
+		setFieldConfig(frame, useEngineeringSpecs)
+	}
+	return frames
+}
+
+func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
+	field, _ := frame.FieldByName("value")
+	if field == nil {
+		return
+	}
 	fieldConfig := &data.FieldConfig{
 		Unit:              "none",
-		Description:       measurement.Description,
-		DisplayNameFromDS: frameName,
+		DisplayNameFromDS: GetMeasurementFrameName(frame),
 	}
-	config, err := measurement.Attributes.GetAttributes("Config")
+	field.Config = fieldConfig
+
+	if frame.Meta == nil || frame.Meta.Custom == nil {
+		return
+	}
+
+	meta, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	custom := schemas.Attributes(meta)
+	attributes, err := custom.GetAttributes("Attributes")
+	if err != nil {
+		return
+	}
+
+	config, err := attributes.GetAttributes("Config")
 	if err != nil || !useEngineeringSpecs {
-		return fieldConfig
+		return
 	}
 
 	if uom := config.GetString("UoM"); uom != "" {
@@ -121,6 +274,4 @@ func getFieldConfig(frameName string, measurement schemas.Measurement, useEngine
 	if len(thresholdConfig.Steps) > 1 {
 		fieldConfig.Thresholds = thresholdConfig
 	}
-
-	return fieldConfig
 }

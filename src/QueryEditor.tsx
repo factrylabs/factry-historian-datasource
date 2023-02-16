@@ -23,6 +23,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     this.saveState = this.saveState.bind(this)
   }
 
+  appIsAlertingType = this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting
   state = {
     loading: true,
     tabIndex: TabIndex.Assets,
@@ -50,7 +51,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
               Period: '$__interval'
             },
             IncludeLastKnownPoint: false,
-            UseEngineeringSpecs: false
+            UseEngineeringSpecs: !this.appIsAlertingType,
           },
         },
         tags: [],
@@ -69,7 +70,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
               Period: '$__interval'
             },
             IncludeLastKnownPoint: false,
-            UseEngineeringSpecs: false
+            UseEngineeringSpecs: !this.appIsAlertingType,
           }
         },
         filter: {
@@ -203,7 +204,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     })
   }
 
-  loadDataForTab(query: Query): Promise<void> {
+  async loadDataForTab(query: Query): Promise<void> {
     let promises = []
     switch (query.tabIndex || TabIndex.Assets) {
       case TabIndex.Assets:
@@ -389,13 +390,15 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
   }
 
   render() {
+
+
     const tabs = [
       {
         title: 'Assets',
         content: (
           <Assets
             state={this.state}
-            appIsAlertingType={this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting}
+            appIsAlertingType={this.appIsAlertingType}
             saveState={this.saveState}
             onChangeAssetMeasurementQuery={this.onChangeAssetMeasurementQuery}
           />
@@ -406,7 +409,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         content: (
           <Measurements
             state={this.state}
-            appIsAlertingType={this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting}
+            appIsAlertingType={this.appIsAlertingType}
             saveState={this.saveState}
             onLoadMeasurementOptions={this.loadMeasurementOptions}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}

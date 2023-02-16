@@ -143,7 +143,12 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		Options:      assetMeasurementQuery.Options,
 	}
 
-	return handleQuery(measurementQuery, backendQuery, api)
+	frames, err := handleQuery(measurementQuery, backendQuery, api)
+	if err != nil {
+		return nil, err
+	}
+
+	return SetFrameNamesByAsset(assets, assetProperties, frames), nil
 }
 
 func getAssetPath(asset schemas.Asset, assets []schemas.Asset) string {
@@ -225,20 +230,9 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 		}
 
 		result = MergeFrames(lastKnownPointResult, result)
-
 	}
 
-	measurements := make([]schemas.Measurement, len(measurementQuery.Measurements))
-	for i, measurementUUID := range measurementQuery.Measurements {
-		measurement, err := api.GetMeasurement(measurementUUID)
-		if err != nil {
-			return nil, fmt.Errorf("Error getting measurement: %v", err)
-		}
-
-		measurements[i] = measurement
-	}
-
-	return AddMetaData(measurements, measurementQuery.Options.UseEngineeringSpecs, result), nil
+	return AddMetaData(result, measurementQuery.Options.UseEngineeringSpecs), nil
 }
 
 func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
