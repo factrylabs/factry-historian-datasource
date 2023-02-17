@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
-import { InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
+import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
 import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { getAggregations, getPeriods } from './util'
@@ -115,33 +115,39 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
           <TagsSection tags={tags} conditions={['AND']} onChange={handleTagsSectionChange} />
         </InlineField>
       </InlineFieldRow>
-
-      <InlineFieldRow>
-        <InlineField
-          label="Include last known point"
-          tooltip="Includes the last known point before the selected time range"
-          labelWidth={labelWidth}
-        >
-          <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
-        </InlineField>
-        {!appIsAlertingType && (
-          <InlineField label="Use engineering specs">
-            <InlineSwitch value={state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
-          </InlineField>
-        )}
-        <InlineField label="Display database name">
-          <InlineSwitch value={state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
-        </InlineField>
-
-        <InlineField label="Display description">
-          <InlineSwitch value={state.DisplayDescription} onChange={onChangeDisplayDescription} />
-        </InlineField>
-      </InlineFieldRow>
       <InlineFieldRow>
         <InlineField label="Limit" labelWidth={labelWidth}>
           <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={state.Limit} />
         </InlineField>
       </InlineFieldRow>
+      <CollapsableSection label="Advanced options" isOpen={false}>
+        <InlineFieldRow>
+          <InlineField
+            label="Include last known point"
+            tooltip="Includes the last known point before the selected time range"
+            labelWidth={labelWidth}
+          >
+            <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
+          </InlineField>
+        </InlineFieldRow>
+        {!appIsAlertingType && (
+          <InlineFieldRow>
+            <InlineField label="Use engineering specs" labelWidth={labelWidth}>
+              <InlineSwitch value={state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
+            </InlineField>
+          </InlineFieldRow>
+        )}
+        <InlineFieldRow>
+          <InlineField label="Display database name" labelWidth={labelWidth}>
+            <InlineSwitch value={state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
+          </InlineField>
+        </InlineFieldRow>
+        <InlineFieldRow>
+          <InlineField label="Display description" labelWidth={labelWidth}>
+            <InlineSwitch value={state.DisplayDescription} onChange={onChangeDisplayDescription} />
+          </InlineField>
+        </InlineFieldRow>
+      </CollapsableSection>
     </div>
   )
 }
