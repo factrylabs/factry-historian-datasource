@@ -51,6 +51,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
               Period: '$__interval'
             },
             IncludeLastKnownPoint: false,
+            FillInitialEmptyValues: false,
             UseEngineeringSpecs: !this.appIsAlertingType,
             DisplayDatabaseName: false,
             DisplayDescription: false,
@@ -72,6 +73,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
               Period: '$__interval'
             },
             IncludeLastKnownPoint: false,
+            FillInitialEmptyValues: false,
             UseEngineeringSpecs: !this.appIsAlertingType,
             DisplayDatabaseName: false,
             DisplayDescription: false,

@@ -75,6 +75,10 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
     onChange({ ...state, IncludeLastKnownPoint: e.target.checked }, tags)
   }
 
+  const onChangeFillInitialEmptyValues = (e: any): void => {
+    onChange({ ...state, FillInitialEmptyValues: e.target.checked }, tags)
+  }
+
   const onChangeUseEngineeringSpecs = (e: any): void => {
     onChange({ ...state, UseEngineeringSpecs: e.target.checked }, tags)
   }
@@ -147,6 +151,15 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
           >
             <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
           </InlineField>
+          {state.IncludeLastKnownPoint && (
+            <InlineField
+              label="Fill empty initial intervals"
+              labelWidth={labelWidth}
+            >
+              <InlineSwitch value={state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
+            </InlineField>
+          )}
+
         </InlineFieldRow>
         {!appIsAlertingType && (
           <InlineFieldRow>

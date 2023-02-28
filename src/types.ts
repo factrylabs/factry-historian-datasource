@@ -132,6 +132,7 @@ export interface MeasurementQueryOptions {
   GroupBy?: string[]
   Aggregation?: Aggregation
   IncludeLastKnownPoint: boolean
+  FillInitialEmptyValues: boolean
   UseEngineeringSpecs: boolean
   DisplayDatabaseName: boolean
   DisplayDescription: boolean

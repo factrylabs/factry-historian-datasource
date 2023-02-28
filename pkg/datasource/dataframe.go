@@ -243,6 +243,32 @@ func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetPropert
 	return frames
 }
 
+func fillInitialEmptyIntervals(frames data.Frames) data.Frames {
+	for _, frame := range frames {
+		valueField, _ := frame.FieldByName("value")
+		if valueField == nil {
+			continue
+		}
+
+		// Concrete at returns ok = false when the value is nil for pointer types
+		if _, ok := valueField.ConcreteAt(0); !ok {
+			continue
+		}
+
+		initialValue := valueField.At(0)
+		for i := 1; i < valueField.Len(); i++ {
+			_, ok := valueField.ConcreteAt(i)
+			if !ok {
+				valueField.Set(i, initialValue)
+			} else {
+				break
+			}
+		}
+	}
+
+	return frames
+}
+
 // addMetaData adds metadata from measurements to data frames
 func addMetaData(frames data.Frames, useEngineeringSpecs bool) data.Frames {
 	for _, frame := range frames {

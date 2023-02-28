@@ -219,6 +219,9 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 		}
 
 		result = mergeFrames(lastKnownPointResult, result)
+		if measurementQuery.Options.FillInitialEmptyValues {
+			result = fillInitialEmptyIntervals(result)
+		}
 	}
 
 	return addMetaData(result, measurementQuery.Options.UseEngineeringSpecs), nil

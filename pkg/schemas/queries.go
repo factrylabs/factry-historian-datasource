@@ -6,14 +6,15 @@ import (
 
 // MeasurementQueryOptions are measurement query options
 type MeasurementQueryOptions struct {
-	Tags                  map[string]string
-	GroupBy               []string
-	Aggregation           *Aggregation
-	IncludeLastKnownPoint bool
-	UseEngineeringSpecs   bool
-	DisplayDatabaseName   bool
-	DisplayDescription    bool
-	Limit                 *int
+	Tags                   map[string]string
+	GroupBy                []string
+	Aggregation            *Aggregation
+	IncludeLastKnownPoint  bool
+	FillInitialEmptyValues bool
+	UseEngineeringSpecs    bool
+	DisplayDatabaseName    bool
+	DisplayDescription     bool
+	Limit                  *int
 }
 
 // AssetMeasurementQuery is used to build the time series query to send to the historian
