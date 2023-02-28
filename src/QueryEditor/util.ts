@@ -2,7 +2,7 @@ import { SelectableValue } from "@grafana/data"
 import { getTemplateSrv } from "@grafana/runtime"
 import { CascaderOption } from "components/Cascader/Cascader"
 import { QueryTag } from "components/TagsSection/TagsSection"
-import { AggregationName, Asset, AssetProperty, Attributes, EventPropertyFilter } from "types"
+import { AggregationName, Asset, AssetProperty, Attributes, EventPropertyFilter, FillType } from "types"
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -17,11 +17,21 @@ export function enumKeys<O extends object, K extends keyof O = keyof O>(obj: O):
 }
 
 export function getAggregations(): Array<SelectableValue<string>> {
-  return enumKeys(AggregationName)
+  return Object.values(AggregationName)
     .map((aggregation) => {
       return {
         label: aggregation,
         value: aggregation,
+      } as SelectableValue<string>
+    })
+}
+
+export function getFillTypes(): Array<SelectableValue<string>> {
+  return Object.values(FillType)
+    .map((fillType) => {
+      return {
+        label: fillType,
+        value: fillType,
       } as SelectableValue<string>
     })
 }

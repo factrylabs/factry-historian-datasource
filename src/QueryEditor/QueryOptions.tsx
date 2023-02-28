@@ -3,7 +3,7 @@ import { SelectableValue } from '@grafana/data'
 import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
 import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
-import { getAggregations, getPeriods } from './util'
+import { getAggregations, getFillTypes, getPeriods } from './util'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
 
 export interface Props {
@@ -62,6 +62,15 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
     onPeriodChange(customValue)
   }
 
+  const onFillChange = (selected: SelectableValue<string>): void => {
+    const aggregation = {
+      ...state.Aggregation,
+      Fill: selected?.value,
+    } as Aggregation
+
+    onChange({ ...state, Aggregation: aggregation }, tags)
+  }
+
   const onChangeIncludeLastKnownPoint = (e: any): void => {
     onChange({ ...state, IncludeLastKnownPoint: e.target.checked }, tags)
   }
@@ -101,6 +110,15 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
             allowCustomValue
             onChange={onPeriodChange}
             onCreateOption={onCreatePeriod}
+          />
+        </InlineField>
+        <InlineField>
+          <Select
+            value={state.Aggregation?.Fill}
+            placeholder="(optional) select a fill type"
+            options={getFillTypes()}
+            onChange={onFillChange}
+            isClearable
           />
         </InlineField>
       </InlineFieldRow>

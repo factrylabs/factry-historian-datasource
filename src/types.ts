@@ -97,18 +97,26 @@ export interface MeasurementByName {
 }
 
 export enum AggregationName {
-  'count',
-  'integral',
-  'mean',
-  'median',
-  'mode',
-  'spread',
-  'stddev',
-  'sum',
-  'first',
-  'last',
-  'max',
-  'min',
+  Count = 'count',
+  Integral = 'integral',
+  Mean = 'mean',
+  Median = 'median',
+  Mode = 'mode',
+  Spread = 'spread',
+  StdDev = 'stddev',
+  Sum = 'sum',
+  First = 'first',
+  Last = 'last',
+  Max = 'max',
+  Min = 'min',
+}
+
+export enum FillType {
+  None = 'none',
+  Null = 'null',
+  Previous = 'previous',
+  Linear = 'linear',
+  Zero = '0',
 }
 
 export interface Aggregation {

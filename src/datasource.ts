@@ -21,7 +21,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           if (assetMeasurementQuery.Options.Aggregation) {
             assetMeasurementQuery.Options.Aggregation = {
               Name: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Name),
-              Period: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Period)
+              Period: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Period),
+              Fill: assetMeasurementQuery.Options.Aggregation.Fill,
+              Arguments: assetMeasurementQuery.Options.Aggregation.Arguments,
             }
           }
           request.targets[i].query = assetMeasurementQuery
@@ -37,7 +39,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           if (measurementQuery.Options.Aggregation) {
             measurementQuery.Options.Aggregation = {
               Name: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Name),
-              Period: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Period)
+              Period: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Period),
+              Fill: measurementQuery.Options.Aggregation.Fill,
+              Arguments: measurementQuery.Options.Aggregation.Arguments,
             }
           }
           request.targets[i].query = measurementQuery
