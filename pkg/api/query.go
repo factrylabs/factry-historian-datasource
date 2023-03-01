@@ -25,6 +25,10 @@ func (api *API) MeasurementQuery(query schemas.Query) (data.Frames, error) {
 		return nil, err
 	}
 
+	if response.StatusCode() != 200 {
+		return nil, fmt.Errorf(string(response.Body()))
+	}
+
 	dataResponse := arrow_pb.DataResponse{}
 	if err := proto.Unmarshal(response.Body(), &dataResponse); err != nil {
 		return nil, err
@@ -49,6 +53,10 @@ func (api *API) RawQuery(timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuer
 	response, err := request.SetBody(query).Post(fmt.Sprintf("/api/timeseries/%v/raw-query", timeseriesDatabaseUUID))
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode() != 200 {
+		return nil, fmt.Errorf(string(response.Body()))
 	}
 
 	dataResponse := arrow_pb.DataResponse{}
