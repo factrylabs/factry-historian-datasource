@@ -21,6 +21,7 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
       aggregation = {
         ...state.Aggregation,
         Name: event.value,
+        Period: state.Aggregation?.Period || '$__interval'
       } as Aggregation
     }
     onChange({ ...state, Aggregation: aggregation }, tags)
@@ -107,24 +108,28 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
             onChange={onAggregationChange}
           />
         </InlineField>
-        <InlineField>
-          <Select
-            value={state.Aggregation?.Period}
-            options={periods}
-            allowCustomValue
-            onChange={onPeriodChange}
-            onCreateOption={onCreatePeriod}
-          />
-        </InlineField>
-        <InlineField>
-          <Select
-            value={state.Aggregation?.Fill}
-            placeholder="(optional) select a fill type"
-            options={getFillTypes()}
-            onChange={onFillChange}
-            isClearable
-          />
-        </InlineField>
+        {state.Aggregation?.Name && (
+          <InlineField>
+            <Select
+              value={state.Aggregation?.Period}
+              options={periods}
+              allowCustomValue
+              onChange={onPeriodChange}
+              onCreateOption={onCreatePeriod}
+            />
+          </InlineField>
+        )}
+        {state.Aggregation?.Name && (
+          <InlineField>
+            <Select
+              value={state.Aggregation?.Fill}
+              placeholder="(optional) select a fill type"
+              options={getFillTypes()}
+              onChange={onFillChange}
+              isClearable
+            />
+          </InlineField>
+        )}
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
