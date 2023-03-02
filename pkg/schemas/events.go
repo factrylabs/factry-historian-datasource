@@ -20,8 +20,9 @@ const (
 
 // EventStatus
 const (
-	EventStatusProcessed EventStatus = "processed"
-	EventStatusOpen      EventStatus = "open"
+	EventStatusProcessed  EventStatus = "processed"
+	EventStatusOpen       EventStatus = "open"
+	EventStatusIncomplete EventStatus = "incomplete"
 )
 
 // Event has the fields of an event that are used by the data source
