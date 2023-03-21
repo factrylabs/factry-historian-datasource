@@ -79,7 +79,7 @@ func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery bac
 			}
 		}
 
-		measurementQuery.Measurements = measurements
+		measurementQuery.MeasurementUUIDs = measurements
 		response.Frames, response.Error = handleMeasurementQuery(measurementQuery, backendQuery, api)
 		return response
 	case QueryTypeRaw:
@@ -119,8 +119,8 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		return nil, err
 	}
 
-	measurements := []string{}
-	assetUUIDs := []string{}
+	measurementUUIDs := []uuid.UUID{}
+	assetUUIDs := []uuid.UUID{}
 	for _, assetString := range assetMeasurementQuery.Assets {
 		if assetUUID, ok := filterAssetUUID(assets, assetString); ok {
 			assetUUIDs = append(assetUUIDs, assetUUID)
@@ -130,8 +130,8 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	for _, assetUUID := range assetUUIDs {
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			for _, assetProperty := range assetProperties {
-				if assetProperty.Name == property && assetProperty.AssetUUID.String() == assetUUID {
-					measurements = append(measurements, assetProperty.MeasurementUUID.String())
+				if assetProperty.Name == property && assetProperty.AssetUUID == assetUUID {
+					measurementUUIDs = append(measurementUUIDs, assetProperty.MeasurementUUID)
 					break
 				}
 			}
@@ -139,8 +139,8 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	}
 
 	measurementQuery := schemas.MeasurementQuery{
-		Measurements: measurements,
-		Options:      assetMeasurementQuery.Options,
+		MeasurementUUIDs: measurementUUIDs,
+		Options:          assetMeasurementQuery.Options,
 	}
 
 	frames, err := handleQuery(measurementQuery, backendQuery, api)
@@ -151,12 +151,12 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	return setAssetFrameNames(frames, assets, assetProperties, measurementQuery.Options), nil
 }
 
-func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) ([]string, error) {
-	parsedMeasurements := []string{}
+func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) ([]uuid.UUID, error) {
+	parsedMeasurements := []uuid.UUID{}
 	measurement := measurementQuery.Measurement
 
-	if _, err := uuid.Parse(measurement); err == nil {
-		parsedMeasurements = append(parsedMeasurements, measurement)
+	if measurementUUID, err := uuid.Parse(measurement); err == nil {
+		parsedMeasurements = append(parsedMeasurements, measurementUUID)
 		return parsedMeasurements, nil
 	}
 
@@ -185,7 +185,7 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery bac
 	}
 
 	for _, m := range res {
-		parsedMeasurements = append(parsedMeasurements, m.UUID.String())
+		parsedMeasurements = append(parsedMeasurements, m.UUID)
 	}
 	return parsedMeasurements, nil
 }
@@ -249,8 +249,8 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 		return nil, err
 	}
 
-	assetUUIDs := []string{}
-	eventTypeUUIDs := []string{}
+	assetUUIDs := []uuid.UUID{}
+	eventTypeUUIDs := []uuid.UUID{}
 	for _, assetString := range eventQuery.Assets {
 		if assetUUID, ok := filterAssetUUID(assets, assetString); ok {
 			assetUUIDs = append(assetUUIDs, assetUUID)
@@ -265,8 +265,8 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 	filter := schemas.EventFilter{
 		StartTime:         backendQuery.TimeRange.From,
 		StopTime:          backendQuery.TimeRange.To,
-		Assets:            assetUUIDs,
-		EventTypes:        eventTypeUUIDs,
+		AssetUUIDss:       assetUUIDs,
+		EventTypeUUIDs:    eventTypeUUIDs,
 		PreloadProperties: true,
 		Limit:             math.MaxInt32,
 		PropertyFilter:    eventQuery.PropertyFilter,
@@ -302,7 +302,7 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 	start := backendQuery.TimeRange.From.Truncate(time.Second)
 	end := backendQuery.TimeRange.To.Truncate(time.Second)
 	historianQuery := schemas.Query{
-		MeasurementUUIDs: query.Measurements,
+		MeasurementUUIDs: query.MeasurementUUIDs,
 		Start:            start,
 		End:              &end,
 		Tags:             query.Options.Tags,
@@ -324,7 +324,7 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 	return historianQuery
 }
 
-func filterAssetUUID(assets []schemas.Asset, searchValue string) (string, bool) {
+func filterAssetUUID(assets []schemas.Asset, searchValue string) (uuid.UUID, bool) {
 	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		UUIDToAssetMap[asset.UUID] = asset
@@ -332,19 +332,19 @@ func filterAssetUUID(assets []schemas.Asset, searchValue string) (string, bool) 
 
 	for _, asset := range assets {
 		if asset.UUID.String() == searchValue || getAssetPath(UUIDToAssetMap, asset.UUID) == searchValue {
-			return asset.UUID.String(), true
+			return asset.UUID, true
 		}
 	}
 
-	return "", false
+	return uuid.Nil, false
 }
 
-func filterEventTypeUUID(eventTypes []schemas.EventType, searchValue string) (string, bool) {
+func filterEventTypeUUID(eventTypes []schemas.EventType, searchValue string) (uuid.UUID, bool) {
 	for _, eventType := range eventTypes {
 		if eventType.UUID.String() == searchValue || eventType.Name == searchValue {
-			return eventType.UUID.String(), true
+			return eventType.UUID, true
 		}
 	}
 
-	return "", false
+	return uuid.Nil, false
 }

@@ -2,6 +2,8 @@ package schemas
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Format is a string
@@ -70,7 +72,7 @@ type Aggregation struct {
 // @Description retrieve time series data.
 type Query struct {
 	// An array of measurements to query defined by uuid
-	MeasurementUUIDs []string `validate:"required_without=Measurements"`
+	MeasurementUUIDs []uuid.UUID `validate:"required_without=Measurements"`
 	// An array of measurements to query defined by database name and measurement name
 	Measurements []MeasurementByName `validate:"required_without=MeasurementUUIDs"`
 	// The start time of the query (inclusive)
