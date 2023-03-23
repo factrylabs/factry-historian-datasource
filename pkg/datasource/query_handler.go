@@ -206,21 +206,26 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 		return nil, err
 	}
 
-	if measurementQuery.Options.IncludeLastKnownPoint {
+	if measurementQuery.Options.IncludeLastKnownPoint || measurementQuery.Options.FillInitialEmptyValues {
+		lastPointQuery := q
 		start := q.Start
-		q.End = &start
-		q.Start = time.Time{}.Add(time.Millisecond)
-		q.Aggregation = &schemas.Aggregation{
+		lastPointQuery.End = &start
+		lastPointQuery.Start = time.Time{}.Add(time.Millisecond)
+		lastPointQuery.Aggregation = &schemas.Aggregation{
 			Name: "last",
 		}
-		lastKnownPointResult, err := api.MeasurementQuery(q)
+		lastKnownPointResult, err := api.MeasurementQuery(lastPointQuery)
 		if err != nil {
 			return nil, err
 		}
 
 		result = mergeFrames(lastKnownPointResult, result)
 		if measurementQuery.Options.FillInitialEmptyValues {
-			result = fillInitialEmptyIntervals(result)
+			result = fillInitialEmptyIntervals(result, q)
+		}
+
+		if !measurementQuery.Options.IncludeLastKnownPoint {
+			result = deleteFistRow(result)
 		}
 	}
 

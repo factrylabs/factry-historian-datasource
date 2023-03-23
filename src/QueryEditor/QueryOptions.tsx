@@ -156,15 +156,14 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
           >
             <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
           </InlineField>
-          {state.IncludeLastKnownPoint && (
-            <InlineField
+        </InlineFieldRow>
+        <InlineFieldRow>
+        <InlineField
               label="Fill empty initial intervals"
               labelWidth={labelWidth}
             >
               <InlineSwitch value={state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
             </InlineField>
-          )}
-
         </InlineFieldRow>
         {!appIsAlertingType && (
           <InlineFieldRow>

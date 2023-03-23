@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -243,7 +244,7 @@ func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetPropert
 	return frames
 }
 
-func fillInitialEmptyIntervals(frames data.Frames) data.Frames {
+func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Frames {
 	for _, frame := range frames {
 		valueField, _ := frame.FieldByName("value")
 		if valueField == nil {
@@ -256,16 +257,42 @@ func fillInitialEmptyIntervals(frames data.Frames) data.Frames {
 		}
 
 		initialValue := valueField.At(0)
-		for i := 1; i < valueField.Len(); i++ {
-			_, ok := valueField.ConcreteAt(i)
-			if !ok {
-				valueField.Set(i, initialValue)
-			} else {
-				break
+		if valueField.Len() > 1 {
+			for i := 1; i < valueField.Len(); i++ {
+				_, ok := valueField.ConcreteAt(i)
+				if !ok {
+					valueField.Set(i, initialValue)
+				} else {
+					break
+				}
+			}
+		} else {
+			timeField, _ := frame.FieldByName("time")
+			if timeField == nil {
+				continue
+			}
+			if query.End == nil {
+				return frames
+			}
+			duration, err := time.ParseDuration(query.Aggregation.Period)
+			if err != nil {
+				return frames
+			}
+			for time := query.Start; time.Before(*query.End); time = time.Add(duration) {
+				valueField.Append(initialValue)
+				timestamp := time
+				timeField.Append(&timestamp)
 			}
 		}
 	}
 
+	return frames
+}
+
+func deleteFistRow(frames data.Frames) data.Frames {
+	for _, frame := range frames {
+		frame.DeleteRow(0)
+	}
 	return frames
 }
 
