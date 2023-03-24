@@ -225,7 +225,7 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 		}
 
 		if !measurementQuery.Options.IncludeLastKnownPoint {
-			result = deleteFistRow(result)
+			result = deleteFirstRow(result)
 		}
 	}
 

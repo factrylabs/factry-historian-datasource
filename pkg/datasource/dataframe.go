@@ -79,12 +79,12 @@ func getFrameSuffix(frame *data.Frame, includeDatabaseName, includeDescription b
 
 	if includeDescription && meta["Description"] != nil {
 		if description, ok := meta["Description"].(string); ok && description != "" {
-			labelPairs = append(labelPairs, fmt.Sprintf("Description=%s", description))
+			labelPairs = append(labelPairs, fmt.Sprintf("Description: %s", description))
 		}
 	}
 
 	if includeDatabaseName && meta["DatabaseName"] != nil {
-		labelPairs = append(labelPairs, fmt.Sprintf("Database=%s", meta["DatabaseName"]))
+		labelPairs = append(labelPairs, fmt.Sprintf("Database: %s", meta["DatabaseName"]))
 	}
 
 	if len(labelPairs) == 0 {
@@ -289,7 +289,7 @@ func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Fra
 	return frames
 }
 
-func deleteFistRow(frames data.Frames) data.Frames {
+func deleteFirstRow(frames data.Frames) data.Frames {
 	for _, frame := range frames {
 		frame.DeleteRow(0)
 	}
