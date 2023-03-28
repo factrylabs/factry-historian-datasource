@@ -1,5 +1,6 @@
 import { DataQueryRequest, DataSourceInstanceSettings } from '@grafana/data'
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime'
+import { Observable } from 'rxjs'
 import { Asset, AssetMeasurementQuery, AssetProperty, Collector, EventConfiguration, EventQuery, EventType, EventTypeProperty, HistorianDataSourceOptions, Measurement, MeasurementFilter, MeasurementQuery, Pagination, Query, RawQuery, TimeseriesDatabase } from './types'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
@@ -60,6 +61,11 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           request.targets[i].query = eventQuery
           break
         }
+        default:
+          return new Observable((subscriber) => {
+               subscriber.next({ data: [] })
+               subscriber.complete()
+          } )
       }
     }
     return super.query(request)
