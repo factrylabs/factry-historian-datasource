@@ -5,7 +5,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag } from 'components/TagsSection/types'
 import { QueryOptions } from './QueryOptions'
-import { getAssetPath, getChildAssets, matchedAssets, replaceAsset } from './util'
+import { getChildAssets, matchedAssets, replaceAsset } from './util'
 import { AssetMeasurementQuery, labelWidth, MeasurementQueryOptions, QueryEditorState } from 'types'
 
 export interface Props {
@@ -107,7 +107,7 @@ export const Assets = ({
   const initialLabel = (): string => {
     const asset = state.assets.find(e => e.UUID === state.assetsState.selectedAsset)
     if (asset) {
-      return getAssetPath(asset, state.assets)
+      return asset.AssetPath || ''
     }
 
     return state.assetsState.selectedAsset || ''

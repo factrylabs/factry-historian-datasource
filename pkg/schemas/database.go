@@ -47,6 +47,7 @@ type Asset struct {
 	Status      string
 	ParentUUID  *uuid.UUID
 	Parent      *Asset
+	AssetPath   string
 }
 
 // AssetProperty has the fields of an asset property that are used by the data source

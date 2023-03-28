@@ -223,6 +223,7 @@ export interface Asset {
   Status: string
   ParentUUID?: string
   Parent?: Asset
+  AssetPath?: string
 }
 
 export interface AssetProperty {

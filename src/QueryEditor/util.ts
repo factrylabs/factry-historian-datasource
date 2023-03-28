@@ -159,8 +159,7 @@ export function matchedAssets(regex: string | undefined, assets: Asset[]): Asset
 
   const matched: Asset[] = []
   for (const asset of assets) {
-    const assetPath = getAssetPath(asset, assets)
-    if (asset.UUID === regex || re?.test(assetPath)) {
+    if (asset.UUID === regex || re?.test(asset.AssetPath || asset.Name)) {
       matched.push(asset)
     }
   }
@@ -168,26 +167,11 @@ export function matchedAssets(regex: string | undefined, assets: Asset[]): Asset
   return matched
 }
 
-export function getAssetPath(asset: Asset, assets: Asset[]): string {
-  if (!asset.ParentUUID) {
-    return asset.Name
-  }
-
-  const parent = assets.find(
-    (item) => item.UUID === asset.ParentUUID
-  )
-  if (parent) {
-    return `${getAssetPath(parent, assets)}\\\\${asset.Name}`
-  }
-
-  return asset.Name
-}
-
 export function replaceAsset(value: string | undefined, assets: Asset[]): string | undefined {
   const template = getTemplateSrv()
   if (template.containsTemplate(value)) {
     const replacedValue = template.replace(value)
-    const asset = assets.find(e => getAssetPath(e, assets) === replacedValue || e.UUID === replacedValue)
+    const asset = assets.find(e => e.AssetPath === replacedValue || e.UUID === replacedValue)
     if (asset) {
       return asset.UUID
     }

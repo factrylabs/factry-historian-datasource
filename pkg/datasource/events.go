@@ -16,8 +16,8 @@ const (
 )
 
 type EventLabels struct {
-	AssetUUID     string
-	EventTypeUUID string
+	AssetUUID     uuid.UUID
+	EventTypeUUID uuid.UUID
 	Status        string
 }
 
@@ -25,12 +25,12 @@ type EventLabels struct {
 func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty) (data.Frames, error) {
 	dataFrames := data.Frames{}
 	groupedEvents := map[EventLabels][]schemas.Event{}
-	eventTypePropertiesForEventType := map[string][]schemas.EventTypeProperty{}
+	eventTypePropertiesForEventType := map[uuid.UUID][]schemas.EventTypeProperty{}
 
 	for _, event := range events {
 		eventLabels := EventLabels{
-			AssetUUID:     event.AssetUUID.String(),
-			EventTypeUUID: event.EventTypeUUID.String(),
+			AssetUUID:     event.AssetUUID,
+			EventTypeUUID: event.EventTypeUUID,
 			Status:        string(event.Status),
 		}
 		if _, ok := groupedEvents[eventLabels]; ok {
@@ -40,10 +40,10 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 		}
 	}
 	for _, eventType := range eventTypes {
-		eventTypePropertiesForEventType[eventType.UUID.String()] = []schemas.EventTypeProperty{}
+		eventTypePropertiesForEventType[eventType.UUID] = []schemas.EventTypeProperty{}
 		for _, eventTypeProperty := range eventTypeProperties {
 			if eventTypeProperty.EventTypeUUID == eventType.UUID {
-				eventTypePropertiesForEventType[eventType.UUID.String()] = append(eventTypePropertiesForEventType[eventType.UUID.String()], eventTypeProperty)
+				eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
 			}
 		}
 	}
@@ -62,16 +62,11 @@ func dataFrameForEventType(assets []schemas.Asset, eventTypes []schemas.EventTyp
 		UUIDToAssetMap[asset.UUID] = asset
 	}
 
-	for _, asset := range assets {
-		if asset.UUID.String() == group.AssetUUID {
-			assetPath = getAssetPath(UUIDToAssetMap, asset.UUID)
-			break
-		}
-	}
+	assetPath = getAssetPath(UUIDToAssetMap, group.AssetUUID)
 
 	groupEventType := schemas.EventType{}
 	for _, eventType := range eventTypes {
-		if eventType.UUID.String() == group.EventTypeUUID {
+		if eventType.UUID == group.EventTypeUUID {
 			groupEventType = eventType
 			break
 		}

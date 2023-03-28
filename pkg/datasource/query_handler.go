@@ -330,13 +330,8 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 }
 
 func filterAssetUUID(assets []schemas.Asset, searchValue string) (uuid.UUID, bool) {
-	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
-		UUIDToAssetMap[asset.UUID] = asset
-	}
-
-	for _, asset := range assets {
-		if asset.UUID.String() == searchValue || getAssetPath(UUIDToAssetMap, asset.UUID) == searchValue {
+		if asset.UUID.String() == searchValue || asset.AssetPath == searchValue {
 			return asset.UUID, true
 		}
 	}

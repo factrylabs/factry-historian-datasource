@@ -147,12 +147,7 @@ func getAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUI
 		return ""
 	}
 
-	parentUUID := asset.ParentUUID
-	if parentUUID == nil {
-		return asset.Name
-	}
-
-	return getAssetPath(uuidToAssetMap, *parentUUID) + "\\\\" + asset.Name
+	return asset.AssetPath
 }
 
 // setMeasurementFrameNames sets the name of each frame to the measurement name

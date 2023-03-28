@@ -4,7 +4,7 @@ import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
-import { getAssetPath, getChildAssets, matchedAssets } from './util'
+import { getChildAssets, matchedAssets } from './util'
 import { EventPropertyFilter, EventQuery, labelWidth, PropertyDatatype, QueryEditorState } from 'types'
 
 export interface Props {
@@ -134,7 +134,7 @@ export const Events = ({
   const initialLabel = (): string => {
     const asset = state.assets.find(e => e.UUID === state.eventsState.selectedAsset)
     if (asset) {
-      return getAssetPath(asset, state.assets)
+      return asset.AssetPath || ''
     }
 
     return state.eventsState.selectedAsset || ''
