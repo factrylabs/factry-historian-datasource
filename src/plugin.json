@@ -11,7 +11,7 @@
     "description": "A datasource plugin for Factry Historian",
     "author": {
       "name": "Factry",
-      "url": "www.factry.io"
+      "url": "https://www.factry.io"
     },
     "keywords": [],
     "logos": {
@@ -25,10 +25,23 @@
       },
       {
         "name": "License",
-        "url": "https://github.com/grafana/grafana-starter-datasource-backend/blob/master/LICENSE"
+        "url": "https://github.com/factrylabs/factry-historian-grafana-datasource/blob/main/LICENSE"
       }
     ],
-    "screenshots": [],
+    "screenshots": [
+      {
+        "name": "Asset property query example",
+        "path": "img/grafana-datasource-assets.png"
+      },
+      {
+        "name": "Measurement query example",
+        "path": "img/grafana-datasource-measurements.png"
+      },
+      {
+        "name": "Event query example",
+        "path": "img/grafana-datasource-events.png"
+      }
+    ],
     "version": "%VERSION%",
     "updated": "%TODAY%"
   },
