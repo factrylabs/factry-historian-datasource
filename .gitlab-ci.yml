@@ -4,13 +4,15 @@ variables:
   PROJECT_NAME: grafana-datasource
   REMOTE: "historian.factry.dev"
   REMOTE_PATH: "/opt/factry/grafana-datasource"
+  CLIENT_PORTAL_SERVER : "portal.factry.cloud"
+  CLIENT_PORTAL_DOWNLOAD_PATH: "/opt/factry/portal.factry.cloud"
 
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # Run on Merge Requests
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS # Don't run branch pipeline if there's an open MR for branch
       when: never
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH =~ /^release-.*$/ # Run branch pipelines on main and release branches
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^release-.*$/ # Run branch pipelines on main and release branches
     - if: $CI_COMMIT_BRANCH =~ /^release-.*$/ && $CI_COMMIT_TAG =~ /^v.*$/
 
 
@@ -19,6 +21,7 @@ stages:
   - build
   - deploy
   - release
+  - publish
 
 before_script:
   - eval $(ssh-agent -s)
@@ -76,7 +79,7 @@ deploy:
 release:
   stage: release
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_MESSAGE =~ /ci-bump/ && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     - git tag -l | xargs git tag -d
     - git fetch --tags
@@ -86,3 +89,26 @@ release:
     - git tag -f $PACKAGE_VERSION
     - "git push origin : $PACKAGE_VERSION"
     - git push --set-upstream -o merge_request.create origin "release-$PACKAGE_VERSION"
+
+publish:
+  stage: publish
+  script:
+    - PACKAGE_VERSION=$(make version)
+    - ARCH=binary
+    - PACKAGE_NAME=factry-historian-datasource-${PACKAGE_VERSION:1}.zip
+    - REPO_FILE=/var/opt/factry/download/packages.json
+
+    - mkdir -p release/factry-historian-datasource
+    - mv dist/ release/factry-historian-datasource
+    - zip release/$PACKAGE_NAME release/factry-historian-datasource -r
+
+    - scp release/$ARCH/$PACKAGE_NAME gitlab@$CLIENT_PORTAL_SERVER:/var/opt/factry/download/factry-historian-datasource
+    - ssh gitlab@$CLIENT_PORTAL_SERVER "/var/opt/factry/publish-package -repo=$REPO_FILE -product=factry-historian-datasource -version=$PACKAGE_VERSION -os=linux -arch=$ARCH -type=binary -location=historian/$PACKAGE_NAME"
+    - ssh gitlab@$CLIENT_PORTAL_SERVER 'cp -r /var/opt/factry/download '$CLIENT_PORTAL_DOWNLOAD_PATH''
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - $CI_PROJECT_DIR/release
+      - $CI_PROJECT_DIR/dist
+  rules:
+  - if: $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/

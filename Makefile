@@ -29,12 +29,15 @@ ver: ## Prints the current version without the 'v' prefix
 	@echo $(major).$(minor).$(patch)$(prerelease)$(prerelease-identifier)
 
 version_major_bump:
-	@sed -i  's/^major = $(major)$$/major = $(shell expr $(major) + 1)/' Makefile
-	@cd pnpm version $(shell expr $(major) + 1).$(minor).$(patch)$(prerelease)$(prerelease-identifier)
+	@sed 's/^patch = $(patch)$$/patch = 0/' Makefile > tmp && mv tmp Makefile
+	@sed 's/^minor = $(minor)$$/minor = 0/' Makefile > tmp && mv tmp Makefile
+	@sed 's/^major = $(major)$$/major = $(shell expr $(major) + 1)/' Makefile > tmp && mv tmp Makefile
+	@cd pnpm version $(shell expr $(major) + 1).0.0$(prerelease)$(prerelease-identifier)
 
 version_minor_bump:
-	@sed -i  's/^minor = $(minor)$$/minor = $(shell expr $(minor) + 1)/' Makefile
-	@cd pnpm version $(major).$(shell expr $(minor) + 1).$(patch)$(prerelease)$(prerelease-identifier)
+	@sed 's/^patch = $(patch)$$/patch = 0/' Makefile > tmp && mv tmp Makefile
+	@sed 's/^minor = $(minor)$$/minor = $(shell expr $(minor) + 1)/' Makefile > tmp && mv tmp Makefile
+	@cd pnpm version $(major).$(shell expr $(minor) + 1).0$(prerelease)$(prerelease-identifier)
 
 version_patch_bump:
 	@sed -i  's/^patch = $(patch)$$/patch = $(shell expr $(patch) + 1)/' Makefile
