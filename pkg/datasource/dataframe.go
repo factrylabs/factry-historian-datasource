@@ -196,12 +196,7 @@ func setRawFrameNames(frames data.Frames) data.Frames {
 }
 
 // setAssetFrameNames sets the name of each frame to the asset path
-func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetProperties []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
-	measurementUUIDToPropertyMap := make(map[uuid.UUID]schemas.AssetProperty)
-	for _, property := range assetProperties {
-		measurementUUIDToPropertyMap[property.MeasurementUUID] = property
-	}
-
+func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, measurementUUIDToPropertyMap map[uuid.UUID]schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
 	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		UUIDToAssetMap[asset.UUID] = asset
