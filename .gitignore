@@ -32,3 +32,5 @@ e2e-results/
 grafana-plugins/*
 .pnpm-store
 node-modules/
+factry-historian-datasource/
+*.zip

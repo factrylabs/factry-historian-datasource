@@ -64,3 +64,10 @@ build_web: ## Build the web application
 
 gen_proto: ## Generates the go files from the .proto files
 	protoc --go_out=. --go_opt=paths=source_relative \--go-grpc_out=. --go-grpc_opt=paths=source_relative \$(PROTO_FILES)
+
+package: build_web
+	mage -v
+	mkdir -p factry-historian-datasource
+	cp -r dist/* factry-historian-datasource
+	zip factry-historian-datasource-$(shell make version).zip factry-historian-datasource -r
+	export GRAFANA_API_KEY=$(key); npx @grafana/sign-plugin@latest --rootUrls $(rootUrls)
