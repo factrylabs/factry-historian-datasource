@@ -143,7 +143,7 @@ export const Measurements = ({
       databaseUUID = state.databases.find(e => e.Name = getTemplateSrv().replace(event.value))?.UUID
     }
     const updatedQuery = { ...state.measurementsState.options.query, Database: event.value } as MeasurementQuery
-    state.measurementsState.options.filter = { ...state.measurementsState.options.filter, Database: databaseUUID }
+    state.measurementsState.options.filter = { ...state.measurementsState.options.filter, DatabaseUUID: databaseUUID }
     onLoadMeasurementOptions('')
     saveState({
       ...state,
@@ -152,7 +152,7 @@ export const Measurements = ({
         options: {
           ...state.measurementsState.options,
           query: updatedQuery,
-          filter: { ...state.measurementsState.options.filter, Database: databaseUUID }
+          filter: { ...state.measurementsState.options.filter, DatabaseUUID: databaseUUID }
         },
       }
     })
@@ -206,7 +206,7 @@ export const Measurements = ({
           />
         </InlineField>
       </InlineFieldRow>
-      {state.measurementsState.options.filter.Database &&
+      {state.measurementsState.options.filter.DatabaseUUID &&
         <InlineFieldRow>
           <InlineField label="Measurement" labelWidth={labelWidth} tooltip="Specify measurement to work with, you can use regex by entering your pattern between forward slashes">
             <AsyncSelect

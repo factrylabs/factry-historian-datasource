@@ -114,7 +114,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
       tabIndex: query.tabIndex,
       measurementsState: {
         ...this.state.measurementsState,
-        selectedMeasurement: query.selectedMeasurement
+        selectedMeasurement: query.selectedMeasurement,
       },
       assetsState: {
         ...this.state.assetsState,
@@ -160,7 +160,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
           const queryOptions: MeasurementQueryState = {
             tags: tagsToQueryTags(measurementQuery.Options.Tags),
             filter: {
-              Database: measurementQuery.Database
+              DatabaseUUID: measurementQuery.Database
             },
             query: measurementQuery
           }
@@ -174,6 +174,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
               selectedMeasurement: query.selectedMeasurement,
             }
           })
+          this.loadMeasurementOptions(getTemplateSrv().replace(query.selectedMeasurement) || '')
           break
         }
         case TabIndex.Events:
@@ -200,7 +201,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
             rawState: {
               ...this.state.rawState,
               filter: {
-                Database: rawQuery.TimeseriesDatabase
+                DatabaseUUID: rawQuery.TimeseriesDatabase
               },
               rawQuery: rawQuery
             }
@@ -218,7 +219,6 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
         break
       case TabIndex.Measurements:
         promises.push(this.getTimeSeriesDatabases())
-        promises.push(this.loadMeasurementOptions(getTemplateSrv().replace(query.selectedMeasurement) || ''))
         break
       case TabIndex.Events:
         promises.push(this.getAssets())
@@ -322,7 +322,7 @@ export class QueryEditor extends PureComponent<Props, QueryEditorState> {
     const { onChange, query } = this.props
     query.queryType = 'RawQuery'
     query.query = {
-      TimeseriesDatabase: this.state.rawState.filter.Database,
+      TimeseriesDatabase: this.state.rawState.filter.DatabaseUUID,
       Query: queryString,
     } as RawQuery
     this.saveState({

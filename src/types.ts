@@ -159,9 +159,9 @@ export interface EventQuery {
 
 export interface MeasurementFilter {
   Keyword?: string
-  Database?: string
-  Collector?: string
-  Asset?: string
+  DatabaseUUID?: string
+  CollectorUUID?: string
+  AssetUUID?: string
   Statuses?: string[]
   WithBadQualityOnly?: boolean
   ExcludeCalculations?: boolean

@@ -35,7 +35,7 @@ export const RawQueryEditor = ({
       ...state,
       rawState: {
         ...state.rawState,
-        filter: { ...state.rawState.filter, Database: event.value }
+        filter: { ...state.rawState.filter, DatabaseUUID: event.value }
       }
     })
   }
@@ -45,16 +45,16 @@ export const RawQueryEditor = ({
       <InlineFieldRow>
         <InlineField label="Database" grow labelWidth={labelWidth} tooltip="Specify a time series database to work with">
           <Select
-            value={selectable(selectableTimeseriesDatabases(state.databases), state.rawState.filter.Database)}
+            value={selectable(selectableTimeseriesDatabases(state.databases), state.rawState.filter.DatabaseUUID)}
             placeholder="select timeseries database"
             options={selectableTimeseriesDatabases(state.databases)}
             onChange={onTimeseriesDatabaseChange}
           />
         </InlineField>
       </InlineFieldRow>
-      {state.rawState.filter.Database &&
+      {state.rawState.filter.DatabaseUUID &&
         <InlineFieldRow>
-          <InlineField label={`${getTimeseriesDatabaseType(state.rawState.filter.Database)} query`} grow labelWidth={labelWidth} tooltip="">
+          <InlineField label={`${getTimeseriesDatabaseType(state.rawState.filter.DatabaseUUID)} query`} grow labelWidth={labelWidth} tooltip="">
             <CodeEditor
               height={'200px'}
               language="sql"
@@ -62,7 +62,7 @@ export const RawQueryEditor = ({
               onSave={onUpdateQuery}
               showMiniMap={false}
               showLineNumbers={true}
-              readOnly={state.rawState.filter.Database === ''}
+              readOnly={state.rawState.filter.DatabaseUUID === ''}
               value={state.rawState.rawQuery.Query}
             />
           </InlineField>
