@@ -127,13 +127,13 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		}
 	}
 
-	measurementUUIDToPropertyMap := make(map[uuid.UUID]schemas.AssetProperty)
+	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 	for _, assetUUID := range assetUUIDs {
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			for _, assetProperty := range assetProperties {
 				if assetProperty.Name == property && assetProperty.AssetUUID == assetUUID {
 					measurementUUIDs = append(measurementUUIDs, assetProperty.MeasurementUUID)
-					measurementUUIDToPropertyMap[assetProperty.MeasurementUUID] = assetProperty
+					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 					break
 				}
 			}
@@ -150,7 +150,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		return nil, err
 	}
 
-	return setAssetFrameNames(frames, assets, measurementUUIDToPropertyMap, measurementQuery.Options), nil
+	return setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options), nil
 }
 
 func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) ([]uuid.UUID, error) {

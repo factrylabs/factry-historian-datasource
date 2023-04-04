@@ -196,13 +196,13 @@ func setRawFrameNames(frames data.Frames) data.Frames {
 }
 
 // setAssetFrameNames sets the name of each frame to the asset path
-func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, measurementUUIDToPropertyMap map[uuid.UUID]schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
+func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, measurementIndexToPropertyMap []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
 	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		UUIDToAssetMap[asset.UUID] = asset
 	}
 
-	for _, frame := range frames {
+	for i, frame := range frames {
 		if frame.Meta == nil {
 			continue
 		}
@@ -211,23 +211,8 @@ func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, measurementU
 			if field.Config == nil {
 				field.Config = &data.FieldConfig{}
 			}
-			custom, ok := frame.Meta.Custom.(map[string]interface{})
-			if ok {
-				measurementUUIDString, ok := custom["MeasurementUUID"].(string)
-				if !ok {
-					continue
-				}
-
-				measurementUUID, err := uuid.Parse(measurementUUIDString)
-				if err != nil {
-					continue
-				}
-
-				property, ok := measurementUUIDToPropertyMap[measurementUUID]
-				if ok {
-					field.Config.DisplayNameFromDS = getAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
-				}
-			}
+			property := measurementIndexToPropertyMap[i]
+			field.Config.DisplayNameFromDS = getAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
 		}
 	}
 
