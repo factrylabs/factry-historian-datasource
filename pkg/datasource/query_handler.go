@@ -272,7 +272,7 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 	filter := schemas.EventFilter{
 		StartTime:         backendQuery.TimeRange.From,
 		StopTime:          backendQuery.TimeRange.To,
-		AssetUUIDss:       assetUUIDs,
+		AssetUUIDs:        assetUUIDs,
 		EventTypeUUIDs:    eventTypeUUIDs,
 		PreloadProperties: true,
 		Limit:             math.MaxInt32,

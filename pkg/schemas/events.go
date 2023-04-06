@@ -43,7 +43,7 @@ type Event struct {
 type EventFilter struct {
 	StartTime           time.Time
 	StopTime            time.Time
-	AssetUUIDss         []uuid.UUID
+	AssetUUIDs          []uuid.UUID
 	EventTypeUUIDs      []uuid.UUID
 	Status              []string
 	EventConfigurations []uuid.UUID
