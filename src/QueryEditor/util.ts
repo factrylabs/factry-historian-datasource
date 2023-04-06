@@ -87,7 +87,7 @@ export function getChildAssets(parent: string | null, assets: Asset[], assetProp
     result.push(cascaderOption)
   })
 
-  return result
+  return result.sort(sortByLabel)
 }
 
 export function findOption(options: Array<SelectableValue<string[]>>, label: string): SelectableValue<string[]> | undefined {
@@ -187,5 +187,11 @@ interface Named {
 export const sortByName = (a: Named, b: Named): number => {
   const idA = a.Name.toUpperCase()
   const idB = b.Name.toUpperCase()
+  return idA.localeCompare(idB)
+}
+
+export function sortByLabel(a: CascaderOption, b: CascaderOption): number {
+  const idA = a.label.toUpperCase()
+  const idB = b.label.toUpperCase()
   return idA.localeCompare(idB)
 }
