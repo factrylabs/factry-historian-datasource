@@ -27,9 +27,9 @@ vet:
 
 build-frontend:
   stage: build
-  image: node:latest
+  image: node:18
   before_script:
-    - curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm@7
+    - npm install -g pnpm@latest
     - pnpm config set store-dir .pnpm-store
   script:
     - pnpm install
@@ -53,6 +53,8 @@ build-backend:
 deploy:
   stage: deploy
   script:
+    - ssh gitlab@$REMOTE rm -rf $REMOTE_PATH/$CI_COMMIT_BRANCH
+    - ssh gitlab@$REMOTE mkdir $REMOTE_PATH/$CI_COMMIT_BRANCH
     - scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$CI_COMMIT_BRANCH
   artifacts:
     expire_in: 1 day
