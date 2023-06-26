@@ -55,7 +55,7 @@ else
 	@git tag -a $(shell make version) -m "Updated to $(shell make version)"
 endif
 
-build_all: build_linux64 build_macos ## Build current project for all targets
+build_all: ## Build current project for all targets
 	mage -v
 
 build_web: ## Build the web application
@@ -65,8 +65,7 @@ build_web: ## Build the web application
 gen_proto: ## Generates the go files from the .proto files
 	protoc --go_out=. --go_opt=paths=source_relative \--go-grpc_out=. --go-grpc_opt=paths=source_relative \$(PROTO_FILES)
 
-package: build_web
-	mage -v
+package: build_web build_all
 	mkdir -p factry-historian-datasource
 	cp -r dist/* factry-historian-datasource
 	zip factry-historian-datasource-$(shell make version).zip factry-historian-datasource -r

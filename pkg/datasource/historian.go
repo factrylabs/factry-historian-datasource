@@ -26,7 +26,7 @@ type HistorianDataSource struct {
 }
 
 func (ds *HistorianDataSource) getDatasourceInstance(ctx context.Context, pluginCtx backend.PluginContext) (*HistorianPlugin, error) {
-	s, err := ds.IM.Get(pluginCtx)
+	s, err := ds.IM.Get(ctx, pluginCtx)
 	if err != nil {
 		return nil, err
 	}
