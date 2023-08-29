@@ -31,7 +31,7 @@ export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
       {groups.map((t, i) => {
         if (i === 0) {
           return (
-            <InlineField>
+            <InlineField key={i}>
               <Group
                 group={t}
                 onChange={(newGroup) => onGroupChange(newGroup || '', i)}
@@ -41,7 +41,7 @@ export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
           )
         } else {
           return (
-            <InlineField>
+            <InlineField key={i}>
               <Group
                 group={t}
                 onChange={(newGroup) => onGroupChange(newGroup || '', i)}
