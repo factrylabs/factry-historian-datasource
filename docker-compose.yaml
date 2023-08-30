@@ -6,10 +6,11 @@ services:
     build:
       context: ./.config
       args:
-        grafana_image: ${GRAFANA_IMAGE:-grafana-enterprise}
+        grafana_image: ${GRAFANA_IMAGE:-grafana-oss}
         grafana_version: ${GRAFANA_VERSION:-9.5.3}
     ports:
       - 3001:3000/tcp
+      - 2345:2345/tcp
     volumes:
       - ./dist:/var/lib/grafana/plugins/factry-historian-datasource
       - ./provisioning:/etc/grafana/provisioning
