@@ -7,9 +7,9 @@ import (
 // Collector has the fields of a collector that are used by the data source
 type Collector struct {
 	Name          string
-	UUID          uuid.UUID
 	Description   string
 	CollectorType string
+	UUID          uuid.UUID
 }
 
 // TimeseriesDatabaseType has the fields of a time series database type that are used by the data source
@@ -19,35 +19,35 @@ type TimeseriesDatabaseType struct {
 
 // TimeseriesDatabase has the fields of a time series database that are used by the data source
 type TimeseriesDatabase struct {
-	Name                   string
-	UUID                   uuid.UUID
-	Description            string
 	TimeseriesDatabaseType *TimeseriesDatabaseType
+	Name                   string
+	Description            string
+	UUID                   uuid.UUID
 }
 
 // Measurement has the fields of a measurement that are used by the data source
 type Measurement struct {
+	Collector     *Collector
+	Database      *TimeseriesDatabase
+	Attributes    Attributes
 	Name          string
-	UUID          uuid.UUID
 	Description   string
 	Datatype      string
 	Status        string
+	UUID          uuid.UUID
 	CollectorUUID uuid.UUID
-	Collector     *Collector
 	DatabaseUUID  uuid.UUID
-	Database      *TimeseriesDatabase
-	Attributes    Attributes
 }
 
 // Asset has the fields of an asset that are used by the data source
 type Asset struct {
-	Name        string
-	UUID        uuid.UUID
-	Description string
-	Status      string
 	ParentUUID  *uuid.UUID
 	Parent      *Asset
+	Name        string
+	Description string
+	Status      string
 	AssetPath   string
+	UUID        uuid.UUID
 }
 
 // AssetProperty has the fields of an asset property that are used by the data source
@@ -61,9 +61,9 @@ type AssetProperty struct {
 // EventType has the fields of an event type that are used by the data source
 type EventType struct {
 	Name        string
-	UUID        uuid.UUID
 	Description string
 	Properties  []EventTypeProperty
+	UUID        uuid.UUID
 }
 
 // PropertyDatatype enum for the event type property datatype
@@ -88,10 +88,10 @@ const (
 // EventTypeProperty has the fields of an event type property that are used by the data source
 type EventTypeProperty struct {
 	Name          string
-	UUID          uuid.UUID
-	EventTypeUUID uuid.UUID
 	Datatype      PropertyDatatype
 	Type          PropertyType
+	UUID          uuid.UUID
+	EventTypeUUID uuid.UUID
 }
 
 // EventConfiguration has the fields of an event configuration that are used by the data source

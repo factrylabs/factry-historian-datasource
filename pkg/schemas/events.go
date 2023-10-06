@@ -27,16 +27,16 @@ const (
 
 // Event has the fields of an event that are used by the data source
 type Event struct {
+	StartTime              *time.Time
+	StopTime               *time.Time
+	ParentUUID             *uuid.UUID
+	Properties             *EventProperties
+	Source                 EventSource
+	Status                 EventStatus
 	UUID                   uuid.UUID
 	AssetUUID              uuid.UUID
 	EventTypeUUID          uuid.UUID
 	EventConfigurationUUID uuid.UUID
-	StartTime              *time.Time
-	StopTime               *time.Time
-	Source                 EventSource
-	Status                 EventStatus
-	ParentUUID             *uuid.UUID
-	Properties             *EventProperties
 }
 
 // EventFilter is used to filter events
@@ -47,11 +47,11 @@ type EventFilter struct {
 	EventTypeUUIDs      []uuid.UUID
 	Status              []string
 	EventConfigurations []uuid.UUID
+	PropertyFilter      []EventPropertyValueFilter
+	Limit               int
 	ExcludeManualEvents bool
 	Ascending           bool
 	PreloadProperties   bool
-	PropertyFilter      []EventPropertyValueFilter
-	Limit               int
 }
 
 // EventProperties is the database representation of event properties

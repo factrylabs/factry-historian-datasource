@@ -20,17 +20,17 @@ type AggregationType string
 // AggregationTypes is a list of supported aggregations
 const (
 	Count    AggregationType = "count"
-	Integral                 = "integral"
-	Mean                     = "mean"
-	Median                   = "median"
-	Mode                     = "mode"
-	Spread                   = "spread"
-	Stddev                   = "stddev"
-	Sum                      = "sum"
-	First                    = "first"
-	Last                     = "last"
-	Max                      = "max"
-	Min                      = "min"
+	Integral AggregationType = "integral"
+	Mean     AggregationType = "mean"
+	Median   AggregationType = "median"
+	Mode     AggregationType = "mode"
+	Spread   AggregationType = "spread"
+	Stddev   AggregationType = "stddev"
+	Sum      AggregationType = "sum"
+	First    AggregationType = "first"
+	Last     AggregationType = "last"
+	Max      AggregationType = "max"
+	Min      AggregationType = "min"
 )
 
 // FillType is a string
@@ -39,10 +39,10 @@ type FillType string
 // FillType is a list of supported fill types
 const (
 	None     FillType = "none"
-	Null              = "null"
-	Previous          = "previous"
-	Linear            = "linear"
-	Zero              = "0"
+	Null     FillType = "null"
+	Previous FillType = "previous"
+	Linear   FillType = "linear"
+	Zero     FillType = "0"
 )
 
 // MeasurementByName is used to identify which measurement to query

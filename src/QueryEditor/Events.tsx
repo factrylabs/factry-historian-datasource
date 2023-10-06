@@ -4,6 +4,7 @@ import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
+import { toSelectableValue } from 'components/TagsSection/util'
 import { getChildAssets, matchedAssets } from './util'
 import { EventPropertyFilter, EventQuery, labelWidth, PropertyDatatype, QueryEditorState } from 'types'
 
@@ -45,6 +46,22 @@ export const Events = ({
       filter(e => state.eventConfigurations.some(ec => (ec.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === ec.AssetUUID)) && ec.EventTypeUUID === e.UUID)).
       map(e => { return { label: e.Name, value: e.UUID } }).
       concat(getTemplateSrv().getVariables().map((e => { return { label: `$${e.name}`, value: `$${e.name}` } })))
+  }
+
+  const onSelectStatuses = (items: Array<SelectableValue<string>>): void => {
+    const statuses = items.map(e => {
+      return e.value || ''
+    })
+    const updatedQuery = { ...state.eventsState.eventQuery, Statuses: statuses }
+    saveState({
+      ...state,
+      eventsState: {
+        ...state.eventsState,
+        eventQuery: updatedQuery,
+        selectedStatuses: items
+      },
+    })
+    onChangeEventQuery(updatedQuery)
   }
 
   const onAssetChange = (value: string): void => {
@@ -139,6 +156,14 @@ export const Events = ({
 
     return state.eventsState.selectedAsset || ''
   }
+  const availableStatuses = (): Array<SelectableValue<string>> => {
+    return [
+      toSelectableValue('processed'),
+      toSelectableValue('open'),
+      toSelectableValue('incomplete'),
+      toSelectableValue('pending')
+    ]
+  }
 
   return (
     <div>
@@ -160,6 +185,15 @@ export const Events = ({
             value={state.eventsState.selectedEventTypes}
             options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
             onChange={onSelectEventTypes}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="Statuses" grow labelWidth={labelWidth} tooltip="Specify one or more status to work with, selecting none will use all statuses">
+          <MultiSelect
+            value={state.eventsState.selectedStatuses}
+            options={availableStatuses()}
+            onChange={onSelectStatuses}
           />
         </InlineField>
       </InlineFieldRow>

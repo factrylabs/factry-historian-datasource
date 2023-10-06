@@ -81,6 +81,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             const eventQuery = target.query as EventQuery
             eventQuery.Assets = eventQuery.Assets?.map((e) => getTemplateSrv().replace(e))
             eventQuery.EventTypes = eventQuery.EventTypes?.map((e) => getTemplateSrv().replace(e))
+            eventQuery.Statuses = eventQuery.Statuses?.map((e) => getTemplateSrv().replace(e))
             target.query = eventQuery
             break
           }

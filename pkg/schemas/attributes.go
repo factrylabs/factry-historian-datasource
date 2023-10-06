@@ -25,7 +25,7 @@ func (a Attributes) GetInt(key string) (int, error) {
 	emptyInt := 0
 	val, ok := a[key]
 	if !ok || val == nil {
-		return emptyInt, fmt.Errorf("Failed to get value from key: %v", key)
+		return emptyInt, fmt.Errorf("failed to get value from key: %v", key)
 	}
 
 	return cast.ToIntE(val)
@@ -36,7 +36,7 @@ func (a Attributes) GetFloat64(key string) (float64, error) {
 	emptyFloat := 0.0
 	val, ok := a[key]
 	if !ok || val == nil {
-		return emptyFloat, fmt.Errorf("Failed to get value from key: %v", key)
+		return emptyFloat, fmt.Errorf("failed to get value from key: %v", key)
 	}
 
 	return cast.ToFloat64E(val)
@@ -46,7 +46,7 @@ func (a Attributes) GetFloat64(key string) (float64, error) {
 func (a Attributes) GetBool(key string) (bool, error) {
 	val, ok := a[key]
 	if !ok || val == nil {
-		return false, fmt.Errorf("Failed to get value from key: %v", key)
+		return false, fmt.Errorf("failed to get value from key: %v", key)
 	}
 
 	return cast.ToBoolE(val)
@@ -56,7 +56,7 @@ func (a Attributes) GetBool(key string) (bool, error) {
 func (a Attributes) GetSlice(key string) ([]interface{}, error) {
 	val, ok := a[key]
 	if !ok || val == nil {
-		return nil, fmt.Errorf("Failed to get value from key: %v", key)
+		return nil, fmt.Errorf("failed to get value from key: %v", key)
 	}
 
 	return cast.ToSliceE(val)
@@ -66,7 +66,7 @@ func (a Attributes) GetSlice(key string) ([]interface{}, error) {
 func (a Attributes) GetMap(key string) (map[string]interface{}, error) {
 	val, ok := a[key]
 	if !ok || val == nil {
-		return nil, fmt.Errorf("Failed to get value from key: %v", key)
+		return nil, fmt.Errorf("failed to get value from key: %v", key)
 	}
 
 	if result, ok := a[key].(Attributes); ok {
@@ -88,16 +88,16 @@ type AttributesArray []map[string]interface{}
 func (a Attributes) Get(key string, object interface{}) error {
 	value, ok := a[key]
 	if !ok {
-		return fmt.Errorf("Error getting %s from attributes: key not found", key)
+		return fmt.Errorf("error getting %s from attributes: key not found", key)
 	}
 
 	jsonbody, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("Error getting %s from attributes: %v", key, err)
+		return fmt.Errorf("error getting %s from attributes: %v", key, err)
 	}
 
 	if err := json.Unmarshal(jsonbody, &object); err != nil {
-		return fmt.Errorf("Error getting %s from attributes: %v", key, err)
+		return fmt.Errorf("error getting %s from attributes: %v", key, err)
 	}
 	return nil
 }
@@ -107,11 +107,11 @@ func (a Attributes) UnMarshal(object interface{}) error {
 
 	jsonbody, err := json.Marshal(a)
 	if err != nil {
-		return fmt.Errorf("Error unmarshalling attributes: %v", err)
+		return fmt.Errorf("error unmarshalling attributes: %v", err)
 	}
 
 	if err := json.Unmarshal(jsonbody, &object); err != nil {
-		return fmt.Errorf("Error unmarshalling attributes: %v", err)
+		return fmt.Errorf("error unmarshalling attributes: %v", err)
 	}
 	return nil
 }

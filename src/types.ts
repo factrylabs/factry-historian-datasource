@@ -51,6 +51,7 @@ export interface EventsTabState {
   eventQuery: EventQuery
   selectedAsset?: string
   selectedEventTypes?: Array<SelectableValue<string>>
+  selectedStatuses?: Array<SelectableValue<string>>
   tags: QueryTag[]
 }
 
@@ -154,6 +155,7 @@ export interface AssetMeasurementQuery {
 export interface EventQuery {
   Assets?: string[]
   EventTypes?: string[]
+  Statuses?: string[]
   PropertyFilter: EventPropertyFilter[]
 }
 

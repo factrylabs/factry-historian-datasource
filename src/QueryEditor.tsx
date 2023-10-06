@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { getTemplateSrv } from '@grafana/runtime'
 import { RadioButtonGroup, InlineField, InlineFieldRow } from '@grafana/ui'
 import { CoreApp, QueryEditorProps, SelectableValue } from '@grafana/data'
+import { toSelectableValue } from 'components/TagsSection/util'
 import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
 import { Events } from 'QueryEditor/Events'
@@ -99,9 +100,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     },
     eventsState: {
       eventQuery: {
+        Statuses: [],
         PropertyFilter: [],
       },
       tags: [],
+      selectedStatuses: [],
+      selectedEventTypes: [],
     },
     rawState: {
       rawQuery: {
@@ -115,7 +119,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     eventTypes: [],
     eventTypeProperties: [],
     eventConfigurations: [],
-    selectedEventTypes: [],
   } as QueryEditorState
 
   async componentDidMount(): Promise<void> {
@@ -215,6 +218,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
                 eventQuery: eventQuery,
                 tags: propertyFilterToQueryTags(eventQuery.PropertyFilter ?? []),
                 selectedAsset: query.selectedAssetPath,
+                selectedStatuses: eventQuery.Statuses?.map(e => toSelectableValue(e)),
                 selectedEventTypes: eventQuery.EventTypes
                   ? eventQuery.EventTypes.map((e) => {
                       return { label: this.state.eventTypes.find((et) => et.UUID === e)?.Name, value: e }

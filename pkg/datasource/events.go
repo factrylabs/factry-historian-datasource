@@ -15,10 +15,11 @@ const (
 	PropertiesIndex = 2
 )
 
+// EventLabels ...
 type EventLabels struct {
+	Status        string
 	AssetUUID     uuid.UUID
 	EventTypeUUID uuid.UUID
-	Status        string
 }
 
 // EventQueryResultToDataFrame converts a event query result to data frames

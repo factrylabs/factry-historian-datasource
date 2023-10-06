@@ -7,14 +7,14 @@ import (
 // MeasurementQueryOptions are measurement query options
 type MeasurementQueryOptions struct {
 	Tags                   map[string]string
-	GroupBy                []string
 	Aggregation            *Aggregation
+	Limit                  *int
+	GroupBy                []string
 	IncludeLastKnownPoint  bool
 	FillInitialEmptyValues bool
 	UseEngineeringSpecs    bool
 	DisplayDatabaseName    bool
 	DisplayDescription     bool
-	Limit                  *int
 }
 
 // AssetMeasurementQuery is used to build the time series query to send to the historian
@@ -43,5 +43,6 @@ type RawQuery struct {
 type EventQuery struct {
 	Assets         []string
 	EventTypes     []string
+	Statuses       []string
 	PropertyFilter []EventPropertyValueFilter
 }
