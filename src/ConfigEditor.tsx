@@ -83,7 +83,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             <InlineField
               label="Organization"
               labelWidth={20}
-              tooltip="Specify the organization UUID"
+              tooltip="Specify the organization UUID, this can be found in the Factry Historian under Configuration > Organizations."
             >
               <Input
                 width={61}
