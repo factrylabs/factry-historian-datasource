@@ -26,10 +26,10 @@ type AssetMeasurementQuery struct {
 
 // MeasurementQuery is used to build the time series query to send to the historian
 type MeasurementQuery struct {
-	Database         string
-	MeasurementUUIDs []uuid.UUID
-	Measurement      string
-	Options          MeasurementQueryOptions
+	Database     string
+	Measurement  string
+	Measurements []string
+	Options      MeasurementQueryOptions
 }
 
 // RawQuery is used to query raw time series data

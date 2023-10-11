@@ -54,7 +54,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           case 'MeasurementQuery': {
             const measurementQuery = target.query as MeasurementQuery
             measurementQuery.Database = getTemplateSrv().replace(measurementQuery.Database)
-            measurementQuery.Measurement = getTemplateSrv().replace(measurementQuery.Measurement)
+            measurementQuery.Measurement = measurementQuery.Measurement ? getTemplateSrv().replace(measurementQuery.Measurement) : undefined
+            measurementQuery.Measurements = measurementQuery.Measurements?.map(m => getTemplateSrv().replace(m))
             if (measurementQuery.Options.GroupBy) {
               measurementQuery.Options.GroupBy = measurementQuery.Options.GroupBy?.map((e) =>
                 getTemplateSrv().replace(e)

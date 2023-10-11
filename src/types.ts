@@ -39,7 +39,7 @@ export interface AssetsTabState {
 
 export interface MeasurementsTabState {
   options: MeasurementQueryState
-  selectedMeasurement?: string
+  selectedMeasurements?: Array<SelectableValue<string>>
 }
 
 export interface RawTabState {
@@ -69,7 +69,8 @@ export interface AssetMeasurementQueryState {
 export interface Query extends DataQuery {
   query: MeasurementQuery | AssetMeasurementQuery | RawQuery | EventQuery
   tabIndex: number
-  selectedMeasurement?: string
+  selectedMeasurement?: string // kept for backwards compatibility
+  selectedMeasurements?: string[]
   selectedAssetPath?: string
   selectedAssetProperties?: string[]
 }
@@ -142,7 +143,8 @@ export interface MeasurementQueryOptions {
 
 export interface MeasurementQuery {
   Database: string
-  Measurement?: string
+  Measurement?: string // kept for backwards compatibility
+  Measurements?: string[]
   Options: MeasurementQueryOptions
 }
 

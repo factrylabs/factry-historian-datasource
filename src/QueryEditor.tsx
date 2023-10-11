@@ -1,5 +1,4 @@
 import React, { Component } from 'react'
-import { getTemplateSrv } from '@grafana/runtime'
 import { RadioButtonGroup, InlineField, InlineFieldRow } from '@grafana/ui'
 import { CoreApp, QueryEditorProps, SelectableValue } from '@grafana/data'
 import { toSelectableValue } from 'components/TagsSection/util'
@@ -20,6 +19,7 @@ import {
   AssetMeasurementQuery,
   AssetMeasurementQueryState,
   TabIndex,
+  Measurement,
 } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -96,7 +96,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         },
         tags: [],
       },
-      selectedMeasurement: '',
+      selectedMeasurements: [],
     },
     eventsState: {
       eventQuery: {
@@ -123,13 +123,20 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   async componentDidMount(): Promise<void> {
     const { query } = this.props
+    let selectedMeasurements = query.selectedMeasurements ?? []
+    console.log('hello')
+    if (query.selectedMeasurement) {
+      selectedMeasurements = [...selectedMeasurements, query.selectedMeasurement]
+    }
+    const measurements = await this.loadMultipleMeasurementOptions(selectedMeasurements)
     this.setState((prevState) => {
       return {
       ...prevState,
       tabIndex: query.tabIndex,
       measurementsState: {
         ...this.state.measurementsState,
-        selectedMeasurement: query.selectedMeasurement,
+        selectedMeasurements: measurements,
+        selectedMeasurement: undefined
       },
       assetsState: {
         ...this.state.assetsState,
@@ -197,13 +204,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
               measurementsState: {
                 ...this.state.measurementsState,
                 options: queryOptions,
-                selectedMeasurement: query.selectedMeasurement,
+                selectedMeasurements: measurements,
               },
             }
           }, () => {
             this.saveState(this.state)
           })
-          this.loadMeasurementOptions(getTemplateSrv().replace(query.selectedMeasurement) || '')
           break
         }
         case TabIndex.Events:
@@ -321,9 +327,40 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         result.push({
           label: measurement.Name,
           value: measurement.UUID,
-          description: `(${database?.Name}) ${measurement.Description}`,
+          description: `(${database?.Name}) (${measurement.Datatype}) ${measurement.Description}`,
         })
       })
+    })
+    return result
+  }
+
+  async loadMultipleMeasurementOptions(items: string[]): Promise<Array<SelectableValue<string>>> {
+    const result: Array<SelectableValue<string>> = []
+    let measurementsFound: Measurement[] = []
+    for (const item of items) {
+      const filter = { ...this.state.measurementsState.options.filter, Keyword: item }
+      await this.props.datasource.getMeasurements(filter, this.state.pagination).then((measurements) => {
+        measurementsFound = [...measurementsFound, ...measurements]
+        // if more than 1 measurement it is probably a regex
+        if (measurements.length > 1) {
+          result.push({
+            label: item,
+            value: item,
+          })
+        } else {
+          measurements.forEach((measurement) => {
+            const database = this.state.databases.find((e) => e.UUID === measurement.DatabaseUUID)
+            result.push({
+              label: measurement.Name,
+              value: measurement.UUID,
+              description: `(${database?.Name}) (${measurement.Datatype}) ${measurement.Description}`,
+            })
+          })
+        }
+      })
+    }
+    this.setState((prevState) => {
+      return { ...prevState, measurements: measurementsFound }
     })
     return result
   }
@@ -399,7 +436,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   saveState(state: QueryEditorState, updateState = false): void {
     const { onChange, query } = this.props
     query.tabIndex = state.tabIndex
-    query.selectedMeasurement = state.measurementsState.selectedMeasurement
+    query.selectedMeasurements = state.measurementsState.selectedMeasurements?.map(e => e.value ?? '') ?? []
     switch (state.tabIndex) {
       case TabIndex.Assets:
         query.selectedAssetPath = state.assetsState.selectedAsset
@@ -427,7 +464,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
     if (props.query.queryType === 'MeasurementQuery') {
       const query = props.query.query as MeasurementQuery
-      if (!query?.Measurement) {
+      if (!query?.Measurements && !query?.Measurement) {
         return
       }
     }

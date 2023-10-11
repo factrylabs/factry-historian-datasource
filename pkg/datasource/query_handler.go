@@ -39,13 +39,13 @@ func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.Query
 	}
 
 	for _, q := range req.Queries {
-		res := queryData(ctx, req.PluginContext, q, dsi.API)
+		res := queryData(q, dsi.API)
 		response.Responses[q.RefID] = res
 	}
 	return response, nil
 }
 
-func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery backend.DataQuery, api *api.API) backend.DataResponse {
+func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataResponse {
 	response := backend.DataResponse{}
 	query := Query{}
 	if err := json.Unmarshal(backendQuery.JSON, &query); err != nil {
@@ -72,14 +72,14 @@ func queryData(ctx context.Context, pCtx backend.PluginContext, backendQuery bac
 			}
 		}
 
-		measurements, err := getMeasurements(measurementQuery, backendQuery, api)
+		measurements, err := getMeasurements(measurementQuery, api)
 		if err != nil {
 			return backend.DataResponse{
 				Error: err,
 			}
 		}
 
-		measurementQuery.MeasurementUUIDs = measurements
+		measurementQuery.Measurements = measurements
 		response.Frames, response.Error = handleMeasurementQuery(measurementQuery, backendQuery, api)
 		return response
 	case QueryTypeRaw:
@@ -119,7 +119,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		return nil, err
 	}
 
-	measurementUUIDs := []uuid.UUID{}
+	measurementUUIDs := []string{}
 	assetUUIDs := []uuid.UUID{}
 	for _, assetString := range assetMeasurementQuery.Assets {
 		if assetUUID, ok := filterAssetUUID(assets, assetString); ok {
@@ -132,7 +132,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			for _, assetProperty := range assetProperties {
 				if assetProperty.Name == property && assetProperty.AssetUUID == assetUUID {
-					measurementUUIDs = append(measurementUUIDs, assetProperty.MeasurementUUID)
+					measurementUUIDs = append(measurementUUIDs, assetProperty.MeasurementUUID.String())
 					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 					break
 				}
@@ -141,8 +141,8 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	}
 
 	measurementQuery := schemas.MeasurementQuery{
-		MeasurementUUIDs: measurementUUIDs,
-		Options:          assetMeasurementQuery.Options,
+		Measurements: measurementUUIDs,
+		Options:      assetMeasurementQuery.Options,
 	}
 
 	frames, err := handleQuery(measurementQuery, backendQuery, api)
@@ -153,41 +153,45 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	return setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options), nil
 }
 
-func getMeasurements(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) ([]uuid.UUID, error) {
-	parsedMeasurements := []uuid.UUID{}
-	measurement := measurementQuery.Measurement
-
-	if measurementUUID, err := uuid.Parse(measurement); err == nil {
-		parsedMeasurements = append(parsedMeasurements, measurementUUID)
-		return parsedMeasurements, nil
+func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([]string, error) {
+	parsedMeasurements := []string{}
+	measurements := measurementQuery.Measurements
+	if measurementQuery.Measurement != "" {
+		measurements = append(measurements, measurementQuery.Measurement)
 	}
-
-	databaseUUID := measurementQuery.Database
-	if _, err := uuid.Parse(databaseUUID); err != nil {
-		databases, err := api.GetTimeseriesDatabases()
-		if err != nil {
-			return nil, err
-		}
-
-		for _, database := range databases {
-			if database.Name == measurementQuery.Database {
-				databaseUUID = database.UUID.String()
-			}
-		}
-	}
-
-	values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&Database=%v", measurement, databaseUUID))
-	res, err := api.GetMeasurements(values.Encode())
+	databases, err := api.GetTimeseriesDatabases()
 	if err != nil {
 		return nil, err
 	}
 
-	if len(res) == 0 {
-		return nil, fmt.Errorf("invalid measurement: %v", measurement)
-	}
+	for _, measurement := range measurements {
+		if measurementUUID, err := uuid.Parse(measurement); err == nil {
+			parsedMeasurements = append(parsedMeasurements, measurementUUID.String())
+			continue
+		}
 
-	for _, m := range res {
-		parsedMeasurements = append(parsedMeasurements, m.UUID)
+		databaseUUID := measurementQuery.Database
+		if _, err := uuid.Parse(databaseUUID); err != nil {
+			for _, database := range databases {
+				if database.Name == measurementQuery.Database {
+					databaseUUID = database.UUID.String()
+				}
+			}
+		}
+
+		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&Database=%v", measurement, databaseUUID))
+		res, err := api.GetMeasurements(values.Encode())
+		if err != nil {
+			return nil, err
+		}
+
+		if len(res) == 0 {
+			return nil, fmt.Errorf("invalid measurement: %v", measurement)
+		}
+
+		for _, m := range res {
+			parsedMeasurements = append(parsedMeasurements, m.UUID.String())
+		}
 	}
 	return parsedMeasurements, nil
 }
@@ -310,7 +314,7 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 	start := backendQuery.TimeRange.From.Truncate(time.Second)
 	end := backendQuery.TimeRange.To.Truncate(time.Second)
 	historianQuery := schemas.Query{
-		MeasurementUUIDs: query.MeasurementUUIDs,
+		MeasurementUUIDs: query.Measurements,
 		Start:            start,
 		End:              &end,
 		Tags:             query.Options.Tags,

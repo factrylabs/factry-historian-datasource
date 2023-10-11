@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
-import { AsyncSelect, InlineField, InlineFieldRow, InputActionMeta, Select } from '@grafana/ui'
+import { AsyncMultiSelect, InlineField, InlineFieldRow, InputActionMeta, Select } from '@grafana/ui'
 import { getTemplateSrv } from '@grafana/runtime'
 import { QueryTag } from 'components/TagsSection/types'
 import { selectable } from './util'
 import { QueryOptions } from './QueryOptions'
 import { labelWidth, MeasurementQuery, MeasurementQueryOptions, QueryEditorState, TimeseriesDatabase } from 'types'
+import { toSelectableValue } from 'components/TagsSection/util'
 
 export interface Props {
   state: QueryEditorState
@@ -25,25 +26,8 @@ export const Measurements = ({
   const [measurementInput, setMeasurementInput] = useState("")
   const [measurementSelected, setMeasurementSelected] = useState(false)
 
-  const selectedMeasurement = (): SelectableValue<string> => {
-    const measurementQuery = state.measurementsState.options.query
-    if (!measurementQuery.Measurement) {
-      return { label: state.measurementsState.selectedMeasurement, value: state.measurementsState.selectedMeasurement }
-    }
-
-    const measurementUUID = measurementQuery.Measurement
-    const measurement = state.measurements.find(m => m.UUID === measurementUUID)
-    if (!measurement) {
-      return { label: state.measurementsState.selectedMeasurement, value: state.measurementsState.selectedMeasurement }
-    }
-    let label: string | undefined = measurement.Name
-    let value: string | undefined = measurement.UUID
-    if (getTemplateSrv().containsTemplate(state.measurementsState.selectedMeasurement)) {
-      label = state.measurementsState.selectedMeasurement
-      value = state.measurementsState.selectedMeasurement
-    }
-    const database = state.databases.find(e => e.UUID === measurement.DatabaseUUID)
-    return { label: label, value: value, description: `(${database?.Name}) ${measurement.Description}` }
+  const selectedMeasurements = (): Array<SelectableValue<string>> => {
+    return state.measurementsState.selectedMeasurements ?? []
   }
 
   const selectableTimeseriesDatabases = (databases: TimeseriesDatabase[]): Array<SelectableValue<string>> => {
@@ -65,7 +49,7 @@ export const Measurements = ({
     }
 
     const options = await onLoadMeasurementOptions(getTemplateSrv().replace(query))
-    setMeasurementOptions(options)
+    setMeasurementOptions([...options])
     return [
       ...getTemplateSrv().getVariables().map((e => {
         return { label: `$${e.name}`, value: `$${e.name}` }
@@ -74,23 +58,23 @@ export const Measurements = ({
     ]
   }
 
-  const onMeasurementChange = (event: SelectableValue<string>): void => {
-    if (event.value) {
+  const onMeasurementChange = (events: Array<SelectableValue<string>>): void => {
+    if (events.length > 0) {
       setMeasurementSelected(true)
-      const updatedQuery = { ...state.measurementsState.options.query, Measurement: event.value }
-      saveState({
-        ...state,
-        measurementsState: {
-          ...state.measurementsState,
-          options: {
-            ...state.measurementsState.options,
-            query: updatedQuery,
-          },
-          selectedMeasurement: event.label
-        }
-      })
-      onChangeMeasurementQuery(updatedQuery)
     }
+    const updatedQuery = { ...state.measurementsState.options.query, Measurements: events.map(e => e.value ?? ''), Measurement: undefined }
+    saveState({
+      ...state,
+      measurementsState: {
+        ...state.measurementsState,
+        options: {
+          ...state.measurementsState.options,
+          query: updatedQuery,
+        },
+        selectedMeasurements: events,
+      }
+    })
+    onChangeMeasurementQuery(updatedQuery)
   }
 
   const onMeasurementInput = (value: string, actionMeta: InputActionMeta): void => {
@@ -117,12 +101,12 @@ export const Measurements = ({
     if (!getTemplateSrv().containsTemplate(value) && !(value.startsWith('/') && value.endsWith('/'))) {
       const measurementOption = measurementOptions.find((e => e.label === value))
       if (measurementOption) {
-        onMeasurementChange(measurementOption)
+        onMeasurementChange([...(state.measurementsState.selectedMeasurements ?? []), measurementOption])
       }
       return
     }
 
-    const updatedQuery = { ...state.measurementsState.options.query, Measurement: value }
+    const updatedQuery = { ...state.measurementsState.options.query, Measurements: [...(state.measurementsState.options.query.Measurements ?? []), value] }
     saveState({
       ...state,
       measurementsState: {
@@ -131,7 +115,7 @@ export const Measurements = ({
           ...state.measurementsState.options,
           query: updatedQuery,
         },
-        selectedMeasurement: value
+        selectedMeasurements: [...(state.measurementsState.selectedMeasurements ?? []), toSelectableValue(value)]
       }
     })
     onChangeMeasurementQuery(updatedQuery)
@@ -208,9 +192,9 @@ export const Measurements = ({
       </InlineFieldRow>
       {state.measurementsState.options.filter.DatabaseUUID &&
         <InlineFieldRow>
-          <InlineField label="Measurement" labelWidth={labelWidth} tooltip="Specify measurement to work with, you can use regex by entering your pattern between forward slashes">
-            <AsyncSelect
-              value={selectedMeasurement()}
+          <InlineField label="Measurements" labelWidth={labelWidth} tooltip="Specify measurements to work with, you can use regex by entering your pattern between forward slashes">
+            <AsyncMultiSelect
+              value={selectedMeasurements()}
               placeholder="select measurement"
               loadOptions={loadMeasurementOptions}
               defaultOptions={defaultMeasurementOptions()}
