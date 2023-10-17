@@ -13,7 +13,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS # Don't run branch pipeline if there's an open MR for branch
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^release-.*$/ # Run branch pipelines on main and release branches
-    - if: $CI_COMMIT_BRANCH =~ /^release-.*$/ && $CI_COMMIT_TAG =~ /^v.*$/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 
 
 stages:
@@ -92,6 +92,8 @@ release:
 
 publish:
   stage: publish
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
   script:
     - PACKAGE_VERSION=$(make version)
     - ARCH=binary
@@ -110,5 +112,3 @@ publish:
     paths:
       - $CI_PROJECT_DIR/release
       - $CI_PROJECT_DIR/dist
-  rules:
-  - if: $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
