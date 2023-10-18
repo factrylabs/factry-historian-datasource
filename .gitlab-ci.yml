@@ -104,7 +104,7 @@ publish:
     - mv dist/ release/factry-historian-datasource
     - zip release/$PACKAGE_NAME release/factry-historian-datasource -r
     - scp release/$PACKAGE_NAME gitlab@$CLIENT_PORTAL_SERVER:/var/opt/factry/download/factry-historian-datasource
-    - ssh gitlab@$CLIENT_PORTAL_SERVER "/var/opt/factry/publish-package -repo=$REPO_FILE -product=factry-historian-datasource -version=$PACKAGE_VERSION -os=any -arch=any -type=zip -location=historian/$PACKAGE_NAME"
+    - ssh gitlab@$CLIENT_PORTAL_SERVER "/var/opt/factry/publish-package -repo=$REPO_FILE -product=factry-historian-datasource -version=$PACKAGE_VERSION -os=any -arch=any -type=zip -location=factry-historian-datasource/$PACKAGE_NAME"
     - ssh gitlab@$CLIENT_PORTAL_SERVER 'cp -r /var/opt/factry/download '$CLIENT_PORTAL_DOWNLOAD_PATH''
   artifacts:
     expire_in: 1 day
