@@ -13,8 +13,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS # Don't run branch pipeline if there's an open MR for branch
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^release-.*$/ # Run branch pipelines on main and release branches
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
-
+    - if: $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 
 stages:
   - test
@@ -93,19 +92,19 @@ release:
 publish:
   stage: publish
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+    - if: $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+      when: manual
   script:
+    - apt-get update
+    - apt-get install -y zip
     - PACKAGE_VERSION=$(make version)
-    - ARCH=binary
     - PACKAGE_NAME=factry-historian-datasource-${PACKAGE_VERSION:1}.zip
     - REPO_FILE=/var/opt/factry/download/packages.json
-
     - mkdir -p release/factry-historian-datasource
     - mv dist/ release/factry-historian-datasource
     - zip release/$PACKAGE_NAME release/factry-historian-datasource -r
-
-    - scp release/$ARCH/$PACKAGE_NAME gitlab@$CLIENT_PORTAL_SERVER:/var/opt/factry/download/factry-historian-datasource
-    - ssh gitlab@$CLIENT_PORTAL_SERVER "/var/opt/factry/publish-package -repo=$REPO_FILE -product=factry-historian-datasource -version=$PACKAGE_VERSION -os=linux -arch=$ARCH -type=binary -location=historian/$PACKAGE_NAME"
+    - scp release/$PACKAGE_NAME gitlab@$CLIENT_PORTAL_SERVER:/var/opt/factry/download/factry-historian-datasource
+    - ssh gitlab@$CLIENT_PORTAL_SERVER "/var/opt/factry/publish-package -repo=$REPO_FILE -product=factry-historian-datasource -version=$PACKAGE_VERSION -os=any -arch=any -type=zip -location=historian/$PACKAGE_NAME"
     - ssh gitlab@$CLIENT_PORTAL_SERVER 'cp -r /var/opt/factry/download '$CLIENT_PORTAL_DOWNLOAD_PATH''
   artifacts:
     expire_in: 1 day
