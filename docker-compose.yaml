@@ -2,7 +2,12 @@ version: '3.0'
 
 services:
   grafana:
+    platform: linux/amd64
     container_name: 'factry-historian-datasource'
+    cap_add:
+      - SYS_PTRACE
+    environment:
+      - DEBUG=$DEBUG
     build:
       context: ./.config
       args:

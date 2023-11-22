@@ -3,6 +3,24 @@
 
 A data source backend plugin consists of both frontend and backend components.
 
+### Running the datasource locally
+
+#### Debug mode
+
+```bash
+make clean
+make build_debug
+make run_debug
+```
+
+#### Normal mode
+
+```bash
+make clean
+make build_all
+make run_server
+```
+
 ### Frontend
 
 1. Install dependencies

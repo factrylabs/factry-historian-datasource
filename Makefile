@@ -58,12 +58,15 @@ else
 	@git tag -a $(shell make version) -m "Updated to $(shell make version)"
 endif
 
-build_all: ## Build current project for all targets
-	mage -v
+build_all: build_web ## Build current project for all targets
+	mage buildAll
 
 build_web: ## Build the web application
 	pnpm config set store-dir .pnpm-store
 	pnpm install && pnpm run build
+
+build_debug: build_web
+	mage build:debug
 
 gen_proto: ## Generates the go files from the .proto files
 	protoc --go_out=. --go_opt=paths=source_relative \--go-grpc_out=. --go-grpc_opt=paths=source_relative \$(PROTO_FILES)
@@ -73,3 +76,13 @@ package: build_web build_all
 	cp -r dist/* factry-historian-datasource
 	zip factry-historian-datasource-$(shell make version).zip factry-historian-datasource -r
 	export GRAFANA_API_KEY=$(key); npx @grafana/sign-plugin@latest --rootUrls $(rootUrls)
+
+run_server: # Runs the grafana datasource
+	docker compose up --build 
+
+run_debug: # Runs the grafana datasource in debug mode
+	DEBUG=1 docker compose up --build 
+
+clean: # Cleans build artifacts
+	mage clean
+	rm -rf node_modules
