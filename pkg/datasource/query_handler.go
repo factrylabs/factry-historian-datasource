@@ -179,7 +179,7 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([
 			}
 		}
 
-		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&Database=%v", measurement, databaseUUID))
+		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&DatabaseUUID=%v", measurement, databaseUUID))
 		res, err := api.GetMeasurements(values.Encode())
 		if err != nil {
 			return nil, err

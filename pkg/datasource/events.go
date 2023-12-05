@@ -34,11 +34,7 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 			EventTypeUUID: event.EventTypeUUID,
 			Status:        string(event.Status),
 		}
-		if _, ok := groupedEvents[eventLabels]; ok {
-			groupedEvents[eventLabels] = append(groupedEvents[eventLabels], event)
-		} else {
-			groupedEvents[eventLabels] = []schemas.Event{event}
-		}
+		groupedEvents[eventLabels] = append(groupedEvents[eventLabels], event)
 	}
 	for _, eventType := range eventTypes {
 		eventTypePropertiesForEventType[eventType.UUID] = []schemas.EventTypeProperty{}
