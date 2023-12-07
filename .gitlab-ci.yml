@@ -100,10 +100,10 @@ publish:
     - PACKAGE_VERSION=$(make version)
     - PACKAGE_NAME=factry-historian-datasource-${PACKAGE_VERSION:1}.zip
     - REPO_FILE=/var/opt/factry/download/packages.json
-    - mkdir -p release/factry-historian-datasource
-    - mv dist/ release/factry-historian-datasource
-    - zip release/$PACKAGE_NAME release/factry-historian-datasource -r
-    - scp release/$PACKAGE_NAME gitlab@$CLIENT_PORTAL_SERVER:/var/opt/factry/download/factry-historian-datasource
+    - mkdir -p factry-historian-datasource
+    - cp -r dist/* factry-historian-datasource
+    - zip $PACKAGE_NAME factry-historian-datasource -r
+    - scp $PACKAGE_NAME gitlab@$CLIENT_PORTAL_SERVER:/var/opt/factry/download/factry-historian-datasource
     - ssh gitlab@$CLIENT_PORTAL_SERVER "/var/opt/factry/publish-package -repo=$REPO_FILE -product=factry-historian-datasource -version=$PACKAGE_VERSION -os=any -arch=any -type=zip -location=factry-historian-datasource/$PACKAGE_NAME"
     - ssh gitlab@$CLIENT_PORTAL_SERVER 'cp -r /var/opt/factry/download '$CLIENT_PORTAL_DOWNLOAD_PATH''
   artifacts:
