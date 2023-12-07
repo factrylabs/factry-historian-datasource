@@ -1,6 +1,6 @@
 major = 1
 minor = 0
-patch = 0
+patch = 1
 project_name=grafana-datasource
 
 PROTO_DIR= pkg/proto
