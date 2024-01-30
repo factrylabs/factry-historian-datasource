@@ -16,6 +16,7 @@ services:
     ports:
       - 3001:3000/tcp
       - 2345:2345/tcp
+      - 1234:1234/tcp
     volumes:
       - ./dist:/var/lib/grafana/plugins/factry-historian-datasource
       - ./provisioning:/etc/grafana/provisioning

@@ -220,12 +220,33 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 		lastPointQuery.Aggregation = &schemas.Aggregation{
 			Name: "last",
 		}
-		lastKnownPointResult, err := api.MeasurementQuery(lastPointQuery)
+
+		lastKnowPointResults := data.Frames{}
+
+		if len(lastPointQuery.Tags) == 0 {
+			lastPointQuery.Tags = make(map[string]string)
+			lastPointQuery.Tags["status"] = "Good"
+
+			// If unfiltered query last point for each resulting data frame
+			for _, frame := range result {
+				getLastQueryForFrame := getLastQueryForFrame(frame, q)
+				lastResult, err := api.MeasurementQuery(getLastQueryForFrame)
+				if err != nil {
+					return nil, err
+				}
+
+				lastKnowPointResults = append(lastKnowPointResults, lastResult...)
+			}
+		}
+
+		// OtherFrames
+		lastResult, err := api.MeasurementQuery(lastPointQuery)
 		if err != nil {
 			return nil, err
 		}
+		lastKnowPointResults = append(lastKnowPointResults, lastResult...)
 
-		result = mergeFrames(lastKnownPointResult, result)
+		result = mergeFrames(lastKnowPointResults, result)
 		if measurementQuery.Options.FillInitialEmptyValues {
 			result = fillInitialEmptyIntervals(result, q)
 		}
@@ -236,6 +257,27 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 	}
 
 	return addMetaData(result, measurementQuery.Options.UseEngineeringSpecs), nil
+}
+
+func getLastQueryForFrame(frame *data.Frame, q schemas.Query) schemas.Query {
+	lastQuery := q
+	start := q.Start
+	lastQuery.MeasurementUUIDs = []string{getMeasurementUUIDFromFrame(frame)}
+	lastQuery.Measurements = nil
+	lastQuery.End = &start
+	lastQuery.Start = time.Time{}.Add(time.Millisecond)
+	lastQuery.Aggregation = &schemas.Aggregation{
+		Name: "last",
+	}
+
+	lastQuery.Tags = make(map[string]string)
+	labels := getLabelsFromFrame(frame)
+
+	for label, value := range labels {
+		lastQuery.Tags[label] = fmt.Sprintf("%v", value)
+	}
+
+	return lastQuery
 }
 
 func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {

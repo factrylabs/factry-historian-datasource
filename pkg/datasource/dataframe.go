@@ -12,6 +12,25 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+// getLabelsFromFrame returns the tag from a frame
+func getLabelsFromFrame(frame *data.Frame) map[string]interface{} {
+	if frame == nil || frame.Meta == nil {
+		return nil
+	}
+
+	meta, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	labels, ok := meta["Labels"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	return labels
+}
+
 // mergeFrames merges 2 set of frames based on the metadata and name of each frame
 func mergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
 	if len(lastKnown) == 0 {
@@ -117,26 +136,32 @@ func getMeasurementFrameName(frame *data.Frame, includeDatabaseName, includeDesc
 	return measurementName + getFrameSuffix(frame, includeDatabaseName, includeDescription)
 }
 
-// getFrameID returns the frame ID for a given frame
-func getFrameID(frame *data.Frame) string {
+// getMeasurementUUIDFromFrame returns the measurement UUID for a given frame
+func getMeasurementUUIDFromFrame(frame *data.Frame) string {
 	if frame == nil {
 		return ""
 	}
 
 	if frame.Meta == nil {
-		return frame.Name
+		return ""
 	}
 
 	meta, ok := frame.Meta.Custom.(map[string]interface{})
 	if !ok {
-		return frame.Name
+		return ""
 	}
 
 	measurementUUID, ok := meta["MeasurementUUID"].(string)
 	if !ok {
-		return frame.Name
+		return ""
 	}
 
+	return measurementUUID
+}
+
+// getFrameID returns the frame ID for a given frame
+func getFrameID(frame *data.Frame) string {
+	measurementUUID := getMeasurementUUIDFromFrame(frame)
 	return fmt.Sprintf("%s%s", measurementUUID, getFrameSuffix(frame, false, false))
 }
 
@@ -256,7 +281,7 @@ func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Fra
 			for time := query.Start; time.Before(*query.End); time = time.Add(duration) {
 				valueField.Append(initialValue)
 				timestamp := time
-				timeField.Append(&timestamp)
+				timeField.Append(timestamp)
 			}
 		}
 	}

@@ -65,7 +65,7 @@ build_web: ## Build the web application
 	pnpm config set store-dir .pnpm-store
 	pnpm install && pnpm run build
 
-build_debug: build_web
+build_debug: build_web ## Build the backend in debug mode
 	mage build:debug
 
 gen_proto: ## Generates the go files from the .proto files
