@@ -220,28 +220,68 @@ func setRawFrameNames(frames data.Frames) data.Frames {
 	return frames
 }
 
+func copyFrame(frame *data.Frame) (*data.Frame, error) {
+	bytes, err := frame.MarshalArrow()
+	if err != nil {
+		return nil, err
+	}
+
+	frameCopy, err := data.UnmarshalArrowFrame(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return frameCopy, nil
+}
+
 // setAssetFrameNames sets the name of each frame to the asset path
-func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, measurementIndexToPropertyMap []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
+func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetProperties []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
 	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		UUIDToAssetMap[asset.UUID] = asset
 	}
 
-	for i, frame := range frames {
+	measurementUUIDToPropertyMap := make(map[uuid.UUID][]schemas.AssetProperty)
+	for _, property := range assetProperties {
+		measurementUUIDToPropertyMap[property.MeasurementUUID] = append(measurementUUIDToPropertyMap[property.MeasurementUUID], property)
+	}
+
+	additionalFrames := make([]*data.Frame, 0)
+
+	for _, frame := range frames {
 		if frame.Meta == nil {
 			continue
 		}
 
-		if field, _ := frame.FieldByName("value"); field != nil {
-			if field.Config == nil {
-				field.Config = &data.FieldConfig{}
+		measurementUUIDString := getMeasurementUUIDFromFrame(frame)
+		measurementUUID, err := uuid.Parse(measurementUUIDString)
+		if err != nil {
+			continue
+		}
+		properties := measurementUUIDToPropertyMap[measurementUUID]
+
+		for i, property := range properties {
+			if i > 0 {
+				frameCopy, err := copyFrame(frame)
+				if err != nil {
+					continue
+				}
+
+				frame = frameCopy
+				additionalFrames = append(additionalFrames, frame)
 			}
-			property := measurementIndexToPropertyMap[i]
-			field.Config.DisplayNameFromDS = getAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
+
+			if field, _ := frame.FieldByName("value"); field != nil {
+				if field.Config == nil {
+					field.Config = &data.FieldConfig{}
+				}
+
+				field.Config.DisplayNameFromDS = getAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
+			}
 		}
 	}
 
-	return frames
+	return append(frames, additionalFrames...)
 }
 
 func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Frames {

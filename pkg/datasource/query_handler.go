@@ -14,6 +14,7 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
 	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
+	"golang.org/x/exp/maps"
 )
 
 // QueryTypes are a list of query types
@@ -119,7 +120,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		return nil, err
 	}
 
-	measurementUUIDs := []string{}
+	measurementUUIDs := map[string]struct{}{}
 	assetUUIDs := []uuid.UUID{}
 	for _, assetString := range assetMeasurementQuery.Assets {
 		if assetUUID, ok := filterAssetUUID(assets, assetString); ok {
@@ -132,7 +133,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			for _, assetProperty := range assetProperties {
 				if assetProperty.Name == property && assetProperty.AssetUUID == assetUUID {
-					measurementUUIDs = append(measurementUUIDs, assetProperty.MeasurementUUID.String())
+					measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
 					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 					break
 				}
@@ -141,7 +142,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	}
 
 	measurementQuery := schemas.MeasurementQuery{
-		Measurements: measurementUUIDs,
+		Measurements: maps.Keys(measurementUUIDs),
 		Options:      assetMeasurementQuery.Options,
 	}
 
