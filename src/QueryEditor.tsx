@@ -20,6 +20,7 @@ import {
   AssetMeasurementQueryState,
   TabIndex,
   Measurement,
+  AggregationName,
 } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -59,7 +60,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             Database: '',
             GroupBy: ['status'],
             Aggregation: {
-              Name: 'mean',
+              Name: AggregationName.Last,
               Period: '$__interval',
             },
             IncludeLastKnownPoint: false,
@@ -81,7 +82,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           Options: {
             GroupBy: ['status'],
             Aggregation: {
-              Name: 'mean',
+              Name: AggregationName.Last,
               Period: '$__interval',
             },
             IncludeLastKnownPoint: false,
