@@ -125,7 +125,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   async componentDidMount(): Promise<void> {
     const { query } = this.props
     let selectedMeasurements = query.selectedMeasurements ?? []
-    console.log('hello')
     if (query.selectedMeasurement) {
       selectedMeasurements = [...selectedMeasurements, query.selectedMeasurement]
     }

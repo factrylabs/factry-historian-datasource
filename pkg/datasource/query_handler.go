@@ -151,7 +151,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		return nil, err
 	}
 
-	return setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options), nil
+	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
 }
 
 func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([]string, error) {
@@ -203,7 +203,7 @@ func handleMeasurementQuery(measurementQuery schemas.MeasurementQuery, backendQu
 		return nil, err
 	}
 
-	return setMeasurementFrameNames(frames, measurementQuery.Options), nil
+	return sortByStatus(setMeasurementFrameNames(frames, measurementQuery.Options)), nil
 }
 
 func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {

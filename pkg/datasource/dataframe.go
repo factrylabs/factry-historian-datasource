@@ -3,6 +3,7 @@ package datasource
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -414,4 +415,26 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 	if len(thresholdConfig.Steps) > 1 {
 		field.Config.Thresholds = thresholdConfig
 	}
+}
+
+func sortByStatus(frames data.Frames) data.Frames {
+	sort.Slice(frames, func(i, j int) bool {
+		custom, ok := frames[i].Meta.Custom.(map[string]interface{})
+		if !ok {
+			return false
+		}
+
+		labels, ok := custom["Labels"].(map[string]interface{})
+		if !ok {
+			return false
+		}
+
+		status, ok := labels["status"]
+		if !ok {
+			return false
+		}
+
+		return status == "Good"
+	})
+	return frames
 }
