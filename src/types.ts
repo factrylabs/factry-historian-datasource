@@ -84,6 +84,7 @@ export const defaultQuery: Partial<Query> = {
 export interface HistorianDataSourceOptions extends DataSourceJsonData {
   url: string
   organization: string
+  defaultTab?: TabIndex
 }
 
 /**

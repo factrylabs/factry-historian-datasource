@@ -1,20 +1,47 @@
 import React, { ChangeEvent, PureComponent } from 'react'
-import { FieldSet, InlineField, InlineFieldRow, Input, SecretInput } from '@grafana/ui'
+import { FieldSet, InlineField, InlineFieldRow, Input, SecretInput, Select } from '@grafana/ui'
 
-import { DataSourcePluginOptionsEditorProps } from '@grafana/data'
-import { HistorianDataSourceOptions, HistorianSecureJsonData } from './types'
+import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data'
+import { HistorianDataSourceOptions, HistorianSecureJsonData, TabIndex } from './types'
 
 interface Props extends DataSourcePluginOptionsEditorProps<HistorianDataSourceOptions> { }
 
 interface State { }
 
 export class ConfigEditor extends PureComponent<Props, State> {
+  tabOptions: Array<SelectableValue<TabIndex>> = [
+    {
+      label: 'Assets',
+      value: TabIndex.Assets,
+    },
+    {
+      label: 'Measurements',
+      value: TabIndex.Measurements,
+    },
+    {
+      label: 'Events',
+      value: TabIndex.Events,
+    },
+    {
+      label: 'Raw query',
+      value: TabIndex.RawQuery,
+    },
+  ]
   onSettingChange = (prop: string) => (event: ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     const jsonData = {
       ...options.jsonData,
       [prop]: event.target.value,
-    };
+    }
+    onOptionsChange({ ...options, jsonData })
+  }
+
+  onDefaultTabChange = (value: SelectableValue<TabIndex>) => {
+    const { onOptionsChange, options } = this.props;
+    const jsonData = {
+      ...options.jsonData,
+      defaultTab: value.value,
+    }
     onOptionsChange({ ...options, jsonData })
   }
 
@@ -90,6 +117,19 @@ export class ConfigEditor extends PureComponent<Props, State> {
                 name="url"
                 onChange={this.onSettingChange('organization')}
                 value={jsonData.organization || ''}
+              />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField
+              label="Default tab"
+              labelWidth={20}
+              tooltip="The default selected tab when opening a new query"
+            >
+              <Select
+                options={this.tabOptions}
+                value={jsonData.defaultTab ?? TabIndex.Assets}
+                onChange={this.onDefaultTabChange}
               />
             </InlineField>
           </InlineFieldRow>

@@ -39,7 +39,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   appIsAlertingType = this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting
   state = {
     loading: true,
-    tabIndex: TabIndex.Assets,
+    tabIndex: this.props.datasource.defaultTab,
     filter: {
       Database: '',
     },
@@ -124,6 +124,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   async componentDidMount(): Promise<void> {
     const { query } = this.props
+    const tabIndex = query.tabIndex ?? this.state.tabIndex
     let selectedMeasurements = query.selectedMeasurements ?? []
     if (query.selectedMeasurement) {
       selectedMeasurements = [...selectedMeasurements, query.selectedMeasurement]
@@ -132,7 +133,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     this.setState((prevState) => {
       return {
       ...prevState,
-      tabIndex: query.tabIndex,
+      tabIndex: tabIndex,
       measurementsState: {
         ...this.state.measurementsState,
         selectedMeasurements: measurements,
@@ -148,20 +149,20 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       },
     }})
 
-    await this.loadDataForTab(query.tabIndex)
+    await this.loadDataForTab(tabIndex)
 
     if (!query.query) {
       this.setState((prevState) => {
         return {
           ...prevState,
           loading: false,
-          tabIndex: TabIndex.Assets,
+          tabIndex,
         }
       }, () => {
         this.saveState(this.state)
       })
     } else {
-      switch (query.tabIndex) {
+      switch (tabIndex) {
         case TabIndex.Assets: {
           const assetMeasurementQuery = query.query as AssetMeasurementQuery
           const queryOptions: AssetMeasurementQueryState = {
@@ -172,7 +173,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             return {
               ...prevState,
               loading: false,
-              tabIndex: query.tabIndex,
+              tabIndex: tabIndex,
               assetsState: {
                 ...this.state.assetsState,
                 options: queryOptions,
@@ -200,7 +201,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             return {
               ...prevState,
               loading: false,
-              tabIndex: query.tabIndex,
+              tabIndex: tabIndex,
               measurementsState: {
                 ...this.state.measurementsState,
                 options: queryOptions,
@@ -218,7 +219,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             return {
               ...prevState,
               loading: false,
-              tabIndex: query.tabIndex,
+              tabIndex: tabIndex,
               eventsState: {
                 ...this.state.eventsState,
                 eventQuery: eventQuery,
@@ -242,7 +243,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             return {
               ...prevState,
               loading: false,
-              tabIndex: query.tabIndex,
+              tabIndex: tabIndex,
               rawState: {
                 ...this.state.rawState,
                 filter: {

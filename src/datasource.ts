@@ -16,12 +16,15 @@ import {
   Pagination,
   Query,
   RawQuery,
+  TabIndex,
   TimeseriesDatabase,
 } from './types'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
+  defaultTab: TabIndex
   constructor(instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>) {
     super(instanceSettings)
+    this.defaultTab = instanceSettings.jsonData.defaultTab ?? TabIndex.Assets
   }
 
   query(request: DataQueryRequest<Query>): any {
