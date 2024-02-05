@@ -436,6 +436,9 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   saveState(state: QueryEditorState, updateState = false): void {
     const { onChange, query } = this.props
+    if (!query) {
+      return
+    }
     query.tabIndex = state.tabIndex
     query.selectedMeasurements = state.measurementsState.selectedMeasurements?.map(e => e.value ?? '') ?? []
     switch (state.tabIndex) {

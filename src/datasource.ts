@@ -1,5 +1,6 @@
 import { DataQueryRequest, DataSourceInstanceSettings } from '@grafana/data'
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime'
+import { VariableSupport } from 'variable_support'
 import {
   Asset,
   AssetMeasurementQuery,
@@ -25,6 +26,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   constructor(instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>) {
     super(instanceSettings)
     this.defaultTab = instanceSettings.jsonData.defaultTab ?? TabIndex.Assets
+    this.variables = new VariableSupport(this)
   }
 
   query(request: DataQueryRequest<Query>): any {

@@ -263,3 +263,37 @@ export interface EventConfiguration {
   AssetUUID: string
   EventTypeUUID: string
 }
+
+export type MeasurementVariableQuery = {
+  refId: string
+  type: 'MeasurementQuery'
+  filter?: MeasurementFilter
+  pagination?: Pagination
+}
+
+export type AssetVariableQuery = {
+  refId: string
+  type: 'AssetQuery'
+}
+
+export type EventTypeVariableQuery = {
+  refId: string
+  type: 'EventTypeQuery'
+}
+
+export type DatabaseVariableQuery = {
+  refId: string
+  type: 'DatabaseQuery'
+}
+
+export type EventTypePropertyVariableQuery = {
+  refId: string
+  type: 'EventTypePropertyQuery'
+}
+
+export type AssetPropertyVariableQuery = {
+  refId: string
+  type: 'AssetPropertyQuery'
+}
+
+export type VariableQuery = MeasurementVariableQuery | AssetVariableQuery | EventTypeVariableQuery | DatabaseVariableQuery | EventTypePropertyVariableQuery | AssetPropertyVariableQuery
