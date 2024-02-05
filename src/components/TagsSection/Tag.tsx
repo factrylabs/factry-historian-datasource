@@ -35,7 +35,16 @@ type TagProps = {
 
 const defaultOptions = () => Promise.resolve([])
 
-export const Tag = ({ tag, isFirst, operators = knownOperators, conditions = knownConditions, onRemove, onChange, getTagKeyOptions = defaultOptions, getTagValueOptions = defaultOptions }: TagProps): JSX.Element => {
+export const Tag = ({
+  tag,
+  isFirst,
+  operators = knownOperators,
+  conditions = knownConditions,
+  onRemove,
+  onChange,
+  getTagKeyOptions = defaultOptions,
+  getTagValueOptions = defaultOptions,
+}: TagProps): JSX.Element => {
   const operator = getOperator(tag)
   const condition = getCondition(tag, isFirst)
 

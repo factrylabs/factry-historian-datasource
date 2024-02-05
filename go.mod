@@ -1,6 +1,6 @@
 module gitlab.com/factry/historian/grafana-datasource.git
 
-go 1.19
+go 1.21.6
 
 require (
 	github.com/go-resty/resty/v2 v2.7.0

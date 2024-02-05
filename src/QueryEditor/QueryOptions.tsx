@@ -3,17 +3,18 @@ import { SelectableValue } from '@grafana/data'
 import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
 import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
-import { getAggregations, getFillTypes, getPeriods } from './util'
+import { getAggregationsForDatatypes, getFillTypes, getPeriods } from './util'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
 
 export interface Props {
   state: MeasurementQueryOptions
   tags: QueryTag[]
   appIsAlertingType: boolean
+  datatypes: string[]
   onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
 }
 
-export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props): JSX.Element => {
+export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChange }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
   const onAggregationChange = (event: SelectableValue<string>) => {
     let aggregation = undefined
@@ -21,7 +22,7 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
       aggregation = {
         ...state.Aggregation,
         Name: event.value,
-        Period: state.Aggregation?.Period || '$__interval'
+        Period: state.Aggregation?.Period || '$__interval',
       } as Aggregation
     }
     onChange({ ...state, Aggregation: aggregation }, tags)
@@ -104,7 +105,7 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
             value={state.Aggregation?.Name}
             placeholder="select an aggregation"
             isClearable
-            options={getAggregations()}
+            options={getAggregationsForDatatypes(datatypes)}
             onChange={onAggregationChange}
           />
         </InlineField>
@@ -158,12 +159,9 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, onChange }: Props
           </InlineField>
         </InlineFieldRow>
         <InlineFieldRow>
-        <InlineField
-              label="Fill empty initial intervals"
-              labelWidth={labelWidth}
-            >
-              <InlineSwitch value={state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
-            </InlineField>
+          <InlineField label="Fill empty initial intervals" labelWidth={labelWidth}>
+            <InlineSwitch value={state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
+          </InlineField>
         </InlineFieldRow>
         {!appIsAlertingType && (
           <InlineFieldRow>

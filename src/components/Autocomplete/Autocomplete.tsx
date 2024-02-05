@@ -14,19 +14,26 @@ export interface Props {
   onClickSuggestion: (e: any) => void
 }
 
-export const Autocomplete = ({ showSuggestions, activeLabel, filteredSuggestions, activeSuggestion, focusCascade, onClickSuggestion }: Props): JSX.Element | null => {
-  const styles = useStyles2(getStyles);
+export const Autocomplete = ({
+  showSuggestions,
+  activeLabel,
+  filteredSuggestions,
+  activeSuggestion,
+  focusCascade,
+  onClickSuggestion,
+}: Props): JSX.Element | null => {
+  const styles = useStyles2(getStyles)
   let suggestionsListComponent = null
   if (showSuggestions && activeLabel && !focusCascade) {
     if (filteredSuggestions.length) {
       suggestionsListComponent = (
         <ul className={styles.container}>
           {filteredSuggestions.map((suggestion, index) => {
-            let className = styles.option;
+            let className = styles.option
 
             // Flag the active suggestion with a class
             if (index === activeSuggestion) {
-              className += " " + styles.optionSelected
+              className += ' ' + styles.optionSelected
             }
             return (
               <li className={className} key={suggestion} onClick={onClickSuggestion}>
@@ -35,7 +42,7 @@ export const Autocomplete = ({ showSuggestions, activeLabel, filteredSuggestions
             )
           })}
         </ul>
-      );
+      )
     }
   }
 

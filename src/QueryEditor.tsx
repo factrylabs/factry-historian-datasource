@@ -6,7 +6,7 @@ import { Assets } from 'QueryEditor/Assets'
 import { Measurements } from 'QueryEditor/Measurements'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
-import { propertyFilterToQueryTags, sortByName, tagsToQueryTags } from 'QueryEditor/util'
+import { measurementToSelectableValue, propertyFilterToQueryTags, sortByName, tagsToQueryTags } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import {
   HistorianDataSourceOptions,
@@ -22,6 +22,7 @@ import {
   Measurement,
   AggregationName,
 } from './types'
+import { getTemplateSrv } from '@grafana/runtime'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -130,37 +131,44 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       selectedMeasurements = [...selectedMeasurements, query.selectedMeasurement]
     }
     const measurements = await this.loadMultipleMeasurementOptions(selectedMeasurements)
+    const allMeasurements = await this.loadMeasurementOptions('')
+
     this.setState((prevState) => {
       return {
-      ...prevState,
-      tabIndex: tabIndex,
-      measurementsState: {
-        ...this.state.measurementsState,
-        selectedMeasurements: measurements,
-        selectedMeasurement: undefined
-      },
-      assetsState: {
-        ...this.state.assetsState,
-        selectedAsset: query.tabIndex === TabIndex.Assets ? query.selectedAssetPath : undefined,
-      },
-      eventsState: {
-        ...this.state.eventsState,
-        selectedAsset: query.tabIndex === TabIndex.Events ? query.selectedAssetPath : undefined,
-      },
-    }})
+        ...prevState,
+        tabIndex: tabIndex,
+        measurementsState: {
+          ...this.state.measurementsState,
+          selectedMeasurements: measurements,
+          selectedMeasurement: undefined,
+        },
+        measurements: allMeasurements,
+        assetsState: {
+          ...this.state.assetsState,
+          selectedAsset: query.tabIndex === TabIndex.Assets ? query.selectedAssetPath : undefined,
+        },
+        eventsState: {
+          ...this.state.eventsState,
+          selectedAsset: query.tabIndex === TabIndex.Events ? query.selectedAssetPath : undefined,
+        },
+      }
+    })
 
     await this.loadDataForTab(tabIndex)
 
     if (!query.query) {
-      this.setState((prevState) => {
-        return {
-          ...prevState,
-          loading: false,
-          tabIndex,
+      this.setState(
+        (prevState) => {
+          return {
+            ...prevState,
+            loading: false,
+            tabIndex,
+          }
+        },
+        () => {
+          this.saveState(this.state)
         }
-      }, () => {
-        this.saveState(this.state)
-      })
+      )
     } else {
       switch (tabIndex) {
         case TabIndex.Assets: {
@@ -169,23 +177,29 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             tags: tagsToQueryTags(assetMeasurementQuery.Options.Tags),
             query: assetMeasurementQuery,
           }
-          this.setState((prevState) => {
-            return {
-              ...prevState,
-              loading: false,
-              tabIndex: tabIndex,
-              assetsState: {
-                ...this.state.assetsState,
-                options: queryOptions,
-                selectedAsset: query.selectedAssetPath,
-                selectedProperties: assetMeasurementQuery.AssetProperties.map((e) => {
-                  return { label: e, value: e } as SelectableValue<string>
-                }),
-              },
+          this.setState(
+            (prevState) => {
+              return {
+                ...prevState,
+                loading: false,
+                tabIndex: tabIndex,
+                assetsState: {
+                  ...this.state.assetsState,
+                  options: queryOptions,
+                  selectedAsset: query.selectedAssetPath,
+                  selectedProperties: assetMeasurementQuery.AssetProperties.map((e) => {
+                    const prop = this.state.assetProperties.find(
+                      (a) => a.Name === e && a.AssetUUID === query.selectedAssetPath
+                    )
+                    return { label: prop?.Name ?? e, value: prop?.UUID ?? e } as SelectableValue<string>
+                  }),
+                },
+              }
+            },
+            () => {
+              this.saveState(this.state)
             }
-          }, () => {
-            this.saveState(this.state)
-          })
+          )
           break
         }
         case TabIndex.Measurements: {
@@ -197,64 +211,73 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             },
             query: measurementQuery,
           }
-          this.setState((prevState) => {
-            return {
-              ...prevState,
-              loading: false,
-              tabIndex: tabIndex,
-              measurementsState: {
-                ...this.state.measurementsState,
-                options: queryOptions,
-                selectedMeasurements: measurements,
-              },
+          this.setState(
+            (prevState) => {
+              return {
+                ...prevState,
+                loading: false,
+                tabIndex: tabIndex,
+                measurementsState: {
+                  ...this.state.measurementsState,
+                  options: queryOptions,
+                  selectedMeasurements: measurements,
+                },
+              }
+            },
+            () => {
+              this.saveState(this.state)
             }
-          }, () => {
-            this.saveState(this.state)
-          })
+          )
           break
         }
         case TabIndex.Events:
           const eventQuery = query.query as EventQuery
-          this.setState((prevState) => {
-            return {
-              ...prevState,
-              loading: false,
-              tabIndex: tabIndex,
-              eventsState: {
-                ...this.state.eventsState,
-                eventQuery: eventQuery,
-                tags: propertyFilterToQueryTags(eventQuery.PropertyFilter ?? []),
-                selectedAsset: query.selectedAssetPath,
-                selectedStatuses: eventQuery.Statuses?.map(e => toSelectableValue(e)),
-                selectedEventTypes: eventQuery.EventTypes
-                  ? eventQuery.EventTypes.map((e) => {
-                      return { label: this.state.eventTypes.find((et) => et.UUID === e)?.Name, value: e }
-                    })
-                  : undefined,
-              },
+          this.setState(
+            (prevState) => {
+              return {
+                ...prevState,
+                loading: false,
+                tabIndex: tabIndex,
+                eventsState: {
+                  ...this.state.eventsState,
+                  eventQuery: eventQuery,
+                  tags: propertyFilterToQueryTags(eventQuery.PropertyFilter ?? []),
+                  selectedAsset: query.selectedAssetPath,
+                  selectedStatuses: eventQuery.Statuses?.map((e) => toSelectableValue(e)),
+                  selectedEventTypes: eventQuery.EventTypes
+                    ? eventQuery.EventTypes.map((e) => {
+                        return { label: this.state.eventTypes.find((et) => et.UUID === e)?.Name, value: e }
+                      })
+                    : undefined,
+                },
+              }
+            },
+            () => {
+              this.saveState(this.state)
             }
-          }, () => {
-            this.saveState(this.state)
-          })
+          )
           break
         case TabIndex.RawQuery:
           const rawQuery = query.query as RawQuery
-          this.setState((prevState) => {
-            return {
-              ...prevState,
-              loading: false,
-              tabIndex: tabIndex,
-              rawState: {
-                ...this.state.rawState,
-                filter: {
-                  DatabaseUUID: rawQuery.TimeseriesDatabase,
+          this.setState(
+            (prevState) => {
+              return {
+                ...prevState,
+                loading: false,
+                tabIndex: tabIndex,
+                rawState: {
+                  ...this.state.rawState,
+                  filter: {
+                    DatabaseUUID: rawQuery.TimeseriesDatabase,
+                  },
+                  rawQuery: rawQuery,
                 },
-                rawQuery: rawQuery,
-              },
+              }
+            },
+            () => {
+              this.saveState(this.state)
             }
-          }, () => {
-            this.saveState(this.state)
-          })
+          )
           break
       }
     }
@@ -284,111 +307,137 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   }
 
   setTabIndex(index: number): void {
-    this.setState((prevState) => {
-      return { ...prevState, tabIndex: index }
-    }, () => {
-      this.saveState(this.state)
-      this.loadDataForTab(index).then(() => {
-        switch (index) {
-        case TabIndex.Assets:
-          if (this.state.assetsState.options.query) {
-            this.onChangeAssetMeasurementQuery(this.state.assetsState.options.query)
+    this.setState(
+      (prevState) => {
+        return { ...prevState, tabIndex: index }
+      },
+      () => {
+        this.saveState(this.state)
+        this.loadDataForTab(index).then(() => {
+          switch (index) {
+            case TabIndex.Assets:
+              if (this.state.assetsState.options.query) {
+                this.onChangeAssetMeasurementQuery(this.state.assetsState.options.query)
+              }
+              break
+            case TabIndex.Measurements:
+              if (this.state.measurementsState.options.query) {
+                this.onChangeMeasurementQuery(this.state.measurementsState.options.query)
+              }
+              break
+            case TabIndex.RawQuery:
+              if (this.state.rawState.rawQuery?.Query) {
+                this.onChangeRawQuery(this.state.rawState.rawQuery.Query)
+              }
+              break
           }
-          break
-        case TabIndex.Measurements:
-          if (this.state.measurementsState.options.query) {
-            this.onChangeMeasurementQuery(this.state.measurementsState.options.query)
-          }
-          break
-        case TabIndex.RawQuery:
-          if (this.state.rawState.rawQuery?.Query) {
-            this.onChangeRawQuery(this.state.rawState.rawQuery.Query)
-          }
-          break
-        }
-      })
-    })
+        })
+      }
+    )
   }
 
   async getTimeSeriesDatabases(): Promise<void> {
     await this.props.datasource.getTimeseriesDatabases().then((timeSeriesDatabases) => {
-      this.setState((prevState) => { return { ...prevState, databases: timeSeriesDatabases }})
+      this.setState((prevState) => {
+        return { ...prevState, databases: timeSeriesDatabases }
+      })
     })
   }
 
-  async loadMeasurementOptions(query: string): Promise<Array<SelectableValue<string>>> {
-    const result: Array<SelectableValue<string>> = []
+  async loadMeasurementOptions(query: string): Promise<Measurement[]> {
     const filter = { ...this.state.measurementsState.options.filter, Keyword: query }
-    await this.props.datasource.getMeasurements(filter, this.state.pagination).then((measurements) => {
-      this.setState((prevState) => {
-        return { ...prevState, measurements: measurements }
-      })
-      measurements.forEach((measurement) => {
-        const database = this.state.databases.find((e) => e.UUID === measurement.DatabaseUUID)
-        result.push({
-          label: measurement.Name,
-          value: measurement.UUID,
-          description: `(${database?.Name}) (${measurement.Datatype}) ${measurement.Description}`,
-        })
-      })
+
+    const measurements = await this.props.datasource.getMeasurements(filter, this.state.pagination)
+
+    measurements.forEach((measurement) => {
+      const database = this.state.databases.find((e) => e.UUID === measurement.DatabaseUUID)
+      if (database) {
+        measurement.Database = database
+      }
     })
-    return result
+
+    return measurements
   }
 
   async loadMultipleMeasurementOptions(items: string[]): Promise<Array<SelectableValue<string>>> {
     const result: Array<SelectableValue<string>> = []
     let measurementsFound: Measurement[] = []
     for (const item of items) {
+      if (getTemplateSrv().containsTemplate(item)) {
+        result.push({
+          label: item,
+          value: item,
+        })
+        continue
+      }
+
       const filter = { ...this.state.measurementsState.options.filter, Keyword: item }
-      await this.props.datasource.getMeasurements(filter, this.state.pagination).then((measurements) => {
-        measurementsFound = [...measurementsFound, ...measurements]
-        // if more than 1 measurement it is probably a regex
-        if (measurements.length > 1) {
-          result.push({
-            label: item,
-            value: item,
-          })
-        } else {
-          measurements.forEach((measurement) => {
+      const measurements = await this.props.datasource.getMeasurements(filter, this.state.pagination)
+      measurementsFound = [...measurementsFound, ...measurements]
+      // if more than 1 measurement it is probably a regex
+      if (measurements.length > 1) {
+        result.push({
+          label: item,
+          value: item,
+        })
+      } else {
+        measurements.forEach((measurement) => {
+          if (!measurement.Database) {
             const database = this.state.databases.find((e) => e.UUID === measurement.DatabaseUUID)
-            result.push({
-              label: measurement.Name,
-              value: measurement.UUID,
-              description: `(${database?.Name}) (${measurement.Datatype}) ${measurement.Description}`,
-            })
-          })
-        }
-      })
+            if (database) {
+              measurement.Database = database
+            }
+          }
+          result.push(measurementToSelectableValue(measurement))
+        })
+      }
     }
-    this.setState((prevState) => {
-      return { ...prevState, measurements: measurementsFound }
-    })
     return result
   }
 
   async getAssets(): Promise<void> {
-    await this.props.datasource.getAssets().then((assets) => {
-      return this.props.datasource.getAssetProperties().then((assetProperties) => {
-        this.setState((prevState) => { return { ...prevState, assetProperties: assetProperties.sort(sortByName), assets: assets }})
+    await this.props.datasource.getAssets().then(async (assets) => {
+      const assetProperties = await this.props.datasource.getAssetProperties()
+      let measurements: Measurement[] = []
+      await Promise.all(
+        assets.map(async (asset) => {
+          let m = await this.props.datasource.getMeasurements({ AssetUUID: asset.UUID }, this.state.pagination)
+          measurements = measurements.concat(m)
+        })
+      )
+
+      this.setState((prevState) => {
+        return {
+          ...prevState,
+          assetProperties: assetProperties.sort(sortByName),
+          assets: assets,
+          measurements: [...new Map(measurements.map((item) => [item.UUID, item])).values()],
+        }
       })
     })
   }
 
   async getEventTypes(): Promise<void> {
     this.props.datasource.getEventTypes().then((eventTypes) => {
-      this.setState((prevState) => { return { ...prevState, eventTypes: eventTypes }})
+      this.setState((prevState) => {
+        return { ...prevState, eventTypes: eventTypes }
+      })
     })
   }
 
   async getEventTypeProperties(): Promise<void> {
     this.props.datasource.getEventTypeProperties().then((eventTypeProperties) => {
-      this.setState((prevState) => { return { ...prevState, eventTypeProperties: eventTypeProperties }})
+      this.setState((prevState) => {
+        return { ...prevState, eventTypeProperties: eventTypeProperties }
+      })
     })
   }
 
   async getEventConfigurations(): Promise<void> {
     this.props.datasource.getEventConfigurations().then((eventConfigurations) => {
-      this.setState((prevState) => { return { ...prevState, eventConfigurations: eventConfigurations }})
+      this.setState((prevState) => {
+        return { ...prevState, eventConfigurations: eventConfigurations }
+      })
     })
   }
 
@@ -440,7 +489,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       return
     }
     query.tabIndex = state.tabIndex
-    query.selectedMeasurements = state.measurementsState.selectedMeasurements?.map(e => e.value ?? '') ?? []
+    query.selectedMeasurements = state.measurementsState.selectedMeasurements?.map((e) => e.value ?? '') ?? []
     switch (state.tabIndex) {
       case TabIndex.Assets:
         query.selectedAssetPath = state.assetsState.selectedAsset
@@ -510,19 +559,29 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             state={this.state}
             appIsAlertingType={this.appIsAlertingType}
             saveState={(state) => this.saveState(state, true)}
-            onLoadMeasurementOptions={this.loadMeasurementOptions}
+            loadMeasurementOptions={this.loadMeasurementOptions}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
           />
         ),
       },
       {
         title: 'Events',
-        content: <Events state={this.state} saveState={(state) => this.saveState(state, true)} onChangeEventQuery={this.onChangeEventQuery} />,
+        content: (
+          <Events
+            state={this.state}
+            saveState={(state) => this.saveState(state, true)}
+            onChangeEventQuery={this.onChangeEventQuery}
+          />
+        ),
       },
       {
         title: 'Raw',
         content: (
-          <RawQueryEditor state={this.state} saveState={(state) => this.saveState(state, true)} onChangeRawQuery={this.onChangeRawQuery} />
+          <RawQueryEditor
+            state={this.state}
+            saveState={(state) => this.saveState(state, true)}
+            onChangeRawQuery={this.onChangeRawQuery}
+          />
         ),
       },
     ]

@@ -10,10 +10,7 @@ export interface Props {
   onChangeRawQuery(queryString: string): void
 }
 
-export const RawQueryEditor = ({
-  state, saveState,
-  onChangeRawQuery
-}: Props): JSX.Element => {
+export const RawQueryEditor = ({ state, saveState, onChangeRawQuery }: Props): JSX.Element => {
   const selectableTimeseriesDatabases = (databases: TimeseriesDatabase[]): Array<SelectableValue<string>> => {
     const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
     databases.forEach((database) => {
@@ -23,7 +20,7 @@ export const RawQueryEditor = ({
   }
 
   const getTimeseriesDatabaseType = (database: string): string => {
-    return state.databases.find(e => e.UUID === database)?.TimeseriesDatabaseType?.Name || 'Unknown database type'
+    return state.databases.find((e) => e.UUID === database)?.TimeseriesDatabaseType?.Name || 'Unknown database type'
   }
 
   const onUpdateQuery = (query: string): void => {
@@ -35,15 +32,20 @@ export const RawQueryEditor = ({
       ...state,
       rawState: {
         ...state.rawState,
-        filter: { ...state.rawState.filter, DatabaseUUID: event.value }
-      }
+        filter: { ...state.rawState.filter, DatabaseUUID: event.value },
+      },
     })
   }
 
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Database" grow labelWidth={labelWidth} tooltip="Specify a time series database to work with">
+        <InlineField
+          label="Database"
+          grow
+          labelWidth={labelWidth}
+          tooltip="Specify a time series database to work with"
+        >
           <Select
             value={selectable(selectableTimeseriesDatabases(state.databases), state.rawState.filter.DatabaseUUID)}
             placeholder="select timeseries database"
@@ -52,9 +54,14 @@ export const RawQueryEditor = ({
           />
         </InlineField>
       </InlineFieldRow>
-      {state.rawState.filter.DatabaseUUID &&
+      {state.rawState.filter.DatabaseUUID && (
         <InlineFieldRow>
-          <InlineField label={`${getTimeseriesDatabaseType(state.rawState.filter.DatabaseUUID)} query`} grow labelWidth={labelWidth} tooltip="">
+          <InlineField
+            label={`${getTimeseriesDatabaseType(state.rawState.filter.DatabaseUUID)} query`}
+            grow
+            labelWidth={labelWidth}
+            tooltip=""
+          >
             <CodeEditor
               height={'200px'}
               language="sql"
@@ -67,7 +74,7 @@ export const RawQueryEditor = ({
             />
           </InlineField>
         </InlineFieldRow>
-      }
+      )}
     </div>
   )
 }

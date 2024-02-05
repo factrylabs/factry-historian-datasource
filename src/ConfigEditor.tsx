@@ -4,9 +4,9 @@ import { FieldSet, InlineField, InlineFieldRow, Input, SecretInput, Select } fro
 import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data'
 import { HistorianDataSourceOptions, HistorianSecureJsonData, TabIndex } from './types'
 
-interface Props extends DataSourcePluginOptionsEditorProps<HistorianDataSourceOptions> { }
+interface Props extends DataSourcePluginOptionsEditorProps<HistorianDataSourceOptions> {}
 
-interface State { }
+interface State {}
 
 export class ConfigEditor extends PureComponent<Props, State> {
   tabOptions: Array<SelectableValue<TabIndex>> = [
@@ -28,7 +28,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
     },
   ]
   onSettingChange = (prop: string) => (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
+    const { onOptionsChange, options } = this.props
     const jsonData = {
       ...options.jsonData,
       [prop]: event.target.value,
@@ -37,7 +37,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
   }
 
   onDefaultTabChange = (value: SelectableValue<TabIndex>) => {
-    const { onOptionsChange, options } = this.props;
+    const { onOptionsChange, options } = this.props
     const jsonData = {
       ...options.jsonData,
       defaultTab: value.value,
@@ -46,7 +46,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
   }
 
   onSecureSettingChange = (prop: string) => (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
+    const { onOptionsChange, options } = this.props
     onOptionsChange({
       ...options,
       secureJsonData: {
@@ -56,7 +56,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
   }
 
   onSecureSettingReset = (prop: string) => () => {
-    const { onOptionsChange, options } = this.props;
+    const { onOptionsChange, options } = this.props
     onOptionsChange({
       ...options,
       secureJsonFields: {
@@ -79,11 +79,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
       <div className="gf-form-group">
         <FieldSet label="Connection settings">
           <InlineFieldRow>
-            <InlineField
-              label="URL"
-              labelWidth={20}
-              tooltip="Specify the URL on which to contact the rest API"
-            >
+            <InlineField label="URL" labelWidth={20} tooltip="Specify the URL on which to contact the rest API">
               <Input
                 width={61}
                 name="url"

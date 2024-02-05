@@ -1,27 +1,27 @@
-import { cx, css } from '@emotion/css';
-import debouncePromise from 'debounce-promise';
-import React, { useState, useEffect } from 'react';
-import { useAsyncFn, usePrevious } from 'react-use';
+import { cx, css } from '@emotion/css'
+import debouncePromise from 'debounce-promise'
+import React, { useState, useEffect } from 'react'
+import { useAsyncFn, usePrevious } from 'react-use'
 
-import { SelectableValue } from '@grafana/data';
-import { InlineLabel, Select, AsyncSelect, Input } from '@grafana/ui';
+import { SelectableValue } from '@grafana/data'
+import { InlineLabel, Select, AsyncSelect, Input } from '@grafana/ui'
 
 // Yoinked from https://github.com/grafana/grafana/blob/main/public/app/plugins/datasource/influxdb/components/VisualInfluxQLEditor/Seg.tsx
 
 function useShadowedState<T>(outsideVal: T): [T, (newVal: T) => void] {
-  const [currentVal, setCurrentVal] = useState(outsideVal);
-  const prevOutsideVal = usePrevious(outsideVal);
+  const [currentVal, setCurrentVal] = useState(outsideVal)
+  const prevOutsideVal = usePrevious(outsideVal)
 
   useEffect(() => {
-    const isOutsideValChanged = prevOutsideVal !== outsideVal;
+    const isOutsideValChanged = prevOutsideVal !== outsideVal
     // if the value changes from the outside, we accept it into the state
     // (we only set it if it is different from the current value)
     if (isOutsideValChanged && currentVal !== outsideVal) {
-      setCurrentVal(outsideVal);
+      setCurrentVal(outsideVal)
     }
-  }, [outsideVal, currentVal, prevOutsideVal]);
+  }, [outsideVal, currentVal, prevOutsideVal])
 
-  return [currentVal, setCurrentVal];
+  return [currentVal, setCurrentVal]
 }
 
 // this file is a simpler version of `grafana-ui / SegmentAsync.tsx`
@@ -33,17 +33,17 @@ function useShadowedState<T>(outsideVal: T): [T, (newVal: T) => void] {
 
 // NOTE: maybe these changes could be migrated into the SegmentAsync later
 
-type SelVal = SelectableValue<string>;
+type SelVal = SelectableValue<string>
 
 // when allowCustomValue is true, there is no way to enforce the selectableValue
 // enum-type, so i just go with `string`
 
-type LoadOptions = (filter: string) => Promise<SelVal[]>;
+type LoadOptions = (filter: string) => Promise<SelVal[]>
 
 type Props = {
-  value: string;
-  buttonClassName?: string;
-  loadOptions?: LoadOptions;
+  value: string
+  buttonClassName?: string
+  loadOptions?: LoadOptions
   // if filterByLoadOptions is false,
   // loadOptions is only executed once,
   // when the select-box opens,
@@ -52,35 +52,35 @@ type Props = {
   // if filterByLoadOptions is true,
   // as you write the loadOptions is executed again and again,
   // and it is relied on to filter the results.
-  filterByLoadOptions?: boolean;
-  onChange: (v: SelVal) => void;
-  allowCustomValue?: boolean;
-};
+  filterByLoadOptions?: boolean
+  onChange: (v: SelVal) => void
+  allowCustomValue?: boolean
+}
 
 const selectClass = css({
   minWidth: '160px',
-});
+})
 
 type SelProps = {
-  loadOptions: LoadOptions;
-  filterByLoadOptions?: boolean;
-  onClose: () => void;
-  onChange: (v: SelVal) => void;
-  allowCustomValue?: boolean;
-};
+  loadOptions: LoadOptions
+  filterByLoadOptions?: boolean
+  onClose: () => void
+  onChange: (v: SelVal) => void
+  allowCustomValue?: boolean
+}
 
 type SelReloadProps = {
-  loadOptions: (filter: string) => Promise<SelVal[]>;
-  onClose: () => void;
-  onChange: (v: SelVal) => void;
-  allowCustomValue?: boolean;
-};
+  loadOptions: (filter: string) => Promise<SelVal[]>
+  onClose: () => void
+  onChange: (v: SelVal) => void
+  allowCustomValue?: boolean
+}
 
 // when a custom value is written into a select-box,
 // by default the new value is prefixed with "Create:",
 // and that sounds confusing because here we do not create
 // anything. we change this to just be the entered string.
-const formatCreateLabel = (v: string) => v;
+const formatCreateLabel = (v: string) => v
 
 const SelReload = ({ loadOptions, allowCustomValue, onChange, onClose }: SelReloadProps): JSX.Element => {
   // here we rely on the fact that writing text into the <AsyncSelect/>
@@ -90,7 +90,7 @@ const SelReload = ({ loadOptions, allowCustomValue, onChange, onClose }: SelRelo
   // if we want ot make this "re-render safe,
   // we will have to put the debounced call into an useRef,
   // and probably have an useEffect
-  const debouncedLoadOptions = debouncePromise(loadOptions, 1000, { leading: true });
+  const debouncedLoadOptions = debouncePromise(loadOptions, 1000, { leading: true })
   return (
     <div className={selectClass}>
       <AsyncSelect
@@ -105,22 +105,22 @@ const SelReload = ({ loadOptions, allowCustomValue, onChange, onClose }: SelRelo
         onChange={onChange}
       />
     </div>
-  );
-};
+  )
+}
 
 type SelSingleLoadProps = {
-  loadOptions: (filter: string) => Promise<SelVal[]>;
-  onClose: () => void;
-  onChange: (v: SelVal) => void;
-  allowCustomValue?: boolean;
-};
+  loadOptions: (filter: string) => Promise<SelVal[]>
+  onClose: () => void
+  onChange: (v: SelVal) => void
+  allowCustomValue?: boolean
+}
 
 const SelSingleLoad = ({ loadOptions, allowCustomValue, onChange, onClose }: SelSingleLoadProps): JSX.Element => {
-  const [loadState, doLoad] = useAsyncFn(loadOptions, [loadOptions]);
+  const [loadState, doLoad] = useAsyncFn(loadOptions, [loadOptions])
 
   useEffect(() => {
-    doLoad('');
-  }, [doLoad, loadOptions]);
+    doLoad('')
+  }, [doLoad, loadOptions])
 
   return (
     <div className={selectClass}>
@@ -136,8 +136,8 @@ const SelSingleLoad = ({ loadOptions, allowCustomValue, onChange, onClose }: Sel
         onChange={onChange}
       />
     </div>
-  );
-};
+  )
+}
 
 const Sel = ({ loadOptions, filterByLoadOptions, allowCustomValue, onChange, onClose }: SelProps): JSX.Element => {
   // unfortunately <Segment/> and <SegmentAsync/> have somewhat different behavior,
@@ -151,17 +151,17 @@ const Sel = ({ loadOptions, filterByLoadOptions, allowCustomValue, onChange, onC
       onChange={onChange}
       onClose={onClose}
     />
-  );
-};
+  )
+}
 
 type InpProps = {
-  initialValue: string;
-  onChange: (newVal: string) => void;
-  onClose: () => void;
-};
+  initialValue: string
+  onChange: (newVal: string) => void
+  onClose: () => void
+}
 
 const Inp = ({ initialValue, onChange, onClose }: InpProps): JSX.Element => {
-  const [currentValue, setCurrentValue] = useShadowedState(initialValue);
+  const [currentValue, setCurrentValue] = useShadowedState(initialValue)
 
   return (
     <Input
@@ -171,21 +171,21 @@ const Inp = ({ initialValue, onChange, onClose }: InpProps): JSX.Element => {
       onBlur={onClose}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
-          onChange(currentValue);
+          onChange(currentValue)
         }
       }}
       onChange={(e) => {
-        setCurrentValue(e.currentTarget.value);
+        setCurrentValue(e.currentTarget.value)
       }}
       value={currentValue}
     />
-  );
-};
+  )
+}
 
 const defaultButtonClass = css({
   width: 'auto',
   cursor: 'pointer',
-});
+})
 
 export const Seg = ({
   value,
@@ -195,20 +195,20 @@ export const Seg = ({
   allowCustomValue,
   onChange,
 }: Props): JSX.Element => {
-  const [isOpen, setOpen] = useState(false);
+  const [isOpen, setOpen] = useState(false)
   if (!isOpen) {
-    const className = cx(defaultButtonClass, buttonClassName);
+    const className = cx(defaultButtonClass, buttonClassName)
     return (
       <InlineLabel
         as="button"
         className={className}
         onClick={() => {
-          setOpen(true);
+          setOpen(true)
         }}
       >
         {value}
       </InlineLabel>
-    );
+    )
   } else {
     if (loadOptions !== undefined) {
       return (
@@ -217,27 +217,27 @@ export const Seg = ({
           filterByLoadOptions={filterByLoadOptions ?? false}
           allowCustomValue={allowCustomValue}
           onChange={(v) => {
-            setOpen(false);
-            onChange(v);
+            setOpen(false)
+            onChange(v)
           }}
           onClose={() => {
-            setOpen(false);
+            setOpen(false)
           }}
         />
-      );
+      )
     } else {
       return (
         <Inp
           initialValue={value}
           onClose={() => {
-            setOpen(false);
+            setOpen(false)
           }}
           onChange={(v) => {
-            setOpen(false);
-            onChange({ value: v, label: v });
+            setOpen(false)
+            onChange({ value: v, label: v })
           }}
         />
-      );
+      )
     }
   }
-};
+}

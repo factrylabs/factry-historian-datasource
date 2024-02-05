@@ -15,16 +15,16 @@ export interface Props {
   onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
 }
 
-export const Assets = ({
-  state, appIsAlertingType, saveState,
-  onChangeAssetMeasurementQuery
-}: Props): JSX.Element => {
+export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasurementQuery }: Props): JSX.Element => {
   const replacedAsset = replaceAsset(state.assetsState.selectedAsset, state.assets)
   const assetOptions = getChildAssets(null, state.assets, state.assetProperties)
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
-    const assetProperties = items.map(e => e.value)
-    const updatedQuery = { ...state.assetsState.options.query, AssetProperties: assetProperties } as AssetMeasurementQuery
+    const assetProperties = items.map((e) => e.value)
+    const updatedQuery = {
+      ...state.assetsState.options.query,
+      AssetProperties: assetProperties,
+    } as AssetMeasurementQuery
     saveState({
       ...state,
       assetsState: {
@@ -32,41 +32,53 @@ export const Assets = ({
         selectedProperties: items,
         options: {
           ...state.assetsState.options,
-          query: updatedQuery
-        }
+          query: updatedQuery,
+        },
       },
     })
     onChangeAssetMeasurementQuery(updatedQuery)
   }
 
   const availableProperties = (selected: string | undefined): Array<SelectableValue<string>> => {
-    const props = state.assetProperties.
-      filter(e => e.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === e.AssetUUID)).
-      map(e => e.Name)
-    return props.filter((value, index, self) => self.indexOf(value) === index).
-      map(e => { return { label: e, value: e } }).
-      concat(getTemplateSrv().getVariables().map(e => { return { label: `$${e.name}`, value: `$${e.name}` } }))
+    const props = state.assetProperties
+      .filter(
+        (e) => e.AssetUUID === selected || matchedAssets(selected, state.assets).find((a) => a.UUID === e.AssetUUID)
+      )
+      .map((e) => e.Name)
+
+    return props
+      .filter((value, index, self) => self.indexOf(value) === index)
+      .map((e) => {
+        return { label: e, value: e }
+      })
+      .concat(
+        getTemplateSrv()
+          .getVariables()
+          .map((e) => {
+            return { label: `$${e.name}`, value: `$${e.name}` }
+          })
+      )
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
     let properties: string[] = []
     let selectedProperties: Array<SelectableValue<string>> = []
     if (property) {
-      const assetProperty = state.assetProperties.find(e => e.UUID === property)
+      const assetProperty = state.assetProperties.find((e) => e.UUID === property)
       if (assetProperty) {
         selectedProperties = [
           {
             value: assetProperty.Name,
-            label: assetProperty.Name
-          } as SelectableValue<string>
+            label: assetProperty.Name,
+          } as SelectableValue<string>,
         ]
         properties = [assetProperty.Name]
       }
     }
     const updatedQuery = {
       ...state.assetsState.options.query,
-      Assets: matchedAssets(getTemplateSrv().replace(asset), state.assets).map(e => e.UUID),
-      AssetProperties: properties
+      Assets: matchedAssets(getTemplateSrv().replace(asset), state.assets).map((e) => e.UUID),
+      AssetProperties: properties,
     } as AssetMeasurementQuery
     saveState({
       ...state,
@@ -75,10 +87,10 @@ export const Assets = ({
         selectedProperties: selectedProperties,
         options: {
           ...state.assetsState.options,
-          query: updatedQuery
+          query: updatedQuery,
         },
-        selectedAsset: asset
-      }
+        selectedAsset: asset,
+      },
     })
     onChangeAssetMeasurementQuery(updatedQuery)
   }
@@ -92,20 +104,20 @@ export const Assets = ({
           ...state.assetsState.options,
           query: {
             ...state.assetsState.options.query,
-            Options: options
+            Options: options,
           },
-          tags: tags
-        }
-      }
+          tags: tags,
+        },
+      },
     })
     onChangeAssetMeasurementQuery({
       ...state.assetsState.options.query,
-      Options: options
+      Options: options,
     })
   }
 
   const initialLabel = (): string => {
-    const asset = state.assets.find(e => e.UUID === state.assetsState.selectedAsset)
+    const asset = state.assets.find((e) => e.UUID === state.assetsState.selectedAsset)
     if (asset) {
       return asset.AssetPath || ''
     }
@@ -116,19 +128,29 @@ export const Assets = ({
   return (
     <div>
       <InlineFieldRow>
-        <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes">
+        <InlineField
+          label="Assets"
+          grow
+          labelWidth={labelWidth}
+          tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes"
+        >
           <Cascader
             initialValue={state.assetsState.selectedAsset}
             initialLabel={initialLabel()}
             options={assetOptions}
             displayAllSelectedLevels
             onSelect={onAssetChange}
-            separator='\\'
+            separator="\\"
           />
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify one or more asset properties to work with">
+        <InlineField
+          label="Properties"
+          grow
+          labelWidth={labelWidth}
+          tooltip="Specify one or more asset properties to work with"
+        >
           <MultiSelect
             value={state.assetsState.selectedProperties}
             options={availableProperties(replacedAsset)}
@@ -141,6 +163,7 @@ export const Assets = ({
         state={state.assetsState.options.query.Options}
         tags={state.assetsState.options.tags}
         appIsAlertingType={appIsAlertingType}
+        datatypes={[]}
         onChange={handleChangeMeasurementQueryOptions}
       />
     </div>

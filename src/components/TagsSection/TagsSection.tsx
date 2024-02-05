@@ -23,7 +23,14 @@ type Props = {
 
 const defaultOptions = () => Promise.resolve([])
 
-export const TagsSection = ({ tags, operators, conditions, onChange, getTagKeyOptions = defaultOptions, getTagValueOptions = defaultOptions }: Props): JSX.Element => {
+export const TagsSection = ({
+  tags,
+  operators,
+  conditions,
+  onChange,
+  getTagKeyOptions = defaultOptions,
+  getTagValueOptions = defaultOptions,
+}: Props): JSX.Element => {
   const onTagChange = (newTag: QueryTag, index: number) => {
     const newTags = tags.map((tag, i) => {
       return index === i ? newTag : tag

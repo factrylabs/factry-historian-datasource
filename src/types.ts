@@ -1,7 +1,6 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data'
 import { QueryTag } from 'components/TagsSection/TagsSection'
 
-
 export const labelWidth = 25
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,7 +10,7 @@ export enum TabIndex {
   Assets,
   Measurements,
   Events,
-  RawQuery
+  RawQuery,
 }
 
 export interface QueryEditorState {
@@ -75,8 +74,7 @@ export interface Query extends DataQuery {
   selectedAssetProperties?: string[]
 }
 
-export const defaultQuery: Partial<Query> = {
-}
+export const defaultQuery: Partial<Query> = {}
 
 /**
  * These are options configured for each DataSource instance.
@@ -247,7 +245,7 @@ export interface EventType {
 export enum PropertyDatatype {
   Number = 'number',
   Bool = 'boolean',
-  String = 'string'
+  String = 'string',
 }
 
 export interface EventTypeProperty {

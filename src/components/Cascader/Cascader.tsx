@@ -7,43 +7,43 @@ import { SelectableValue } from '@grafana/data'
 
 import { Icon, Input } from '@grafana/ui'
 
-import { onChangeCascader } from './optionMappings';
+import { onChangeCascader } from './optionMappings'
 import { Autocomplete } from '../Autocomplete/Autocomplete'
 import { findOption } from 'QueryEditor/util'
 
 export interface CascaderProps {
   /** The separator between levels in the search */
-  separator?: string;
-  placeholder?: string;
-  options: CascaderOption[];
+  separator?: string
+  placeholder?: string
+  options: CascaderOption[]
   /** Changes the value for every selection, including branch nodes. Defaults to true. */
-  changeOnSelect?: boolean;
-  onSelect(asset: string, property?: string): void;
+  changeOnSelect?: boolean
+  onSelect(asset: string, property?: string): void
   /** Sets the width to a multiple of 8px. Should only be used with inline forms. Setting width of the container is preferred in other cases.*/
-  width?: number;
-  initialValue?: string;
+  width?: number
+  initialValue?: string
   initialLabel?: string
-  allowCustomValue?: boolean;
+  allowCustomValue?: boolean
   /** A function for formatting the message for custom value creation. Only applies when allowCustomValue is set to true*/
-  formatCreateLabel?: (val: string) => string;
+  formatCreateLabel?: (val: string) => string
   /** If true all levels are shown in the input by simple concatenating the labels */
-  displayAllSelectedLevels?: boolean;
-  onBlur?: () => void;
+  displayAllSelectedLevels?: boolean
+  onBlur?: () => void
   /** When mounted focus automatically on the input */
-  autoFocus?: boolean;
+  autoFocus?: boolean
   /** Keep the dropdown open all the time, useful in case whole cascader visibility is controlled by the parent */
-  alwaysOpen?: boolean;
+  alwaysOpen?: boolean
   /** Don't show what is selected in the cascader input/search. Useful when input is used just as search and the
       cascader is hidden after selection. */
   hideActiveLevelLabel?: boolean
 }
 
 interface CascaderState {
-  isSearching: boolean;
-  focusCascade: boolean;
+  isSearching: boolean
+  focusCascade: boolean
   //Array for cascade navigation
-  rcValue: SelectableValue<string[]>;
-  activeLabel: string;
+  rcValue: SelectableValue<string[]>
+  activeLabel: string
   activeSuggestion: number
   filteredSuggestions: string[]
   showSuggestions: boolean
@@ -53,18 +53,18 @@ export interface CascaderOption {
   /**
    *  The value used under the hood
    */
-  value: any;
+  value: any
   /**
    *  The label to display in the UI
    */
-  label: string;
+  label: string
   /** Items will be just flattened into the main list of items recursively. */
-  items?: CascaderOption[];
-  disabled?: boolean;
+  items?: CascaderOption[]
+  disabled?: boolean
   /** Avoid using */
-  title?: string;
+  title?: string
   /**  Children will be shown in a submenu. Use 'items' instead, as 'children' exist to ensure backwards compatibility.*/
-  children?: CascaderOption[];
+  children?: CascaderOption[]
 }
 
 const disableDivFocus = css(`
@@ -77,7 +77,7 @@ const DEFAULT_SEPARATOR = '/'
 
 export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   constructor(props: CascaderProps) {
-    super(props);
+    super(props)
     const rcValue = [props.initialValue]
     const activeLabel = props.initialLabel || ''
     this.state = {
@@ -87,36 +87,36 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       activeLabel,
       activeSuggestion: 0,
       filteredSuggestions: [],
-      showSuggestions: false
+      showSuggestions: false,
     }
   }
 
-  static defaultProps = { changeOnSelect: true };
+  static defaultProps = { changeOnSelect: true }
 
   flattenOptions = (options: CascaderOption[], optionPath: CascaderOption[] = []) => {
-    let selectOptions: Array<SelectableValue<string[]>> = [];
+    let selectOptions: Array<SelectableValue<string[]>> = []
     for (const option of options) {
-      const cpy = [...optionPath];
-      cpy.push(option);
+      const cpy = [...optionPath]
+      cpy.push(option)
       if (!option.items || option.items.length === 0) {
         selectOptions.push({
           singleLabel: cpy[cpy.length - 1].label,
           label: cpy.map((o) => o.label).join(this.props.separator || ` ${DEFAULT_SEPARATOR} `),
           value: cpy.map((o) => o.value),
-        });
+        })
       } else {
         selectOptions.push({
           singleLabel: cpy[cpy.length - 1].label,
           label: cpy.map((o) => o.label).join(this.props.separator || ` ${DEFAULT_SEPARATOR} `),
           value: cpy.map((o) => o.value),
-        });
-        selectOptions = [...selectOptions, ...this.flattenOptions(option.items, cpy)];
+        })
+        selectOptions = [...selectOptions, ...this.flattenOptions(option.items, cpy)]
       }
     }
     return selectOptions
   }
 
-  getSearchableOptions = memoizeOne((options: CascaderOption[]) => this.flattenOptions(options));
+  getSearchableOptions = memoizeOne((options: CascaderOption[]) => this.flattenOptions(options))
 
   setInitialValue(searchableOptions: Array<SelectableValue<string[]>>, initValue?: string) {
     if (!initValue) {
@@ -129,7 +129,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
         return {
           rcValue: optionPath,
           activeLabel: this.props.displayAllSelectedLevels ? option.label : option.singleLabel || '',
-        };
+        }
       }
     }
     if (this.props.allowCustomValue) {
@@ -143,8 +143,11 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     const activeLabel = this.props.hideActiveLevelLabel
       ? ''
       : this.props.displayAllSelectedLevels
-        ? selectedOptions.filter((option) => !option.label.startsWith('📏')).map((option) => option.label).join(this.props.separator || DEFAULT_SEPARATOR)
-        : selectedOptions[selectedOptions.length - 1].label
+      ? selectedOptions
+          .filter((option) => !option.label.startsWith('📏'))
+          .map((option) => option.label)
+          .join(this.props.separator || DEFAULT_SEPARATOR)
+      : selectedOptions[selectedOptions.length - 1].label
     const propertySelected = selectedOptions[selectedOptions.length - 1].label.startsWith('📏')
     this.setState({
       rcValue: value,
@@ -152,7 +155,10 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       activeLabel,
     })
     if (propertySelected) {
-      this.props.onSelect(selectedOptions[selectedOptions.length - 2].value, selectedOptions[selectedOptions.length - 1].value)
+      this.props.onSelect(
+        selectedOptions[selectedOptions.length - 2].value,
+        selectedOptions[selectedOptions.length - 1].value
+      )
     } else {
       this.props.onSelect(selectedOptions[selectedOptions.length - 1].value)
     }
@@ -180,18 +186,17 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   }
 
   handleChange(e: any) {
-    const suggestions: string[] = this.getSearchableOptions(this.props.options).map(e => e.label || "")
+    const suggestions: string[] = this.getSearchableOptions(this.props.options).map((e) => e.label || '')
     const userInput: string = e.target.value
     const filteredSuggestions: string[] = suggestions.filter(
-      suggestion =>
-        suggestion.toLowerCase().indexOf(userInput.toLowerCase()) > -1
+      (suggestion) => suggestion.toLowerCase().indexOf(userInput.toLowerCase()) > -1
     )
 
     this.setState({
       activeLabel: userInput,
       focusCascade: userInput.length === 0,
       showSuggestions: true,
-      filteredSuggestions: filteredSuggestions
+      filteredSuggestions: filteredSuggestions,
     })
     this.props.onSelect(userInput)
   }
@@ -211,12 +216,12 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       activeSuggestion: 0,
       filteredSuggestions: [],
       showSuggestions: false,
-      activeLabel: activeLabel
+      activeLabel: activeLabel,
     })
   }
 
   onKeyDown = (e: any) => {
-    const { activeSuggestion, filteredSuggestions } = this.state;
+    const { activeSuggestion, filteredSuggestions } = this.state
     if (e.keyCode === 13) {
       const option = findOption(this.getSearchableOptions(this.props.options), filteredSuggestions[activeSuggestion])
       let activeLabel: string = option?.label || filteredSuggestions[activeSuggestion]
@@ -231,20 +236,20 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       this.setState({
         activeSuggestion: 0,
         showSuggestions: false,
-        activeLabel: activeLabel
-      });
+        activeLabel: activeLabel,
+      })
     } else if (e.keyCode === 38) {
       if (activeSuggestion === 0) {
-        return;
+        return
       }
-      this.setState({ activeSuggestion: activeSuggestion - 1 });
+      this.setState({ activeSuggestion: activeSuggestion - 1 })
     }
     // User pressed the down arrow, increment the index
     else if (e.keyCode === 40) {
       if (activeSuggestion - 1 === filteredSuggestions.length) {
-        return;
+        return
       }
-      this.setState({ activeSuggestion: activeSuggestion + 1 });
+      this.setState({ activeSuggestion: activeSuggestion + 1 })
     }
   }
 
@@ -253,15 +258,8 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   }
 
   render() {
-    const { placeholder, width, changeOnSelect, options } = this.props;
-    const {
-      focusCascade,
-      rcValue,
-      activeLabel,
-      activeSuggestion,
-      filteredSuggestions,
-      showSuggestions,
-    } = this.state
+    const { placeholder, width, changeOnSelect, options } = this.props
+    const { focusCascade, rcValue, activeLabel, activeSuggestion, filteredSuggestions, showSuggestions } = this.state
 
     this.getSearchableOptions(options)
 
@@ -294,10 +292,17 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
                 )
               }
             />
-            <Autocomplete activeLabel={activeLabel} activeSuggestion={activeSuggestion} filteredSuggestions={filteredSuggestions} showSuggestions={showSuggestions} focusCascade={focusCascade} onClickSuggestion={this.onClickSuggestion} />
+            <Autocomplete
+              activeLabel={activeLabel}
+              activeSuggestion={activeSuggestion}
+              filteredSuggestions={filteredSuggestions}
+              showSuggestions={showSuggestions}
+              focusCascade={focusCascade}
+              onClickSuggestion={this.onClickSuggestion}
+            />
           </div>
         </RCCascader>
       </div>
-    );
+    )
   }
 }

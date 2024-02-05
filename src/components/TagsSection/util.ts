@@ -1,5 +1,5 @@
-import { SelectableValue } from "@grafana/data"
-import { QueryTag } from "./types"
+import { SelectableValue } from '@grafana/data'
+import { QueryTag } from './types'
 
 export function toSelectableValue<T extends string>(t: T): SelectableValue<T> {
   return { label: t, value: t }

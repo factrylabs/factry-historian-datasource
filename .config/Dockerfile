@@ -18,7 +18,8 @@ RUN sed -i 's/<\/body><\/html>/<script src=\"http:\/\/localhost:35729\/livereloa
 
 ENV PATH=/usr/local/go/bin:~/go/bin:$PATH
 RUN ARCH=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/) \
-  && curl -o _go.tar.gz "https://dl.google.com/go/go1.20.linux-${ARCH}.tar.gz" \
+  && GO_LATEST=$(curl "https://go.dev/VERSION?m=text" 2>/dev/null | head -n 1) \
+  && curl -o _go.tar.gz "https://dl.google.com/go/${GO_LATEST}.linux-${ARCH}.tar.gz" \
   && tar -C /usr/local -xzf _go.tar.gz \
   && rm _go.tar.gz \
   && go install github.com/go-delve/delve/cmd/dlv@latest

@@ -14,15 +14,12 @@ export interface Props {
   onChangeEventQuery: (query: EventQuery) => void
 }
 
-export const Events = ({
-  state, saveState,
-  onChangeEventQuery
-}: Props): JSX.Element => {
+export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Element => {
   const assetOptions = getChildAssets(null, state.assets)
 
   const onSelectEventTypes = (items: Array<SelectableValue<string>>): void => {
-    const eventTypes = items.map(e => {
-      const eventType = state.eventTypes.find(et => et.Name === e.value)
+    const eventTypes = items.map((e) => {
+      const eventType = state.eventTypes.find((et) => et.Name === e.value)
       if (eventType) {
         return eventType.UUID
       }
@@ -35,21 +32,35 @@ export const Events = ({
       eventsState: {
         ...state.eventsState,
         eventQuery: updatedQuery,
-        selectedEventTypes: items
+        selectedEventTypes: items,
       },
     })
     onChangeEventQuery(updatedQuery)
   }
 
   const availableEventTypes = (selected: string | undefined): Array<SelectableValue<string>> => {
-    return state.eventTypes.
-      filter(e => state.eventConfigurations.some(ec => (ec.AssetUUID === selected || matchedAssets(selected, state.assets).find(a => a.UUID === ec.AssetUUID)) && ec.EventTypeUUID === e.UUID)).
-      map(e => { return { label: e.Name, value: e.UUID } }).
-      concat(getTemplateSrv().getVariables().map((e => { return { label: `$${e.name}`, value: `$${e.name}` } })))
+    return state.eventTypes
+      .filter((e) =>
+        state.eventConfigurations.some(
+          (ec) =>
+            (ec.AssetUUID === selected || matchedAssets(selected, state.assets).find((a) => a.UUID === ec.AssetUUID)) &&
+            ec.EventTypeUUID === e.UUID
+        )
+      )
+      .map((e) => {
+        return { label: e.Name, value: e.UUID }
+      })
+      .concat(
+        getTemplateSrv()
+          .getVariables()
+          .map((e) => {
+            return { label: `$${e.name}`, value: `$${e.name}` }
+          })
+      )
   }
 
   const onSelectStatuses = (items: Array<SelectableValue<string>>): void => {
-    const statuses = items.map(e => {
+    const statuses = items.map((e) => {
       return e.value || ''
     })
     const updatedQuery = { ...state.eventsState.eventQuery, Statuses: statuses }
@@ -58,27 +69,30 @@ export const Events = ({
       eventsState: {
         ...state.eventsState,
         eventQuery: updatedQuery,
-        selectedStatuses: items
+        selectedStatuses: items,
       },
     })
     onChangeEventQuery(updatedQuery)
   }
 
   const onAssetChange = (value: string): void => {
-    const updatedQuery = { ...state.eventsState.eventQuery, Assets: matchedAssets(getTemplateSrv().replace(value), state.assets).map(e => e.UUID) }
+    const updatedQuery = {
+      ...state.eventsState.eventQuery,
+      Assets: matchedAssets(getTemplateSrv().replace(value), state.assets).map((e) => e.UUID),
+    }
     saveState({
       ...state,
       eventsState: {
         ...state.eventsState,
         selectedAsset: value,
-        eventQuery: updatedQuery
-      }
+        eventQuery: updatedQuery,
+      },
     })
   }
 
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
     const filter: EventPropertyFilter[] = []
-    updatedTags.forEach(tag => {
+    updatedTags.forEach((tag) => {
       if (tag.value === undefined || tag.value === 'select tag value') {
         return
       }
@@ -89,7 +103,7 @@ export const Events = ({
         Datatype: dataType,
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
-        Value: ''
+        Value: '',
       }
       switch (dataType) {
         case PropertyDatatype.Number:
@@ -107,17 +121,18 @@ export const Events = ({
     const updatedQuery = { ...state.eventsState.eventQuery, PropertyFilter: filter } as EventQuery
     onChangeEventQuery(updatedQuery)
     saveState({
-      ...state, eventsState: {
+      ...state,
+      eventsState: {
         ...state.eventsState,
-        tags: updatedTags
-      }
+        tags: updatedTags,
+      },
     } as QueryEditorState)
   }
 
   const getDatatype = (property: string): PropertyDatatype => {
-    const datatype = state.eventTypeProperties.
-      filter(e => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID)).
-      find(e => e.Name === property)?.Datatype
+    const datatype = state.eventTypeProperties
+      .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+      .find((e) => e.Name === property)?.Datatype
 
     if (!datatype) {
       return PropertyDatatype.Number
@@ -127,15 +142,19 @@ export const Events = ({
   }
 
   const availableProperties = (): string[] => {
-    return [...new Set(state.eventTypeProperties.
-      filter(e => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID)).
-      map(e => e.Name))]
+    return [
+      ...new Set(
+        state.eventTypeProperties
+          .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+          .map((e) => e.Name)
+      ),
+    ]
   }
 
   const availablePropertyValues = (key: string): string[] => {
-    const eventTypeProperty = state.eventTypeProperties.
-      filter(e => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID)).
-      find(e => e.Name === key)
+    const eventTypeProperty = state.eventTypeProperties
+      .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+      .find((e) => e.Name === key)
 
     if (!eventTypeProperty) {
       return []
@@ -149,7 +168,7 @@ export const Events = ({
   }
 
   const initialLabel = (): string => {
-    const asset = state.assets.find(e => e.UUID === state.eventsState.selectedAsset)
+    const asset = state.assets.find((e) => e.UUID === state.eventsState.selectedAsset)
     if (asset) {
       return asset.AssetPath || ''
     }
@@ -161,7 +180,7 @@ export const Events = ({
       toSelectableValue('processed'),
       toSelectableValue('open'),
       toSelectableValue('incomplete'),
-      toSelectableValue('pending')
+      toSelectableValue('pending'),
     ]
   }
 
@@ -175,12 +194,17 @@ export const Events = ({
             options={assetOptions}
             displayAllSelectedLevels
             onSelect={onAssetChange}
-            separator='\\'
+            separator="\\"
           />
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Event types" grow labelWidth={labelWidth} tooltip="Specify one or more event type to work with">
+        <InlineField
+          label="Event types"
+          grow
+          labelWidth={labelWidth}
+          tooltip="Specify one or more event type to work with"
+        >
           <MultiSelect
             value={state.eventsState.selectedEventTypes}
             options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
@@ -189,7 +213,12 @@ export const Events = ({
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label="Statuses" grow labelWidth={labelWidth} tooltip="Specify one or more status to work with, selecting none will use all statuses">
+        <InlineField
+          label="Statuses"
+          grow
+          labelWidth={labelWidth}
+          tooltip="Specify one or more status to work with, selecting none will use all statuses"
+        >
           <MultiSelect
             value={state.eventsState.selectedStatuses}
             options={availableStatuses()}
@@ -201,7 +230,7 @@ export const Events = ({
         <InlineField label="WHERE" labelWidth={labelWidth}>
           <TagsSection
             tags={state.eventsState.tags}
-            operators={["=", '!=', '<', '<=', '>', '>=']}
+            operators={['=', '!=', '<', '<=', '>', '>=']}
             getTagKeyOptions={() => Promise.resolve(availableProperties())}
             getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
             onChange={handleTagsSectionChange}

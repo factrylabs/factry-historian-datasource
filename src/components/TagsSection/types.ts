@@ -1,4 +1,3 @@
-
 export interface QueryTag {
   key: string
   operator?: string
