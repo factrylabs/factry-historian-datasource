@@ -15,6 +15,10 @@ func (api *API) GetMeasurements(query string) ([]schemas.Measurement, error) {
 		return nil, err
 	}
 
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
+	}
+
 	if err := json.Unmarshal(response.Body(), &measurements); err != nil {
 		return nil, err
 	}
@@ -28,6 +32,10 @@ func (api *API) GetMeasurement(uuid string) (schemas.Measurement, error) {
 	response, err := api.client.R().Get(fmt.Sprintf("/api/measurements/%v", uuid))
 	if err != nil {
 		return measurement, err
+	}
+
+	if response.StatusCode() >= 300 {
+		return measurement, handleHistorianError(response)
 	}
 
 	if err := json.Unmarshal(response.Body(), &measurement); err != nil {
@@ -45,6 +53,10 @@ func (api *API) GetCollectors() ([]schemas.Collector, error) {
 		return nil, err
 	}
 
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
+	}
+
 	if err := json.Unmarshal(response.Body(), &collectors); err != nil {
 		return nil, err
 	}
@@ -58,6 +70,10 @@ func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
 	response, err := api.client.R().Get("/api/timeseries-databases")
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
 	}
 
 	if err := json.Unmarshal(response.Body(), &timeseriesDatabases); err != nil {
@@ -75,6 +91,10 @@ func (api *API) GetAssets() ([]schemas.Asset, error) {
 		return nil, err
 	}
 
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
+	}
+
 	if err := json.Unmarshal(response.Body(), &assets); err != nil {
 		return nil, err
 	}
@@ -88,6 +108,10 @@ func (api *API) GetAssetProperties() ([]schemas.AssetProperty, error) {
 	response, err := api.client.R().Get("/api/asset-properties")
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
 	}
 
 	if err := json.Unmarshal(response.Body(), &assetProperties); err != nil {
@@ -105,6 +129,10 @@ func (api *API) GetEventTypes() ([]schemas.EventType, error) {
 		return nil, err
 	}
 
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
+	}
+
 	if err := json.Unmarshal(response.Body(), &eventTypes); err != nil {
 		return nil, err
 	}
@@ -120,6 +148,10 @@ func (api *API) GetEventTypeProperties() ([]schemas.EventTypeProperty, error) {
 		return nil, err
 	}
 
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
+	}
+
 	if err := json.Unmarshal(response.Body(), &eventTypeProperties); err != nil {
 		return nil, err
 	}
@@ -133,6 +165,10 @@ func (api *API) GetEventConfigurations() ([]schemas.EventConfiguration, error) {
 	response, err := api.client.R().Get("/api/event-configurations")
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
 	}
 
 	if err := json.Unmarshal(response.Body(), &eventConfigurations); err != nil {

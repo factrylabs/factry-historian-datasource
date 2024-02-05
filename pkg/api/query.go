@@ -25,8 +25,8 @@ func (api *API) MeasurementQuery(query schemas.Query) (data.Frames, error) {
 		return nil, err
 	}
 
-	if response.StatusCode() != 200 {
-		return nil, fmt.Errorf(string(response.Body()))
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
 	}
 
 	dataResponse := arrow_pb.DataResponse{}
@@ -55,8 +55,8 @@ func (api *API) RawQuery(timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuer
 		return nil, err
 	}
 
-	if response.StatusCode() != 200 {
-		return nil, fmt.Errorf(string(response.Body()))
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
 	}
 
 	dataResponse := arrow_pb.DataResponse{}
