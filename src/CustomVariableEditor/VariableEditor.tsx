@@ -1,20 +1,22 @@
-import React, { ChangeEvent, FormEvent } from 'react';
+import React, { ChangeEvent, FormEvent } from 'react'
 
-import { QueryEditorProps } from "@grafana/data";
-import { DataSource } from "datasource";
-import { HistorianDataSourceOptions, MeasurementFilter, Query, VariableQuery } from "types";
-import { InlineField, InlineFieldRow, Input, Select } from '@grafana/ui';
+import { QueryEditorProps } from '@grafana/data'
+import { DataSource } from 'datasource'
+import { HistorianDataSourceOptions, MeasurementFilter, Query, VariableQuery } from 'types'
+import { InlineField, InlineFieldRow, Input, Select } from '@grafana/ui'
 
-export function VariableQueryEditor(props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions, VariableQuery>) {
+export function VariableQueryEditor(
+  props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions, VariableQuery>
+) {
   return (
     <>
       <InlineFieldRow>
         <InlineField
-        label="Query type"
-        labelWidth={20}
-        tooltip={
-          <div>The Factry Historian data source plugin provides the following query types for template variables</div>
-        }
+          label="Query type"
+          labelWidth={20}
+          tooltip={
+            <div>The Factry Historian data source plugin provides the following query types for template variables</div>
+          }
         >
           <Select
             placeholder="Select query type"
@@ -33,37 +35,37 @@ export function VariableQueryEditor(props: QueryEditorProps<DataSource, Query, H
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                });
+                })
               }
               if (value.value! === 'AssetQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                });
+                })
               }
               if (value.value! === 'EventTypeQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                });
+                })
               }
               if (value.value! === 'DatabaseQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                });
+                })
               }
               if (value.value! === 'EventTypePropertyQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                });
+                })
               }
               if (value.value! === 'AssetPropertyQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                });
+                })
               }
             }}
             value={props.query.type}
@@ -71,14 +73,14 @@ export function VariableQueryEditor(props: QueryEditorProps<DataSource, Query, H
         </InlineField>
       </InlineFieldRow>
 
-      {(props.query.type === 'MeasurementQuery') && (
+      {props.query.type === 'MeasurementQuery' && (
         <MeasurementFilterRow
           datasource={props.datasource}
           initialValue={props.query.filter}
           onChange={(val) => {
             // To make TS happy
             if (props.query.type === 'MeasurementQuery') {
-              props.onChange({ ...props.query, filter: val });
+              props.onChange({ ...props.query, filter: val })
             }
           }}
         />
@@ -88,15 +90,14 @@ export function VariableQueryEditor(props: QueryEditorProps<DataSource, Query, H
 }
 
 function MeasurementFilterRow(props: {
-  datasource: DataSource;
-  onChange: (val: MeasurementFilter) => void;
-  initialValue?: MeasurementFilter;
+  datasource: DataSource
+  onChange: (val: MeasurementFilter) => void
+  initialValue?: MeasurementFilter
 }) {
-
   const onKeywordChange = (event: FormEvent<HTMLInputElement>) => {
     props.onChange({
       ...props.initialValue,
-      Keyword: (event as ChangeEvent<HTMLInputElement>).target.value
+      Keyword: (event as ChangeEvent<HTMLInputElement>).target.value,
     })
   }
   return (
@@ -108,10 +109,7 @@ function MeasurementFilterRow(props: {
           labelWidth={20}
           tooltip={<div>Searches measurement by name</div>}
         >
-          <Input
-            value={props.initialValue?.Keyword}
-            onChange={(e) => onKeywordChange(e)}
-          />
+          <Input value={props.initialValue?.Keyword} onChange={(e) => onKeywordChange(e)} />
         </InlineField>
       </InlineFieldRow>
     </>

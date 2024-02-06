@@ -45,7 +45,6 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
         (e) => e.AssetUUID === selected || matchedAssets(selected, state.assets).find((a) => a.UUID === e.AssetUUID)
       )
       .map((e) => e.Name)
-
     return props
       .filter((value, index, self) => self.indexOf(value) === index)
       .map((e) => {

@@ -294,4 +294,10 @@ export type AssetPropertyVariableQuery = {
   type: 'AssetPropertyQuery'
 }
 
-export type VariableQuery = MeasurementVariableQuery | AssetVariableQuery | EventTypeVariableQuery | DatabaseVariableQuery | EventTypePropertyVariableQuery | AssetPropertyVariableQuery
+export type VariableQuery =
+  | MeasurementVariableQuery
+  | AssetVariableQuery
+  | EventTypeVariableQuery
+  | DatabaseVariableQuery
+  | EventTypePropertyVariableQuery
+  | AssetPropertyVariableQuery

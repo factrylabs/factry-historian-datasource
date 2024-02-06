@@ -1,8 +1,20 @@
-import { forkJoin, from, map, of, Observable } from 'rxjs';
+import { forkJoin, from, map, of, Observable } from 'rxjs'
 
-import { CustomVariableSupport, DataQueryRequest, DataQueryResponse, MetricFindValue } from "@grafana/data"
-import { DataSource } from "datasource"
-import { Asset, AssetProperty, Collector, EventConfiguration, EventType, EventTypeProperty, Measurement, MeasurementFilter, Pagination, TimeseriesDatabase, VariableQuery } from 'types'
+import { CustomVariableSupport, DataQueryRequest, DataQueryResponse, MetricFindValue } from '@grafana/data'
+import { DataSource } from 'datasource'
+import {
+  Asset,
+  AssetProperty,
+  Collector,
+  EventConfiguration,
+  EventType,
+  EventTypeProperty,
+  Measurement,
+  MeasurementFilter,
+  Pagination,
+  TimeseriesDatabase,
+  VariableQuery,
+} from 'types'
 import { VariableQueryEditor } from 'CustomVariableEditor/VariableEditor'
 
 // https://github.com/storpool/grafana/blob/1f9efade078316fe502c72dba6156860d69928d4/public/app/plugins/datasource/grafana-pyroscope-datasource/VariableSupport.ts
@@ -66,36 +78,36 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
       case 'EventTypePropertyQuery':
         return forkJoin({
           eventTypes: this.dataAPI.getEventTypes(),
-          eventTypeProperties: this.dataAPI.getEventTypeProperties()
+          eventTypeProperties: this.dataAPI.getEventTypeProperties(),
         }).pipe(
           map((values) => {
             return {
               data: values.eventTypeProperties.map<MetricFindValue>((eventTypeProperty) => {
-                const eventType = values.eventTypes.find(e => e.UUID === eventTypeProperty.EventTypeUUID)
+                const eventType = values.eventTypes.find((e) => e.UUID === eventTypeProperty.EventTypeUUID)
                 let name = eventTypeProperty.Name
                 if (eventType) {
                   name = `${eventType.Name} - ${name}`
                 }
                 return { text: name, value: eventTypeProperty.UUID }
-              })
+              }),
             }
           })
         )
       case 'AssetPropertyQuery':
         return forkJoin({
           assets: this.dataAPI.getAssets(),
-          assetProperties: this.dataAPI.getAssetProperties()
+          assetProperties: this.dataAPI.getAssetProperties(),
         }).pipe(
           map((values) => {
             return {
               data: values.assetProperties.map<MetricFindValue>((assetProperty) => {
-                const asset = values.assets.find(e => e.UUID === assetProperty.AssetUUID)
+                const asset = values.assets.find((e) => e.UUID === assetProperty.AssetUUID)
                 let name = assetProperty.Name
                 if (asset) {
                   name = `${asset.AssetPath ?? asset.Name} - ${name}`
                 }
                 return { text: name, value: assetProperty.UUID }
-              })
+              }),
             }
           })
         )
