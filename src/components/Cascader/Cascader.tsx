@@ -265,7 +265,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     this.getSearchableOptions(options)
 
     return (
-      <div>
+      <>
         <RCCascader
           onChange={onChangeCascader(this.onChange)}
           options={options}
@@ -303,7 +303,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
             />
           </div>
         </RCCascader>
-      </div>
+      </>
     )
   }
 }

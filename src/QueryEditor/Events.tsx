@@ -181,7 +181,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
   }
 
   return (
-    <div>
+    <>
       <InlineFieldRow>
         <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
           <Cascader
@@ -233,6 +233,6 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
           />
         </InlineField>
       </InlineFieldRow>
-    </div>
+    </>
   )
 }

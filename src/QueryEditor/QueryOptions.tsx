@@ -100,7 +100,7 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChan
   }
 
   return (
-    <div>
+    <>
       <InlineFieldRow>
         <InlineField
           label="Aggregation"
@@ -187,6 +187,6 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChan
           </InlineField>
         </InlineFieldRow>
       </CollapsableSection>
-    </div>
+    </>
   )
 }

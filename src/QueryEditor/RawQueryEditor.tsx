@@ -46,7 +46,7 @@ export const RawQueryEditor = ({ state, saveState, onChangeRawQuery }: Props): J
   }
 
   return (
-    <div>
+    <>
       <InlineFieldRow>
         <InlineField
           label="Database"
@@ -83,6 +83,6 @@ export const RawQueryEditor = ({ state, saveState, onChangeRawQuery }: Props): J
           </InlineField>
         </InlineFieldRow>
       )}
-    </div>
+    </>
   )
 }

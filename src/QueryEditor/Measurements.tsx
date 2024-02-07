@@ -196,6 +196,7 @@ export const Measurements = ({
                 onChange={onMeasurementChange}
                 menuShouldPortal
                 allowCustomValue
+                createOptionPosition="first"
                 onCreateOption={handleCustomMeasurement}
               />
             </InlineField>

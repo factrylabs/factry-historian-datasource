@@ -587,7 +587,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     ]
 
     return (
-      <div>
+      <>
         <InlineFieldRow>
           <InlineField>
             <RadioButtonGroup
@@ -598,7 +598,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           </InlineField>
         </InlineFieldRow>
         {!this.state.loading && tabs[this.state.tabIndex].content}
-      </div>
+      </>
     )
   }
 }

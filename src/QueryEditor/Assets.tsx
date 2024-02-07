@@ -126,7 +126,7 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
   }
 
   return (
-    <div>
+    <>
       <InlineFieldRow>
         <InlineField
           label="Assets"
@@ -156,6 +156,7 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
             options={availableProperties(replacedAsset)}
             onChange={onSelectProperties}
             allowCustomValue
+            createOptionPosition="first"
           />
         </InlineField>
       </InlineFieldRow>
@@ -166,6 +167,6 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
         datatypes={[]}
         onChange={handleChangeMeasurementQueryOptions}
       />
-    </div>
+    </>
   )
 }
