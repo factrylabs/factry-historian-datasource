@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -123,8 +124,8 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	measurementUUIDs := map[string]struct{}{}
 	assetUUIDs := []uuid.UUID{}
 	for _, assetString := range assetMeasurementQuery.Assets {
-		if assetUUID, ok := filterAssetUUID(assets, assetString); ok {
-			assetUUIDs = append(assetUUIDs, assetUUID)
+		if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
+			assetUUIDs = append(assetUUIDs, filteredAssetUUIDs...)
 		}
 	}
 
@@ -132,7 +133,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	for _, assetUUID := range assetUUIDs {
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			for _, assetProperty := range assetProperties {
-				if assetProperty.Name == property && assetProperty.AssetUUID == assetUUID {
+				if (assetProperty.Name == property && assetProperty.AssetUUID == assetUUID) || assetProperty.UUID.String() == property {
 					measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
 					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 					break
@@ -306,14 +307,17 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 	assetUUIDs := []uuid.UUID{}
 	eventTypeUUIDs := []uuid.UUID{}
 	for _, assetString := range eventQuery.Assets {
-		if assetUUID, ok := filterAssetUUID(assets, assetString); ok {
-			assetUUIDs = append(assetUUIDs, assetUUID)
+		if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
+			assetUUIDs = append(assetUUIDs, filteredAssetUUIDs...)
 		}
 	}
 	for _, eventTypeString := range eventQuery.EventTypes {
-		if eventTypeUUID, ok := filterEventTypeUUID(eventTypes, eventTypeString); ok {
-			eventTypeUUIDs = append(eventTypeUUIDs, eventTypeUUID)
+		if filteredEventTypeUUIDs := filterEventTypeUUIDs(eventTypes, eventTypeString); len(filteredEventTypeUUIDs) > 0 {
+			eventTypeUUIDs = append(eventTypeUUIDs, filteredEventTypeUUIDs...)
 		}
+	}
+	if len(assetUUIDs) == 0 || len(eventTypeUUIDs) == 0 {
+		return data.Frames{}, nil
 	}
 
 	filter := schemas.EventFilter{
@@ -379,22 +383,54 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 	return historianQuery
 }
 
-func filterAssetUUID(assets []schemas.Asset, searchValue string) (uuid.UUID, bool) {
-	for _, asset := range assets {
-		if asset.UUID.String() == searchValue || asset.AssetPath == searchValue {
-			return asset.UUID, true
+func filterAssetUUIDs(assets []schemas.Asset, searchValue string) []uuid.UUID {
+	if strings.HasPrefix(searchValue, "/") && strings.HasSuffix(searchValue, "/") {
+		pattern := searchValue[1 : len(searchValue)-1]
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return []uuid.UUID{}
+		}
+
+		assetUUIDs := []uuid.UUID{}
+		for _, asset := range assets {
+			if re.MatchString(asset.AssetPath) || re.MatchString(asset.UUID.String()) {
+				assetUUIDs = append(assetUUIDs, asset.UUID)
+			}
+		}
+		return assetUUIDs
+	} else {
+		for _, asset := range assets {
+			if asset.UUID.String() == searchValue || asset.AssetPath == searchValue {
+				return []uuid.UUID{asset.UUID}
+			}
 		}
 	}
 
-	return uuid.Nil, false
+	return []uuid.UUID{}
 }
 
-func filterEventTypeUUID(eventTypes []schemas.EventType, searchValue string) (uuid.UUID, bool) {
-	for _, eventType := range eventTypes {
-		if eventType.UUID.String() == searchValue || eventType.Name == searchValue {
-			return eventType.UUID, true
+func filterEventTypeUUIDs(eventTypes []schemas.EventType, searchValue string) []uuid.UUID {
+	if strings.HasPrefix(searchValue, "/") && strings.HasSuffix(searchValue, "/") {
+		pattern := searchValue[1 : len(searchValue)-1]
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return []uuid.UUID{}
+		}
+
+		assetUUIDs := []uuid.UUID{}
+		for _, eventType := range eventTypes {
+			if re.MatchString(eventType.Name) || re.MatchString(eventType.UUID.String()) {
+				assetUUIDs = append(assetUUIDs, eventType.UUID)
+			}
+		}
+		return assetUUIDs
+	} else {
+		for _, eventType := range eventTypes {
+			if eventType.UUID.String() == searchValue || eventType.Name == searchValue {
+				return []uuid.UUID{eventType.UUID}
+			}
 		}
 	}
 
-	return uuid.Nil, false
+	return []uuid.UUID{}
 }

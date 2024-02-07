@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
-import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
+import { getTemplateSrv } from '@grafana/runtime'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
-import { getAggregationsForDatatypes, getFillTypes, getPeriods } from './util'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
+import { getAggregationsForDatatypes, getFillTypes, getPeriods } from './util'
+import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
 
 export interface Props {
   state: MeasurementQueryOptions
@@ -16,6 +17,11 @@ export interface Props {
 
 export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChange }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
+  const templateVariables = getTemplateSrv()
+    .getVariables()
+    .map((e) => {
+      return { label: `$${e.name}`, value: `$${e.name}` }
+    })
   const onAggregationChange = (event: SelectableValue<string>) => {
     let aggregation = undefined
     if (event?.value) {
@@ -105,7 +111,7 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChan
             value={state.Aggregation?.Name}
             placeholder="select an aggregation"
             isClearable
-            options={getAggregationsForDatatypes(datatypes)}
+            options={getAggregationsForDatatypes(datatypes).concat(templateVariables)}
             onChange={onAggregationChange}
           />
         </InlineField>
@@ -113,7 +119,7 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChan
           <InlineField>
             <Select
               value={state.Aggregation?.Period}
-              options={periods}
+              options={periods.concat(templateVariables)}
               allowCustomValue
               onChange={onPeriodChange}
               onCreateOption={onCreatePeriod}
@@ -125,7 +131,7 @@ export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChan
             <Select
               value={state.Aggregation?.Fill}
               placeholder="(optional) select a fill type"
-              options={getFillTypes()}
+              options={getFillTypes().concat(templateVariables)}
               onChange={onFillChange}
               isClearable
             />

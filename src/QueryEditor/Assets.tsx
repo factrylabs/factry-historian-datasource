@@ -17,7 +17,12 @@ export interface Props {
 
 export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasurementQuery }: Props): JSX.Element => {
   const replacedAsset = replaceAsset(state.assetsState.selectedAsset, state.assets)
-  const assetOptions = getChildAssets(null, state.assets, state.assetProperties)
+  const templateVariables = getTemplateSrv()
+    .getVariables()
+    .map((e) => {
+      return { label: `$${e.name}`, value: `$${e.name}` }
+    })
+  const assetOptions = getChildAssets(null, state.assets, state.assetProperties).concat(templateVariables)
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const assetProperties = items.map((e) => e.value)
@@ -40,26 +45,22 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
   }
 
   const availableProperties = (selected: string | undefined): Array<SelectableValue<string>> => {
+    const replaced = getTemplateSrv().replace(selected)
     const props = state.assetProperties
       .filter(
-        (e) => e.AssetUUID === selected || matchedAssets(selected, state.assets).find((a) => a.UUID === e.AssetUUID)
+        (e) => e.AssetUUID === replaced || matchedAssets(replaced, state.assets).find((a) => a.UUID === e.AssetUUID)
       )
       .map((e) => e.Name)
     return props
       .filter((value, index, self) => self.indexOf(value) === index)
       .map((e) => {
-        return { label: e, value: e }
+        return { label: e, value: e } as SelectableValue<string>
       })
-      .concat(
-        getTemplateSrv()
-          .getVariables()
-          .map((e) => {
-            return { label: `$${e.name}`, value: `$${e.name}` }
-          })
-      )
+      .concat(templateVariables)
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
+    console.log(asset, property)
     let properties: string[] = []
     let selectedProperties: Array<SelectableValue<string>> = []
     if (property) {
@@ -76,7 +77,7 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
     }
     const updatedQuery = {
       ...state.assetsState.options.query,
-      Assets: matchedAssets(getTemplateSrv().replace(asset), state.assets).map((e) => e.UUID),
+      Assets: [asset],
       AssetProperties: properties,
     } as AssetMeasurementQuery
     saveState({

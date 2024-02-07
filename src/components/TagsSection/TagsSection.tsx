@@ -1,9 +1,10 @@
 import React from 'react'
 
+import { getTemplateSrv } from '@grafana/runtime'
 import { AddButton } from 'components/util/AddButton'
 import { Tag } from './Tag'
-import { KnownCondition, KnownOperator } from './types'
 import { getCondition, getOperator, toSelectableValue } from './util'
+import { KnownCondition, KnownOperator } from './types'
 
 export interface QueryTag {
   key: string
@@ -31,6 +32,12 @@ export const TagsSection = ({
   getTagKeyOptions = defaultOptions,
   getTagValueOptions = defaultOptions,
 }: Props): JSX.Element => {
+  const templateVariables = getTemplateSrv()
+    .getVariables()
+    .map((e) => {
+      return { label: `$${e.name}`, value: `$${e.name}` }
+    })
+
   const onTagChange = (newTag: QueryTag, index: number) => {
     const newTags = tags.map((tag, i) => {
       return index === i ? newTag : tag
@@ -43,9 +50,21 @@ export const TagsSection = ({
     onChange(newTags)
   }
 
+  const tagKeyOptions = () => {
+    return getTagKeyOptions().then((tags) => {
+      return tags.concat(templateVariables.map((e) => e.value))
+    })
+  }
+
+  const tagValueOptions = (key: string) => {
+    return getTagValueOptions(key).then((tags) => {
+      return tags.concat(templateVariables.map((e) => e.value))
+    })
+  }
+
   const getTagKeySegmentOptions = () => {
     return getTagKeyOptions().then((tags) => {
-      return tags.map(toSelectableValue)
+      return tags.map(toSelectableValue).concat(templateVariables)
     })
   }
 
@@ -80,8 +99,8 @@ export const TagsSection = ({
           onRemove={() => {
             onTagRemove(i)
           }}
-          getTagKeyOptions={getTagKeyOptions}
-          getTagValueOptions={getTagValueOptions}
+          getTagKeyOptions={tagKeyOptions}
+          getTagValueOptions={tagValueOptions}
         />
       ))}
       <AddButton

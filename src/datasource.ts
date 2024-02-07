@@ -1,10 +1,11 @@
 import { DataQueryRequest, DataSourceInstanceSettings } from '@grafana/data'
-import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime'
+import { DataSourceWithBackend, TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { VariableSupport } from 'variable_support'
 import {
   Asset,
   AssetMeasurementQuery,
   AssetProperty,
+  Attributes,
   Collector,
   EventConfiguration,
   EventQuery,
@@ -14,7 +15,9 @@ import {
   Measurement,
   MeasurementFilter,
   MeasurementQuery,
+  MeasurementQueryOptions,
   Pagination,
+  PropertyDatatype,
   Query,
   RawQuery,
   TabIndex,
@@ -23,7 +26,10 @@ import {
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   defaultTab: TabIndex
-  constructor(instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>) {
+  constructor(
+    instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>,
+    private readonly templateSrv: TemplateSrv = getTemplateSrv()
+  ) {
     super(instanceSettings)
     this.defaultTab = instanceSettings.jsonData.defaultTab ?? TabIndex.Assets
     this.variables = new VariableSupport(this)
@@ -36,60 +42,52 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         switch (target.queryType) {
           case 'AssetMeasurementQuery': {
             const assetMeasurementQuery = target.query as AssetMeasurementQuery
-            assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.map((e) => getTemplateSrv().replace(e))
-            assetMeasurementQuery.AssetProperties = assetMeasurementQuery.AssetProperties.map((e) =>
-              getTemplateSrv().replace(e)
-            )
-            if (assetMeasurementQuery.Options.GroupBy) {
-              assetMeasurementQuery.Options.GroupBy = assetMeasurementQuery.Options.GroupBy?.map((e) =>
-                getTemplateSrv().replace(e)
-              )
-            }
-            if (assetMeasurementQuery.Options.Aggregation) {
-              assetMeasurementQuery.Options.Aggregation = {
-                Name: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Name),
-                Period: getTemplateSrv().replace(assetMeasurementQuery.Options.Aggregation?.Period),
-                Fill: assetMeasurementQuery.Options.Aggregation.Fill,
-                Arguments: assetMeasurementQuery.Options.Aggregation.Arguments,
-              }
-            }
+            assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.flatMap((e) => this.multiSelectReplace(e))
+            assetMeasurementQuery.AssetProperties = assetMeasurementQuery.AssetProperties.flatMap((e) => {
+              return this.multiSelectReplace(e)
+            })
+            assetMeasurementQuery.Options = this.templateReplaceQueryOptions(assetMeasurementQuery.Options)
             target.query = assetMeasurementQuery
             break
           }
           case 'MeasurementQuery': {
             const measurementQuery = target.query as MeasurementQuery
-            measurementQuery.Database = getTemplateSrv().replace(measurementQuery.Database)
+            measurementQuery.Database = this.templateSrv.replace(measurementQuery.Database)
             measurementQuery.Measurement = measurementQuery.Measurement
-              ? getTemplateSrv().replace(measurementQuery.Measurement)
+              ? this.templateSrv.replace(measurementQuery.Measurement)
               : undefined
-            measurementQuery.Measurements = measurementQuery.Measurements?.map((m) => getTemplateSrv().replace(m))
-            if (measurementQuery.Options.GroupBy) {
-              measurementQuery.Options.GroupBy = measurementQuery.Options.GroupBy?.map((e) =>
-                getTemplateSrv().replace(e)
-              )
-            }
-            if (measurementQuery.Options.Aggregation) {
-              measurementQuery.Options.Aggregation = {
-                Name: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Name),
-                Period: getTemplateSrv().replace(measurementQuery.Options.Aggregation?.Period),
-                Fill: measurementQuery.Options.Aggregation.Fill,
-                Arguments: measurementQuery.Options.Aggregation.Arguments,
-              }
-            }
+            measurementQuery.Measurements = measurementQuery.Measurements?.flatMap((m) => this.multiSelectReplace(m))
+            measurementQuery.Options = this.templateReplaceQueryOptions(measurementQuery.Options)
             target.query = measurementQuery
             break
           }
           case 'RawQuery': {
             const rawQuery = target.query as RawQuery
-            rawQuery.Query = getTemplateSrv().replace(rawQuery.Query)
+            rawQuery.TimeseriesDatabase = this.templateSrv.replace(rawQuery.TimeseriesDatabase)
+            rawQuery.Query = this.templateSrv.replace(rawQuery.Query)
             target.query = rawQuery
             break
           }
           case 'EventQuery': {
             const eventQuery = target.query as EventQuery
-            eventQuery.Assets = eventQuery.Assets?.map((e) => getTemplateSrv().replace(e))
-            eventQuery.EventTypes = eventQuery.EventTypes?.map((e) => getTemplateSrv().replace(e))
-            eventQuery.Statuses = eventQuery.Statuses?.map((e) => getTemplateSrv().replace(e))
+            eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e))
+            eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) => this.multiSelectReplace(e))
+            eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e))
+            eventQuery.PropertyFilter = eventQuery.PropertyFilter.map((e) => {
+              e.Property = this.templateSrv.replace(e.Property)
+              switch (e.Datatype) {
+                case PropertyDatatype.Number:
+                  e.Value = parseFloat(this.templateSrv.replace(String(e.Value)))
+                  break
+                case PropertyDatatype.Bool:
+                  e.Value = this.templateSrv.replace(String(e.Value)) === 'true'
+                  break
+                case PropertyDatatype.String:
+                  e.Value = this.templateSrv.replace(String(e.Value))
+                  break
+              }
+              return e
+            })
             target.query = eventQuery
             break
           }
@@ -100,6 +98,39 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       })
 
     return super.query(request)
+  }
+
+  // https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
+  multiSelectReplace(value: string | undefined): string[] {
+    return this.templateSrv.replace(value, undefined, 'csv').split(',')
+  }
+
+  templateReplaceQueryOptions(options: MeasurementQueryOptions): MeasurementQueryOptions {
+    if (options.GroupBy) {
+      options.GroupBy = options.GroupBy?.flatMap((e) => this.multiSelectReplace(e))
+    }
+    if (options.Tags) {
+      const tags: Attributes = {}
+      for (const [key, value] of Object.entries(options.Tags)) {
+        tags[this.templateSrv.replace(key)] = this.templateSrv.replace(value)
+      }
+      options.Tags = tags
+    }
+    if (options.Aggregation) {
+      const aggregationArguments = options.Aggregation.Arguments
+      if (aggregationArguments) {
+        for (let i = 0; i < aggregationArguments.length; i++) {
+          aggregationArguments[i] = this.templateSrv.replace(aggregationArguments[i])
+        }
+      }
+      options.Aggregation = {
+        Name: this.templateSrv.replace(options.Aggregation?.Name),
+        Period: this.templateSrv.replace(options.Aggregation?.Period),
+        Fill: options.Aggregation.Fill,
+        Arguments: aggregationArguments,
+      }
+    }
+    return options
   }
 
   async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {

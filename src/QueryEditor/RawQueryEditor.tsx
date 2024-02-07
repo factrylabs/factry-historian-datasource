@@ -1,6 +1,7 @@
 import React from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CodeEditor, InlineField, InlineFieldRow, Select } from '@grafana/ui'
+import { getTemplateSrv } from '@grafana/runtime'
 import { selectable } from './util'
 import { labelWidth, QueryEditorState, TimeseriesDatabase } from 'types'
 
@@ -12,11 +13,18 @@ export interface Props {
 
 export const RawQueryEditor = ({ state, saveState, onChangeRawQuery }: Props): JSX.Element => {
   const selectableTimeseriesDatabases = (databases: TimeseriesDatabase[]): Array<SelectableValue<string>> => {
-    const result: Array<SelectableValue<string>> = [{ label: 'All databases', value: '' }]
+    const result: Array<SelectableValue<string>> = []
     databases.forEach((database) => {
       result.push({ label: database.Name, value: database.UUID, description: database.Description })
     })
-    return result
+    return [
+      ...getTemplateSrv()
+        .getVariables()
+        .map((e) => {
+          return { label: `$${e.name}`, value: `$${e.name}` }
+        }),
+      ...result,
+    ]
   }
 
   const getTimeseriesDatabaseType = (database: string): string => {

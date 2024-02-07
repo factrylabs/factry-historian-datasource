@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { InlineField } from '@grafana/ui'
+import { getTemplateSrv } from '@grafana/runtime'
 import { AddButton } from 'components/util/AddButton'
 import { Group } from './Group'
 
@@ -10,6 +11,12 @@ type Props = {
 }
 
 export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
+  const templateVariables = getTemplateSrv()
+    .getVariables()
+    .map((e) => {
+      return { label: `$${e.name}`, value: `$${e.name}` }
+    })
+
   const onGroupChange = (newGroup: string, index: number) => {
     const newGroups = groups.map((group, i) => {
       return index === i ? newGroup : group
@@ -34,6 +41,7 @@ export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
             <InlineField key={i}>
               <Group
                 group={t}
+                options={templateVariables}
                 onChange={(newGroup) => onGroupChange(newGroup || '', i)}
                 onRemove={() => onGroupRemove(i)}
               />
@@ -44,6 +52,7 @@ export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
             <InlineField key={i}>
               <Group
                 group={t}
+                options={templateVariables}
                 onChange={(newGroup) => onGroupChange(newGroup || '', i)}
                 onRemove={() => onGroupRemove(i)}
               />
@@ -54,7 +63,7 @@ export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
       <InlineField>
         <AddButton
           allowCustomValue
-          loadOptions={() => Promise.resolve([])}
+          loadOptions={() => Promise.resolve(templateVariables)}
           onAdd={(v) => {
             addNewGroup(v)
           }}

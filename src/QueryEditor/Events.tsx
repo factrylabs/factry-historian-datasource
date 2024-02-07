@@ -15,7 +15,12 @@ export interface Props {
 }
 
 export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Element => {
-  const assetOptions = getChildAssets(null, state.assets)
+  const templateVariables = getTemplateSrv()
+    .getVariables()
+    .map((e) => {
+      return { label: `$${e.name}`, value: `$${e.name}` }
+    })
+  const assetOptions = getChildAssets(null, state.assets).concat(templateVariables)
 
   const onSelectEventTypes = (items: Array<SelectableValue<string>>): void => {
     const eventTypes = items.map((e) => {
@@ -39,11 +44,12 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
   }
 
   const availableEventTypes = (selected: string | undefined): Array<SelectableValue<string>> => {
+    const replaced = getTemplateSrv().replace(selected)
     return state.eventTypes
       .filter((e) =>
         state.eventConfigurations.some(
           (ec) =>
-            (ec.AssetUUID === selected || matchedAssets(selected, state.assets).find((a) => a.UUID === ec.AssetUUID)) &&
+            (ec.AssetUUID === replaced || matchedAssets(replaced, state.assets).find((a) => a.UUID === ec.AssetUUID)) &&
             ec.EventTypeUUID === e.UUID
         )
       )
@@ -78,7 +84,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
   const onAssetChange = (value: string): void => {
     const updatedQuery = {
       ...state.eventsState.eventQuery,
-      Assets: matchedAssets(getTemplateSrv().replace(value), state.assets).map((e) => e.UUID),
+      Assets: [value],
     }
     saveState({
       ...state,
@@ -88,6 +94,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
         eventQuery: updatedQuery,
       },
     })
+    onChangeEventQuery(updatedQuery)
   }
 
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
@@ -103,18 +110,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
         Datatype: dataType,
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
-        Value: '',
-      }
-      switch (dataType) {
-        case PropertyDatatype.Number:
-          eventPropertyFilter.Value = parseFloat(tag.value)
-          break
-        case PropertyDatatype.Bool:
-          eventPropertyFilter.Value = tag.value.toLowerCase() === 'true'
-          break
-        case PropertyDatatype.String:
-          eventPropertyFilter.Value = tag.value
-          break
+        Value: tag.value,
       }
       filter.push(eventPropertyFilter)
     })
@@ -181,7 +177,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
       toSelectableValue('open'),
       toSelectableValue('incomplete'),
       toSelectableValue('pending'),
-    ]
+    ].concat(templateVariables)
   }
 
   return (

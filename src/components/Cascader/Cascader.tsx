@@ -149,9 +149,10 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
           .join(this.props.separator || DEFAULT_SEPARATOR)
       : selectedOptions[selectedOptions.length - 1].label
     const propertySelected = selectedOptions[selectedOptions.length - 1].label.startsWith('📏')
+    const assetSelected = selectedOptions[selectedOptions.length - 1].label.startsWith('📦')
     this.setState({
       rcValue: value,
-      focusCascade: !propertySelected,
+      focusCascade: assetSelected,
       activeLabel,
     })
     if (propertySelected) {

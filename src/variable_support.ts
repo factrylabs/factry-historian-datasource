@@ -94,21 +94,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         )
       case 'AssetPropertyQuery':
-        return forkJoin({
-          assets: this.dataAPI.getAssets(),
-          assetProperties: this.dataAPI.getAssetProperties(),
-        }).pipe(
+        return from(this.dataAPI.getAssetProperties()).pipe(
           map((values) => {
-            return {
-              data: values.assetProperties.map<MetricFindValue>((assetProperty) => {
-                const asset = values.assets.find((e) => e.UUID === assetProperty.AssetUUID)
-                let name = assetProperty.Name
-                if (asset) {
-                  name = `${asset.AssetPath ?? asset.Name} - ${name}`
-                }
-                return { text: name, value: assetProperty.UUID }
-              }),
-            }
+            return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.Name })) }
           })
         )
     }
