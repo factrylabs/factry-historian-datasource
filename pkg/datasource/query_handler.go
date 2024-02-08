@@ -111,12 +111,12 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 }
 
 func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets()
+	assets, err := api.GetAssets("")
 	if err != nil {
 		return nil, err
 	}
 
-	assetProperties, err := api.GetAssetProperties()
+	assetProperties, err := api.GetAssetProperties("")
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([
 	if measurementQuery.Measurement != "" {
 		measurements = append(measurements, measurementQuery.Measurement)
 	}
-	databases, err := api.GetTimeseriesDatabases()
+	databases, err := api.GetTimeseriesDatabases("")
 	if err != nil {
 		return nil, err
 	}
@@ -294,12 +294,12 @@ func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, a
 }
 
 func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets()
+	assets, err := api.GetAssets("")
 	if err != nil {
 		return nil, err
 	}
 
-	eventTypes, err := api.GetEventTypes()
+	eventTypes, err := api.GetEventTypes("")
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +336,7 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 		return nil, err
 	}
 
-	allEventTypeProperties, err := api.GetEventTypeProperties()
+	allEventTypeProperties, err := api.GetEventTypeProperties("")
 	if err != nil {
 		return nil, err
 	}

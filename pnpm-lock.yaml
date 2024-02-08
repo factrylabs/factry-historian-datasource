@@ -17,6 +17,9 @@ dependencies:
   '@grafana/runtime':
     specifier: ~9.4.17
     version: 9.4.17(@babel/core@7.23.9)(react-dom@17.0.2)(react@17.0.2)
+  '@grafana/schema':
+    specifier: ~9.4.17
+    version: 9.4.17
   '@grafana/ui':
     specifier: ~9.4.17
     version: 9.4.17(@babel/core@7.23.9)(react-dom@17.0.2)(react@17.0.2)

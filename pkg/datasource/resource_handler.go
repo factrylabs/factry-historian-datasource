@@ -48,14 +48,14 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 		return err
 	}
 
+	url, err := url.Parse(req.URL)
+	if err != nil {
+		return err
+	}
+
 	resourcePath := req.Path
 	switch resourcePath {
 	case ResourceTypeMeasurements:
-		url, err := url.Parse(req.URL)
-		if err != nil {
-			return err
-		}
-
 		o, err := dsi.API.GetMeasurements(url.RawQuery)
 		if err != nil {
 			return err
@@ -70,35 +70,35 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeDatabases:
-		o, err := dsi.API.GetTimeseriesDatabases()
+		o, err := dsi.API.GetTimeseriesDatabases(url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeAssets:
-		o, err := dsi.API.GetAssets()
+		o, err := dsi.API.GetAssets(url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeAssetProperties:
-		o, err := dsi.API.GetAssetProperties()
+		o, err := dsi.API.GetAssetProperties(url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeEventTypes:
-		o, err := dsi.API.GetEventTypes()
+		o, err := dsi.API.GetEventTypes(url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeEventTypeProperties:
-		o, err := dsi.API.GetEventTypeProperties()
+		o, err := dsi.API.GetEventTypeProperties(url.RawQuery)
 		if err != nil {
 			return err
 		}

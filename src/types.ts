@@ -1,4 +1,5 @@
-import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data'
+import { DataSourceJsonData, SelectableValue } from '@grafana/data'
+import { DataQuery } from '@grafana/schema'
 import { QueryTag } from 'components/TagsSection/TagsSection'
 
 export const labelWidth = 25
@@ -163,14 +164,41 @@ export interface EventQuery {
   PropertyFilter: EventPropertyFilter[]
 }
 
+export enum EventTypePropertyType {
+  Simple = 'simple',
+  Periodic = 'periodic',
+}
+
 export interface MeasurementFilter {
   Keyword?: string
   DatabaseUUID?: string
   CollectorUUID?: string
   AssetUUID?: string
   Statuses?: string[]
-  WithBadQualityOnly?: boolean
-  ExcludeCalculations?: boolean
+}
+
+export interface AssetFilter {
+  Keyword?: string
+  Path?: string
+  ParentUUIDs?: string[]
+}
+
+export interface AssetPropertyFilter {
+  AssetUUIDs?: string[]
+  Recursive?: boolean
+}
+
+export interface TimeseriesDatabaseFilter {
+  Keyword?: string
+}
+
+export interface EventTypeFilter {
+  Keyword?: string
+}
+
+export interface EventTypePropertiesFilter {
+  EventTypeUUIDs?: string[]
+  Types?: string[]
 }
 
 export interface EventPropertyFilter {
@@ -253,7 +281,7 @@ export enum PropertyDatatype {
 
 export enum PropertyType {
   Simple = 'simple',
-  Periodic = 'periodic'
+  Periodic = 'periodic',
 }
 
 export interface EventTypeProperty {
@@ -281,26 +309,31 @@ export type MeasurementVariableQuery = {
 export type AssetVariableQuery = {
   refId: string
   type: 'AssetQuery'
+  filter?: AssetFilter
 }
 
 export type EventTypeVariableQuery = {
   refId: string
   type: 'EventTypeQuery'
+  filter?: EventTypeFilter
 }
 
 export type DatabaseVariableQuery = {
   refId: string
   type: 'DatabaseQuery'
+  filter?: TimeseriesDatabaseFilter
 }
 
 export type EventTypePropertyVariableQuery = {
   refId: string
   type: 'EventTypePropertyQuery'
+  filter?: EventTypePropertiesFilter
 }
 
 export type AssetPropertyVariableQuery = {
   refId: string
   type: 'AssetPropertyQuery'
+  filter?: AssetPropertyFilter
 }
 
 export type VariableQuery =

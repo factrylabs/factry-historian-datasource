@@ -1,13 +1,27 @@
-import React, { ChangeEvent, FormEvent } from 'react'
+import React from 'react'
 
-import { QueryEditorProps } from '@grafana/data'
+import { QueryEditorProps, SelectableValue } from '@grafana/data'
+import { InlineField, InlineFieldRow, Select } from '@grafana/ui'
+import { TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { DataSource } from 'datasource'
-import { HistorianDataSourceOptions, MeasurementFilter, Query, VariableQuery } from 'types'
-import { InlineField, InlineFieldRow, Input, Select } from '@grafana/ui'
+import { MeasurementFilterRow } from './MeasurementFilter'
+import { AssetFilterRow } from './AssetFilter'
+import { AssetPropertyFilterRow } from './AssetPropertyFilter'
+import { DatabaseFilterRow } from './DatabaseFilter'
+import { HistorianDataSourceOptions, Query, VariableQuery } from 'types'
+import { EventTypePropertyFilterRow } from './EventTypePropertyFilter'
+import { EventTypeFilterRow } from './EventTypeFilter'
 
 export function VariableQueryEditor(
   props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions, VariableQuery>
 ) {
+  const templateSrv: TemplateSrv = getTemplateSrv()
+  const templateVariables = templateSrv.getVariables().map((e) => {
+    return {
+      label: `$${e.name}`,
+      value: `$${e.name}`,
+    } as SelectableValue<string>
+  })
   return (
     <>
       <InlineFieldRow>
@@ -35,36 +49,42 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  filter: {},
                 })
               }
               if (value.value! === 'AssetQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  filter: {},
                 })
               }
               if (value.value! === 'EventTypeQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  filter: {},
                 })
               }
               if (value.value! === 'DatabaseQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  filter: {},
                 })
               }
               if (value.value! === 'EventTypePropertyQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  filter: {},
                 })
               }
               if (value.value! === 'AssetPropertyQuery') {
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  filter: {},
                 })
               }
             }}
@@ -77,41 +97,72 @@ export function VariableQueryEditor(
         <MeasurementFilterRow
           datasource={props.datasource}
           initialValue={props.query.filter}
+          templateVariables={templateVariables}
           onChange={(val) => {
-            // To make TS happy
             if (props.query.type === 'MeasurementQuery') {
               props.onChange({ ...props.query, filter: val })
             }
           }}
         />
       )}
-    </>
-  )
-}
-
-function MeasurementFilterRow(props: {
-  datasource: DataSource
-  onChange: (val: MeasurementFilter) => void
-  initialValue?: MeasurementFilter
-}) {
-  const onKeywordChange = (event: FormEvent<HTMLInputElement>) => {
-    props.onChange({
-      ...props.initialValue,
-      Keyword: (event as ChangeEvent<HTMLInputElement>).target.value,
-    })
-  }
-  return (
-    <>
-      <InlineFieldRow>
-        <InlineField
-          label={'Keyword'}
-          aria-label={'Keyword'}
-          labelWidth={20}
-          tooltip={<div>Searches measurement by name</div>}
-        >
-          <Input value={props.initialValue?.Keyword} onChange={(e) => onKeywordChange(e)} />
-        </InlineField>
-      </InlineFieldRow>
+      {props.query.type === 'AssetQuery' && (
+        <AssetFilterRow
+          datasource={props.datasource}
+          initialValue={props.query.filter}
+          templateVariables={templateVariables}
+          onChange={(val) => {
+            if (props.query.type === 'AssetQuery') {
+              props.onChange({ ...props.query, filter: val })
+            }
+          }}
+        />
+      )}
+      {props.query.type === 'AssetPropertyQuery' && (
+        <AssetPropertyFilterRow
+          datasource={props.datasource}
+          initialValue={props.query.filter}
+          templateVariables={templateVariables}
+          onChange={(val) => {
+            if (props.query.type === 'AssetPropertyQuery') {
+              props.onChange({ ...props.query, filter: val })
+            }
+          }}
+        />
+      )}
+      {props.query.type === 'DatabaseQuery' && (
+        <DatabaseFilterRow
+          datasource={props.datasource}
+          initialValue={props.query.filter}
+          onChange={(val) => {
+            if (props.query.type === 'DatabaseQuery') {
+              props.onChange({ ...props.query, filter: val })
+            }
+          }}
+        />
+      )}
+      {props.query.type === 'EventTypeQuery' && (
+        <EventTypeFilterRow
+          datasource={props.datasource}
+          initialValue={props.query.filter}
+          onChange={(val) => {
+            if (props.query.type === 'EventTypeQuery') {
+              props.onChange({ ...props.query, filter: val })
+            }
+          }}
+        />
+      )}
+      {props.query.type === 'EventTypePropertyQuery' && (
+        <EventTypePropertyFilterRow
+          datasource={props.datasource}
+          initialValue={props.query.filter}
+          templateVariables={templateVariables}
+          onChange={(val) => {
+            if (props.query.type === 'EventTypePropertyQuery') {
+              props.onChange({ ...props.query, filter: val })
+            }
+          }}
+        />
+      )}
     </>
   )
 }

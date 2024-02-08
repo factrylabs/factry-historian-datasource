@@ -1,37 +1,44 @@
 import { forkJoin, from, map, of, Observable } from 'rxjs'
 
 import { CustomVariableSupport, DataQueryRequest, DataQueryResponse, MetricFindValue } from '@grafana/data'
+import { TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { DataSource } from 'datasource'
+import { VariableQueryEditor } from 'CustomVariableEditor/VariableEditor'
 import {
   Asset,
+  AssetFilter,
   AssetProperty,
+  AssetPropertyFilter,
   Collector,
   EventConfiguration,
   EventType,
+  EventTypeFilter,
+  EventTypePropertiesFilter,
   EventTypeProperty,
   Measurement,
   MeasurementFilter,
   Pagination,
   TimeseriesDatabase,
+  TimeseriesDatabaseFilter,
   VariableQuery,
 } from 'types'
-import { VariableQueryEditor } from 'CustomVariableEditor/VariableEditor'
 
 // https://github.com/storpool/grafana/blob/1f9efade078316fe502c72dba6156860d69928d4/public/app/plugins/datasource/grafana-pyroscope-datasource/VariableSupport.ts
 
 export interface DataAPI {
   getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]>
   getCollectors(): Promise<Collector[]>
-  getTimeseriesDatabases(): Promise<TimeseriesDatabase[]>
-  getAssets(): Promise<Asset[]>
-  getAssetProperties(): Promise<AssetProperty[]>
-  getEventTypes(): Promise<EventType[]>
-  getEventTypeProperties(): Promise<EventTypeProperty[]>
+  getTimeseriesDatabases(filter?: TimeseriesDatabaseFilter): Promise<TimeseriesDatabase[]>
+  getAssets(filter?: AssetFilter): Promise<Asset[]>
+  getAssetProperties(filter?: AssetPropertyFilter): Promise<AssetProperty[]>
+  getEventTypes(filter?: EventTypeFilter): Promise<EventType[]>
+  getEventTypeProperties(filter?: EventTypePropertiesFilter): Promise<EventTypeProperty[]>
   getEventConfigurations(): Promise<EventConfiguration[]>
+  multiSelectReplace(value: string | undefined): string[]
 }
 
 export class VariableSupport extends CustomVariableSupport<DataSource> {
-  constructor(private readonly dataAPI: DataAPI) {
+  constructor(private readonly dataAPI: DataAPI, private readonly templateSrv: TemplateSrv = getTemplateSrv()) {
     super()
     this.query = this.query.bind(this)
   }
@@ -41,8 +48,10 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
   query(request: DataQueryRequest<VariableQuery>): Observable<DataQueryResponse> {
     const queryType = request.targets[0].type
     switch (queryType) {
-      case 'MeasurementQuery':
-        const filter = request.targets[0].filter
+      case 'MeasurementQuery': {
+        const filter = {
+          ...request.targets[0].filter,
+        }
         if (!filter) {
           return of({ data: [] })
         }
@@ -52,33 +61,41 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           Page: 0,
         }
 
+        if (filter.DatabaseUUID) {
+          filter.DatabaseUUID = this.templateSrv.replace(filter.DatabaseUUID)
+        }
+
         return from(this.dataAPI.getMeasurements(filter, pagination)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
           })
         )
-      case 'AssetQuery':
-        return from(this.dataAPI.getAssets()).pipe(
+      }
+      case 'AssetQuery': {
+        return from(this.dataAPI.getAssets(request.targets[0].filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.AssetPath ?? v.Name, value: v.UUID })) }
           })
         )
-      case 'EventTypeQuery':
-        return from(this.dataAPI.getEventTypes()).pipe(
+      }
+      case 'EventTypeQuery': {
+        return from(this.dataAPI.getEventTypes(request.targets[0].filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
           })
         )
-      case 'DatabaseQuery':
-        return from(this.dataAPI.getTimeseriesDatabases()).pipe(
+      }
+      case 'DatabaseQuery': {
+        return from(this.dataAPI.getTimeseriesDatabases(request.targets[0].filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
           })
         )
-      case 'EventTypePropertyQuery':
+      }
+      case 'EventTypePropertyQuery': {
         return forkJoin({
           eventTypes: this.dataAPI.getEventTypes(),
-          eventTypeProperties: this.dataAPI.getEventTypeProperties(),
+          eventTypeProperties: this.dataAPI.getEventTypeProperties(request.targets[0].filter),
         }).pipe(
           map((values) => {
             return {
@@ -93,12 +110,20 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
             }
           })
         )
-      case 'AssetPropertyQuery':
-        return from(this.dataAPI.getAssetProperties()).pipe(
+      }
+      case 'AssetPropertyQuery': {
+        const filter = {
+          ...request.targets[0].filter,
+        }
+        if (filter.AssetUUIDs) {
+          filter.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.dataAPI.multiSelectReplace(e))
+        }
+        return from(this.dataAPI.getAssetProperties(filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.Name })) }
           })
         )
+      }
     }
     return of({ data: [] })
   }

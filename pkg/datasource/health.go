@@ -22,7 +22,7 @@ func (d *HistorianDataSource) CheckHealth(ctx context.Context, req *backend.Chec
 		}, err
 	}
 
-	databases, err := dsi.API.GetTimeseriesDatabases()
+	databases, err := dsi.API.GetTimeseriesDatabases("")
 	if err != nil {
 		return &backend.CheckHealthResult{
 			Status:  backend.HealthStatusError,

@@ -3,13 +3,17 @@ import { DataSourceWithBackend, TemplateSrv, getTemplateSrv } from '@grafana/run
 import { VariableSupport } from 'variable_support'
 import {
   Asset,
+  AssetFilter,
   AssetMeasurementQuery,
   AssetProperty,
+  AssetPropertyFilter,
   Attributes,
   Collector,
   EventConfiguration,
   EventQuery,
   EventType,
+  EventTypeFilter,
+  EventTypePropertiesFilter,
   EventTypeProperty,
   HistorianDataSourceOptions,
   Measurement,
@@ -22,6 +26,7 @@ import {
   RawQuery,
   TabIndex,
   TimeseriesDatabase,
+  TimeseriesDatabaseFilter,
 } from './types'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
@@ -151,24 +156,54 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return this.getResource('collectors')
   }
 
-  async getTimeseriesDatabases(): Promise<TimeseriesDatabase[]> {
-    return this.getResource('databases')
+  async getTimeseriesDatabases(filter?: TimeseriesDatabaseFilter): Promise<TimeseriesDatabase[]> {
+    let params: Record<string, unknown> = {}
+    if (filter) {
+      params = {
+        ...filter,
+      }
+    }
+    return this.getResource('databases', params)
   }
 
-  async getAssets(): Promise<Asset[]> {
-    return this.getResource('assets')
+  async getAssets(filter?: AssetFilter): Promise<Asset[]> {
+    let params: Record<string, unknown> = {}
+    if (filter) {
+      params = {
+        ...filter,
+      }
+    }
+    return this.getResource('assets', params)
   }
 
-  async getAssetProperties(): Promise<AssetProperty[]> {
-    return this.getResource('asset-properties')
+  async getAssetProperties(filter?: AssetPropertyFilter): Promise<AssetProperty[]> {
+    let params: Record<string, unknown> = {}
+    if (filter) {
+      params = {
+        ...filter,
+      }
+    }
+    return this.getResource('asset-properties', params)
   }
 
-  async getEventTypes(): Promise<EventType[]> {
-    return this.getResource('event-types')
+  async getEventTypes(filter?: EventTypeFilter): Promise<EventType[]> {
+    let params: Record<string, unknown> = {}
+    if (filter) {
+      params = {
+        ...filter,
+      }
+    }
+    return this.getResource('event-types', params)
   }
 
-  async getEventTypeProperties(): Promise<EventTypeProperty[]> {
-    return this.getResource('event-type-properties')
+  async getEventTypeProperties(filter?: EventTypePropertiesFilter): Promise<EventTypeProperty[]> {
+    let params: Record<string, unknown> = {}
+    if (filter) {
+      params = {
+        ...filter,
+      }
+    }
+    return this.getResource('event-type-properties', params)
   }
 
   async getEventConfigurations(): Promise<EventConfiguration[]> {

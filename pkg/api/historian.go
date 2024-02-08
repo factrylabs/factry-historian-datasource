@@ -65,9 +65,9 @@ func (api *API) GetCollectors() ([]schemas.Collector, error) {
 }
 
 // GetTimeseriesDatabases calls get timeseries databases in the historian API
-func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
+func (api *API) GetTimeseriesDatabases(query string) ([]schemas.TimeseriesDatabase, error) {
 	timeseriesDatabases := []schemas.TimeseriesDatabase{}
-	response, err := api.client.R().Get("/api/timeseries-databases")
+	response, err := api.client.R().SetQueryString(query).Get("/api/timeseries-databases")
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +84,9 @@ func (api *API) GetTimeseriesDatabases() ([]schemas.TimeseriesDatabase, error) {
 }
 
 // GetAssets calls get assets in the historian API
-func (api *API) GetAssets() ([]schemas.Asset, error) {
+func (api *API) GetAssets(query string) ([]schemas.Asset, error) {
 	assets := []schemas.Asset{}
-	response, err := api.client.R().Get("/api/assets")
+	response, err := api.client.R().SetQueryString(query).Get("/api/assets")
 	if err != nil {
 		return nil, err
 	}
@@ -103,9 +103,9 @@ func (api *API) GetAssets() ([]schemas.Asset, error) {
 }
 
 // GetAssetProperties calls get asset properties in the historian API
-func (api *API) GetAssetProperties() ([]schemas.AssetProperty, error) {
+func (api *API) GetAssetProperties(query string) ([]schemas.AssetProperty, error) {
 	assetProperties := []schemas.AssetProperty{}
-	response, err := api.client.R().Get("/api/asset-properties")
+	response, err := api.client.R().SetQueryString(query).Get("/api/asset-properties")
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +122,9 @@ func (api *API) GetAssetProperties() ([]schemas.AssetProperty, error) {
 }
 
 // GetEventTypes calls get event types in the historian API
-func (api *API) GetEventTypes() ([]schemas.EventType, error) {
+func (api *API) GetEventTypes(query string) ([]schemas.EventType, error) {
 	eventTypes := []schemas.EventType{}
-	response, err := api.client.R().Get("/api/event-types")
+	response, err := api.client.R().SetQueryString(query).Get("/api/event-types")
 	if err != nil {
 		return nil, err
 	}
@@ -141,9 +141,9 @@ func (api *API) GetEventTypes() ([]schemas.EventType, error) {
 }
 
 // GetEventTypeProperties calls get event type properties in the historian API
-func (api *API) GetEventTypeProperties() ([]schemas.EventTypeProperty, error) {
+func (api *API) GetEventTypeProperties(query string) ([]schemas.EventTypeProperty, error) {
 	eventTypeProperties := []schemas.EventTypeProperty{}
-	response, err := api.client.R().Get("/api/event-type-properties")
+	response, err := api.client.R().SetQueryString(query).Get("/api/event-type-properties")
 	if err != nil {
 		return nil, err
 	}
