@@ -73,6 +73,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e))
             eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) => this.multiSelectReplace(e))
             eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e))
+            eventQuery.Properties = eventQuery.Properties?.flatMap((e) => this.multiSelectReplace(e))
             eventQuery.PropertyFilter = eventQuery.PropertyFilter.map((e) => {
               e.Property = this.templateSrv.replace(e.Property)
               switch (e.Datatype) {

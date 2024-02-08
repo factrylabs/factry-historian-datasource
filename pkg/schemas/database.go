@@ -92,6 +92,7 @@ type EventTypeProperty struct {
 	Type          PropertyType
 	UUID          uuid.UUID
 	EventTypeUUID uuid.UUID
+	UoM           string
 }
 
 // EventConfiguration has the fields of an event configuration that are used by the data source

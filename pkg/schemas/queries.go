@@ -41,8 +41,10 @@ type RawQuery struct {
 
 // EventQuery is used to query events
 type EventQuery struct {
+	Type           string
 	Assets         []string
 	EventTypes     []string
 	Statuses       []string
+	Properties     []string
 	PropertyFilter []EventPropertyValueFilter
 }

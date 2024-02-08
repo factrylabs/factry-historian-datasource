@@ -26,8 +26,8 @@ func (d *HistorianDataSource) CheckHealth(ctx context.Context, req *backend.Chec
 	if err != nil {
 		return &backend.CheckHealthResult{
 			Status:  backend.HealthStatusError,
-			Message: "Error getting time series databases",
-		}, err
+			Message: fmt.Sprintf("Error performing health check: %v", err),
+		}, nil
 	}
 
 	return &backend.CheckHealthResult{

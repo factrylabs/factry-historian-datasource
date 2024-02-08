@@ -438,3 +438,103 @@ func sortByStatus(frames data.Frames) data.Frames {
 	})
 	return frames
 }
+
+// add value to field
+func addValueToField(field *data.Field, value interface{}) {
+	if value == nil && field.Nullable() {
+		field.Append(nil)
+		return
+	}
+
+	switch field.Type() {
+	case data.FieldTypeNullableBool:
+		switch v := value.(type) {
+		case bool:
+			field.Append(&v)
+		case *bool:
+			field.Append(v)
+		default:
+			field.Append(nil)
+		}
+		return
+	case data.FieldTypeNullableFloat64:
+		switch v := value.(type) {
+		case float64:
+			field.Append(&v)
+		case *float64:
+			field.Append(v)
+		default:
+			field.Append(nil)
+		}
+		return
+	case data.FieldTypeNullableString:
+		switch v := value.(type) {
+		case string:
+			field.Append(&v)
+		case *string:
+			field.Append(v)
+		default:
+			field.Append(nil)
+		}
+		return
+	case data.FieldTypeNullableTime:
+		switch v := value.(type) {
+		case time.Time:
+			field.Append(&v)
+		case *time.Time:
+			field.Append(v)
+		default:
+			field.Append(nil)
+		}
+		return
+	}
+
+	if value == nil && !field.Nullable() {
+		switch field.Type() {
+		case data.FieldTypeBool:
+			field.Append(false)
+		case data.FieldTypeFloat64:
+			field.Append(0.0)
+		case data.FieldTypeString:
+			field.Append("")
+		case data.FieldTypeTime:
+			field.Append(time.Time{})
+		}
+		return
+	}
+
+	switch field.Type() {
+	case data.FieldTypeBool:
+		switch v := value.(type) {
+		case bool:
+			field.Append(v)
+		case *bool:
+			field.Append(*v)
+		}
+		return
+	case data.FieldTypeFloat64:
+		switch v := value.(type) {
+		case float64:
+			field.Append(v)
+		case *float64:
+			field.Append(*v)
+		}
+		return
+	case data.FieldTypeString:
+		switch v := value.(type) {
+		case string:
+			field.Append(v)
+		case *string:
+			field.Append(*v)
+		}
+		return
+	case data.FieldTypeTime:
+		switch v := value.(type) {
+		case time.Time:
+			field.Append(v)
+		case *time.Time:
+			field.Append(*v)
+		}
+		return
+	}
+}

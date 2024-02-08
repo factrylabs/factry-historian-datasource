@@ -20,3 +20,7 @@ services:
     volumes:
       - ./dist:/var/lib/grafana/plugins/factry-historian-datasource
       - ./provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+volumes:
+  grafana-data:
+    driver: local

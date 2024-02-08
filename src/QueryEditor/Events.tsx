@@ -1,12 +1,12 @@
 import React from 'react'
-import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
+import { InlineField, InlineFieldRow, MultiSelect, Select } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { toSelectableValue } from 'components/TagsSection/util'
 import { getChildAssets, matchedAssets } from './util'
-import { EventPropertyFilter, EventQuery, labelWidth, PropertyDatatype, QueryEditorState } from 'types'
+import { EventPropertyFilter, EventQuery, labelWidth, PropertyDatatype, PropertyType, QueryEditorState } from 'types'
 
 export interface Props {
   state: QueryEditorState
@@ -97,6 +97,21 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
     onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeQueryType = (item: SelectableValue<string>): void => {
+    const updatedQuery = {
+      ...state.eventsState.eventQuery,
+      Type: item.value || PropertyType.Simple,
+    }
+    saveState({
+      ...state,
+      eventsState: {
+        ...state.eventsState,
+        eventQuery: updatedQuery,
+      },
+    })
+    onChangeEventQuery(updatedQuery)
+  }
+
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
     const filter: EventPropertyFilter[] = []
     updatedTags.forEach((tag) => {
@@ -120,6 +135,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
       ...state,
       eventsState: {
         ...state.eventsState,
+        eventQuery: updatedQuery,
         tags: updatedTags,
       },
     } as QueryEditorState)
@@ -137,14 +153,55 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
     return datatype
   }
 
-  const availableProperties = (): string[] => {
+  const availableSimpleProperties = (): string[] => {
     return [
       ...new Set(
         state.eventTypeProperties
+          .filter((e) => e.Type === PropertyType.Simple)
           .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
     ]
+  }
+
+  const availablePeriodicProperties = (): string[] => {
+    return [
+      ...new Set(
+        state.eventTypeProperties
+          .filter((e) => e.Type === PropertyType.Periodic)
+          .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+          .map((e) => e.Name)
+      ),
+    ]
+  }
+
+  const availableProperties = (): Array<SelectableValue<string>> => {
+    let properties = [] as string[]
+    if (state.eventsState.eventQuery.Type === PropertyType.Simple) {
+      properties = availableSimpleProperties()
+    } else {
+      properties = availablePeriodicProperties()
+    }
+
+    return properties
+      .map((e) => {
+        return { label: e, value: e }
+      })
+      .concat(templateVariables)
+  }
+
+  const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
+    const properties = items.map((e) => e.value || '')
+    const updatedQuery = { ...state.eventsState.eventQuery, Properties: properties }
+    saveState({
+      ...state,
+      eventsState: {
+        ...state.eventsState,
+        selectedProperties: items,
+        eventQuery: updatedQuery,
+      },
+    })
+    onChangeEventQuery(updatedQuery)
   }
 
   const availablePropertyValues = (key: string): string[] => {
@@ -183,6 +240,15 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
   return (
     <>
       <InlineFieldRow>
+        <InlineField grow labelWidth={labelWidth} label="Query Type" tooltip="Specify a property type to work with">
+          <Select
+            options={ Object.entries(PropertyType).map(([key, value]) => ({ label: key, value }))}
+            value={state.eventsState.eventQuery.Type}
+            onChange={onChangeQueryType}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
         <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
           <Cascader
             initialValue={state.eventsState.selectedAsset}
@@ -194,6 +260,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
           />
         </InlineField>
       </InlineFieldRow>
+
       <InlineFieldRow>
         <InlineField
           label="Event types"
@@ -205,6 +272,15 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
             value={state.eventsState.selectedEventTypes}
             options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
             onChange={onSelectEventTypes}
+          />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
+          <MultiSelect
+            value={state.eventsState.selectedProperties}
+            options={availableProperties()}
+            onChange={onSelectProperties}
           />
         </InlineField>
       </InlineFieldRow>
@@ -227,7 +303,7 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
           <TagsSection
             tags={state.eventsState.tags}
             operators={['=', '!=', '<', '<=', '>', '>=']}
-            getTagKeyOptions={() => Promise.resolve(availableProperties())}
+            getTagKeyOptions={() => Promise.resolve(availableSimpleProperties())}
             getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
             onChange={handleTagsSectionChange}
           />

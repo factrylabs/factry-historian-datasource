@@ -27,7 +27,7 @@ const (
 
 // Event has the fields of an event that are used by the data source
 type Event struct {
-	StartTime              *time.Time
+	StartTime              time.Time
 	StopTime               *time.Time
 	ParentUUID             *uuid.UUID
 	Properties             *EventProperties

@@ -51,6 +51,7 @@ export interface EventsTabState {
   selectedAsset?: string
   selectedEventTypes?: Array<SelectableValue<string>>
   selectedStatuses?: Array<SelectableValue<string>>
+  selectedProperties?: Array<SelectableValue<string>>
   tags: QueryTag[]
 }
 
@@ -154,9 +155,11 @@ export interface AssetMeasurementQuery {
 }
 
 export interface EventQuery {
+  Type: string
   Assets?: string[]
   EventTypes?: string[]
   Statuses?: string[]
+  Properties?: string[]
   PropertyFilter: EventPropertyFilter[]
 }
 
@@ -248,11 +251,17 @@ export enum PropertyDatatype {
   String = 'string',
 }
 
+export enum PropertyType {
+  Simple = 'simple',
+  Periodic = 'periodic'
+}
+
 export interface EventTypeProperty {
   Name: string
   UUID: string
   EventTypeUUID: string
   Datatype: PropertyDatatype
+  Type: PropertyType
 }
 
 export interface EventConfiguration {

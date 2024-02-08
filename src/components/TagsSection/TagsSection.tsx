@@ -22,15 +22,22 @@ type Props = {
   getTagValueOptions?: (key: string) => Promise<string[]>
 }
 
-const defaultOptions = () => Promise.resolve([])
+const defaultKeys = () => Promise.resolve([
+  "status"
+])
+
+const defaultValues = () => Promise.resolve([
+  "Good"
+])
+
 
 export const TagsSection = ({
   tags,
   operators,
   conditions,
   onChange,
-  getTagKeyOptions = defaultOptions,
-  getTagValueOptions = defaultOptions,
+  getTagKeyOptions = defaultKeys,
+  getTagValueOptions = defaultValues,
 }: Props): JSX.Element => {
   const templateVariables = getTemplateSrv()
     .getVariables()

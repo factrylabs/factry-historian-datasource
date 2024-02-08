@@ -21,6 +21,7 @@ import {
   TabIndex,
   Measurement,
   AggregationName,
+  PropertyType,
 } from './types'
 import { getTemplateSrv } from '@grafana/runtime'
 
@@ -64,6 +65,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
               Name: AggregationName.Last,
               Period: '$__interval',
             },
+            Tags: { status: 'Good' },
             IncludeLastKnownPoint: false,
             FillInitialEmptyValues: false,
             UseEngineeringSpecs: !this.appIsAlertingType,
@@ -71,7 +73,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             DisplayDescription: false,
           },
         },
-        tags: [],
+        tags: [{ key: 'status', value: 'Good' }],
       },
       selectedAsset: '',
       selectedProperties: [],
@@ -86,6 +88,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
               Name: AggregationName.Last,
               Period: '$__interval',
             },
+            Tags: { status: 'Good' },
             IncludeLastKnownPoint: false,
             FillInitialEmptyValues: false,
             UseEngineeringSpecs: !this.appIsAlertingType,
@@ -96,18 +99,22 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         filter: {
           Database: '',
         },
-        tags: [],
+        tags: [{ key: 'status', value: 'Good' }],
       },
       selectedMeasurements: [],
     },
     eventsState: {
       eventQuery: {
+        Type: PropertyType.Simple,
         Statuses: [],
         PropertyFilter: [],
+        EventTypes: [],
+        Properties: [],
       },
       tags: [],
       selectedStatuses: [],
       selectedEventTypes: [],
+      selectedProperties: [],
     },
     rawState: {
       rawQuery: {

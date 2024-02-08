@@ -336,12 +336,37 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 		return nil, err
 	}
 
-	eventTypeProperties, err := api.GetEventTypeProperties()
+	allEventTypeProperties, err := api.GetEventTypeProperties()
 	if err != nil {
 		return nil, err
 	}
 
-	return EventQueryResultToDataFrame(assets, events, eventTypes, eventTypeProperties)
+	eventTypeSet := map[uuid.UUID]struct{}{}
+	for _, eventTypeUUID := range eventTypeUUIDs {
+		eventTypeSet[eventTypeUUID] = struct{}{}
+	}
+
+	eventTypeProperties := []schemas.EventTypeProperty{}
+	for _, eventTypeProperty := range allEventTypeProperties {
+		if _, ok := eventTypeSet[eventTypeProperty.EventTypeUUID]; ok {
+			eventTypeProperties = append(eventTypeProperties, eventTypeProperty)
+		}
+	}
+
+	selectedPropertiesSet := map[string]struct{}{}
+	for _, property := range eventQuery.Properties {
+		selectedPropertiesSet[property] = struct{}{}
+	}
+
+	switch eventQuery.Type {
+	case string(schemas.EventTypePropertyTypeSimple):
+		return EventQueryResultToDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet)
+	case string(schemas.EventTypePropertyTypePeriodic):
+		return EventQueryResultToTrendDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet)
+	default:
+		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
+
+	}
 }
 
 func fillQueryVariables(query string, databaseType string, backendQuery backend.DataQuery) string {
