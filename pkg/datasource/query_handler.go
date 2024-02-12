@@ -172,16 +172,24 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([
 			continue
 		}
 
-		databaseUUID := measurementQuery.Database
-		if _, err := uuid.Parse(databaseUUID); err != nil {
-			for _, database := range databases {
-				if database.Name == measurementQuery.Database {
-					databaseUUID = database.UUID.String()
+		databaseUUIDs := []string{}
+		for _, databaseString := range measurementQuery.Databases {
+			if _, err := uuid.Parse(databaseString); err != nil {
+				for _, database := range databases {
+					if database.Name == databaseString {
+						databaseUUIDs = append(databaseUUIDs, database.UUID.String())
+					}
 				}
+			} else {
+				databaseUUIDs = append(databaseUUIDs, databaseString)
 			}
 		}
 
-		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&DatabaseUUID=%v", measurement, databaseUUID))
+		databasesQuery := ""
+		for i, databaseUUID := range databaseUUIDs {
+			databasesQuery += fmt.Sprintf("&DatabaseUUIDs[%v]=%s", i, databaseUUID)
+		}
+		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v%v", measurement, databasesQuery))
 		res, err := api.GetMeasurements(values.Encode())
 		if err != nil {
 			return nil, err

@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
-import { getTemplateSrv } from '@grafana/runtime'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
 import { getAggregationsForDatatypes, getFillTypes, getPeriods } from './util'
@@ -12,16 +11,19 @@ export interface Props {
   tags: QueryTag[]
   appIsAlertingType: boolean
   datatypes: string[]
+  templateVariables: Array<SelectableValue<string>>
   onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
 }
 
-export const QueryOptions = ({ state, tags, appIsAlertingType, datatypes, onChange }: Props): JSX.Element => {
+export const QueryOptions = ({
+  state,
+  tags,
+  appIsAlertingType,
+  datatypes,
+  templateVariables,
+  onChange,
+}: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
-  const templateVariables = getTemplateSrv()
-    .getVariables()
-    .map((e) => {
-      return { label: `$${e.name}`, value: `$${e.name}` }
-    })
   const onAggregationChange = (event: SelectableValue<string>) => {
     let aggregation = undefined
     if (event?.value) {

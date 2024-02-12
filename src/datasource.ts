@@ -57,7 +57,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           }
           case 'MeasurementQuery': {
             const measurementQuery = target.query as MeasurementQuery
-            measurementQuery.Database = this.templateSrv.replace(measurementQuery.Database)
+            measurementQuery.Databases = measurementQuery.Databases?.flatMap((e) => this.multiSelectReplace(e))
             measurementQuery.Measurement = measurementQuery.Measurement
               ? this.templateSrv.replace(measurementQuery.Measurement)
               : undefined
@@ -139,9 +139,15 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return options
   }
 
+  templateReplaceMeasurementFilter(filter: MeasurementFilter): MeasurementFilter {
+    filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.multiSelectReplace(e))
+    filter.Keyword = this.templateSrv.replace(filter.Keyword)
+    return filter
+  }
+
   async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {
     const params: Record<string, unknown> = {
-      ...filter,
+      ...this.templateReplaceMeasurementFilter(filter),
     }
     if (pagination.Limit) {
       params['limit'] = pagination.Limit

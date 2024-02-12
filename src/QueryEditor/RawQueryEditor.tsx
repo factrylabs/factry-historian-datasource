@@ -40,7 +40,7 @@ export const RawQueryEditor = ({ state, saveState, onChangeRawQuery }: Props): J
       ...state,
       rawState: {
         ...state.rawState,
-        filter: { ...state.rawState.filter, DatabaseUUID: event.value },
+        filter: { ...state.rawState.filter, DatabaseUUIDs: event.value ? [event.value] : [] },
       },
     })
   }
@@ -55,17 +55,20 @@ export const RawQueryEditor = ({ state, saveState, onChangeRawQuery }: Props): J
           tooltip="Specify a time series database to work with"
         >
           <Select
-            value={selectable(selectableTimeseriesDatabases(state.databases), state.rawState.filter.DatabaseUUID)}
+            value={selectable(
+              selectableTimeseriesDatabases(state.databases),
+              state.rawState.filter.DatabaseUUIDs ? state.rawState.filter.DatabaseUUIDs[0] : undefined
+            )}
             placeholder="select timeseries database"
             options={selectableTimeseriesDatabases(state.databases)}
             onChange={onTimeseriesDatabaseChange}
           />
         </InlineField>
       </InlineFieldRow>
-      {state.rawState.filter.DatabaseUUID && (
+      {state.rawState.filter.DatabaseUUIDs && (
         <InlineFieldRow>
           <InlineField
-            label={`${getTimeseriesDatabaseType(state.rawState.filter.DatabaseUUID)} query`}
+            label={`${getTimeseriesDatabaseType(state.rawState.filter.DatabaseUUIDs[0])} query`}
             grow
             labelWidth={labelWidth}
             tooltip=""
@@ -77,7 +80,7 @@ export const RawQueryEditor = ({ state, saveState, onChangeRawQuery }: Props): J
               onSave={onUpdateQuery}
               showMiniMap={false}
               showLineNumbers={true}
-              readOnly={state.rawState.filter.DatabaseUUID === ''}
+              readOnly={state.rawState.filter.DatabaseUUIDs.length === 0}
               value={state.rawState.rawQuery.Query}
             />
           </InlineField>

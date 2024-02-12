@@ -143,7 +143,7 @@ export interface MeasurementQueryOptions {
 }
 
 export interface MeasurementQuery {
-  Database: string
+  Databases?: string[]
   Measurement?: string // kept for backwards compatibility
   Measurements?: string[]
   Options: MeasurementQueryOptions
@@ -171,7 +171,7 @@ export enum EventTypePropertyType {
 
 export interface MeasurementFilter {
   Keyword?: string
-  DatabaseUUID?: string
+  DatabaseUUIDs?: string[]
   CollectorUUID?: string
   AssetUUID?: string
   Statuses?: string[]

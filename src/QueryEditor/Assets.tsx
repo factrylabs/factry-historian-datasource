@@ -1,5 +1,5 @@
 import React from 'react'
-import { InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
+import { CascaderOption, InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
@@ -11,18 +11,24 @@ import { AssetMeasurementQuery, labelWidth, MeasurementQueryOptions, QueryEditor
 export interface Props {
   state: QueryEditorState
   appIsAlertingType: boolean
+  templateVariables: Array<SelectableValue<string>>
   saveState(state: QueryEditorState): void
   onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
 }
 
-export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasurementQuery }: Props): JSX.Element => {
+export const Assets = ({
+  state,
+  appIsAlertingType,
+  templateVariables,
+  saveState,
+  onChangeAssetMeasurementQuery,
+}: Props): JSX.Element => {
   const replacedAsset = replaceAsset(state.assetsState.selectedAsset, state.assets)
-  const templateVariables = getTemplateSrv()
-    .getVariables()
-    .map((e) => {
-      return { label: `$${e.name}`, value: `$${e.name}` }
+  const assetOptions = getChildAssets(null, state.assets, state.assetProperties).concat(
+    templateVariables.map((e) => {
+      return { value: e.value, label: e.label } as CascaderOption
     })
-  const assetOptions = getChildAssets(null, state.assets, state.assetProperties).concat(templateVariables)
+  )
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const assetProperties = items.map((e) => e.value)
@@ -60,7 +66,6 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
-    console.log(asset, property)
     let properties: string[] = []
     let selectedProperties: Array<SelectableValue<string>> = []
     if (property) {
@@ -165,6 +170,7 @@ export const Assets = ({ state, appIsAlertingType, saveState, onChangeAssetMeasu
         tags={state.assetsState.options.tags}
         appIsAlertingType={appIsAlertingType}
         datatypes={[]}
+        templateVariables={templateVariables}
         onChange={handleChangeMeasurementQueryOptions}
       />
     </>

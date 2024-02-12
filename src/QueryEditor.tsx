@@ -81,7 +81,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     measurementsState: {
       options: {
         query: {
-          Database: '',
           Options: {
             GroupBy: ['status'],
             Aggregation: {
@@ -129,6 +128,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     eventTypeProperties: [],
     eventConfigurations: [],
   } as QueryEditorState
+
+  templateVariables = getTemplateSrv()
+    .getVariables()
+    .map((e) => {
+      return { label: `$${e.name}`, value: `$${e.name}` }
+    })
 
   async componentDidMount(): Promise<void> {
     const { query } = this.props
@@ -214,7 +219,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           const queryOptions: MeasurementQueryState = {
             tags: tagsToQueryTags(measurementQuery.Options.Tags),
             filter: {
-              DatabaseUUID: measurementQuery.Database,
+              DatabaseUUIDs: measurementQuery.Databases,
             },
             query: measurementQuery,
           }
@@ -275,7 +280,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
                 rawState: {
                   ...this.state.rawState,
                   filter: {
-                    DatabaseUUID: rawQuery.TimeseriesDatabase,
+                    DatabaseUUIDs: [rawQuery.TimeseriesDatabase],
                   },
                   rawQuery: rawQuery,
                 },
@@ -353,7 +358,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   async loadMeasurementOptions(query: string): Promise<Measurement[]> {
     const filter = { ...this.state.measurementsState.options.filter, Keyword: query }
-
     const measurements = await this.props.datasource.getMeasurements(filter, this.state.pagination)
 
     measurements.forEach((measurement) => {
@@ -468,7 +472,9 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     const { onChange, query } = this.props
     query.queryType = 'RawQuery'
     query.query = {
-      TimeseriesDatabase: this.state.rawState.filter.DatabaseUUID,
+      TimeseriesDatabase: this.state.rawState.filter.DatabaseUUIDs
+        ? this.state.rawState.filter.DatabaseUUIDs[0]
+        : undefined,
       Query: queryString,
     } as RawQuery
     this.saveState({
@@ -554,6 +560,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           <Assets
             state={this.state}
             appIsAlertingType={this.appIsAlertingType}
+            templateVariables={this.templateVariables}
             saveState={(state) => this.saveState(state, true)}
             onChangeAssetMeasurementQuery={this.onChangeAssetMeasurementQuery}
           />
@@ -565,6 +572,8 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           <Measurements
             state={this.state}
             appIsAlertingType={this.appIsAlertingType}
+            datasource={this.props.datasource}
+            templateVariables={this.templateVariables}
             saveState={(state) => this.saveState(state, true)}
             loadMeasurementOptions={this.loadMeasurementOptions}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}

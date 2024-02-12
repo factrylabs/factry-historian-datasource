@@ -1,7 +1,6 @@
 import { forkJoin, from, map, of, Observable } from 'rxjs'
 
 import { CustomVariableSupport, DataQueryRequest, DataQueryResponse, MetricFindValue } from '@grafana/data'
-import { TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { DataSource } from 'datasource'
 import { VariableQueryEditor } from 'CustomVariableEditor/VariableEditor'
 import {
@@ -38,7 +37,7 @@ export interface DataAPI {
 }
 
 export class VariableSupport extends CustomVariableSupport<DataSource> {
-  constructor(private readonly dataAPI: DataAPI, private readonly templateSrv: TemplateSrv = getTemplateSrv()) {
+  constructor(private readonly dataAPI: DataAPI) {
     super()
     this.query = this.query.bind(this)
   }
@@ -61,8 +60,8 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           Page: 0,
         }
 
-        if (filter.DatabaseUUID) {
-          filter.DatabaseUUID = this.templateSrv.replace(filter.DatabaseUUID)
+        if (filter.DatabaseUUIDs) {
+          filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.dataAPI.multiSelectReplace(e))
         }
 
         return from(this.dataAPI.getMeasurements(filter, pagination)).pipe(
