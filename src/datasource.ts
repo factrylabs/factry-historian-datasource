@@ -58,9 +58,6 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           case 'MeasurementQuery': {
             const measurementQuery = target.query as MeasurementQuery
             measurementQuery.Databases = measurementQuery.Databases?.flatMap((e) => this.multiSelectReplace(e))
-            measurementQuery.Measurement = measurementQuery.Measurement
-              ? this.templateSrv.replace(measurementQuery.Measurement)
-              : undefined
             measurementQuery.Measurements = measurementQuery.Measurements?.flatMap((m) => this.multiSelectReplace(m))
             measurementQuery.Options = this.templateReplaceQueryOptions(measurementQuery.Options)
             target.query = measurementQuery

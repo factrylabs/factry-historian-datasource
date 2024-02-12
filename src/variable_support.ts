@@ -64,9 +64,21 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.dataAPI.multiSelectReplace(e))
         }
 
-        return from(this.dataAPI.getMeasurements(filter, pagination)).pipe(
+        return forkJoin({
+          measurements: this.dataAPI.getMeasurements(filter, pagination),
+          databases: this.dataAPI.getTimeseriesDatabases(),
+        }).pipe(
           map((values) => {
-            return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
+            return {
+              data: values.measurements.map<MetricFindValue>((measurement) => {
+                const database = values.databases.find((e) => e.UUID === measurement.DatabaseUUID)
+                let name = measurement.Name
+                if (database) {
+                  name = `${measurement.Name} - ${database.Name}`
+                }
+                return { text: name, value: measurement.UUID }
+              }),
+            }
           })
         )
       }

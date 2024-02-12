@@ -12,7 +12,6 @@ export function EventTypePropertyFilterRow(props: {
   templateVariables: SelectableValue<string>
 }) {
   const [selectedEventTypes, setEventTypes] = useState<Array<SelectableValue<string>>>()
-  let initialLoadDone = false
 
   const onEventTypesChange = (values: Array<SelectableValue<string>>) => {
     props.onChange({
@@ -35,9 +34,8 @@ export function EventTypePropertyFilterRow(props: {
         } as SelectableValue<string>
       })
       .concat(props.templateVariables)
-    if (!initialLoadDone) {
+    if (!selectedEventTypes) {
       setEventTypes(selectableValues.filter((e) => props.initialValue?.EventTypeUUIDs?.includes(e.value ?? '')))
-      initialLoadDone = true
     }
     return selectableValues
   }

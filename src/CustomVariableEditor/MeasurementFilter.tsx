@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEvent } from 'react'
+import React, { ChangeEvent, FormEvent, useState } from 'react'
 
 import { SelectableValue } from '@grafana/data'
 import { InlineField, InlineFieldRow, Input } from '@grafana/ui'
@@ -14,6 +14,8 @@ export interface MeasurementFilterProps {
 }
 
 export function MeasurementFilterRow(props: MeasurementFilterProps) {
+  const [selectedDatabases, setSelectedDatabases] = useState<Array<SelectableValue<string>>>()
+
   const onKeywordChange = (event: FormEvent<HTMLInputElement>) => {
     props.onChange({
       ...props.initialValue,
@@ -52,6 +54,8 @@ export function MeasurementFilterRow(props: MeasurementFilterProps) {
             onChange={onDatabaseChange}
             templateVariables={props.templateVariables}
             initialValue={props.initialValue?.DatabaseUUIDs}
+            selectedDatabases={selectedDatabases}
+            setSelectedDatabases={setSelectedDatabases}
           />
         </InlineField>
       </InlineFieldRow>

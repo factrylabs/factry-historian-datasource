@@ -17,13 +17,12 @@ export enum TabIndex {
 export interface QueryEditorState {
   loading: boolean
   tabIndex: number
+  measurementQuery?: MeasurementQuery
   databases: TimeseriesDatabase[]
   pagination: Pagination
-  measurements: Measurement[]
   assetProperties: AssetProperty[]
   assets: Asset[]
   assetsState: AssetsTabState
-  measurementsState: MeasurementsTabState
   eventsState: EventsTabState
   rawState: RawTabState
   eventTypes: EventType[]
@@ -35,11 +34,6 @@ export interface AssetsTabState {
   options: AssetMeasurementQueryState
   selectedAsset?: string
   selectedProperties: Array<SelectableValue<string>>
-}
-
-export interface MeasurementsTabState {
-  options: MeasurementQueryState
-  selectedMeasurements?: Array<SelectableValue<string>>
 }
 
 export interface RawTabState {
@@ -70,8 +64,6 @@ export interface AssetMeasurementQueryState {
 export interface Query extends DataQuery {
   query: MeasurementQuery | AssetMeasurementQuery | RawQuery | EventQuery
   tabIndex: number
-  selectedMeasurement?: string // kept for backwards compatibility
-  selectedMeasurements?: string[]
   selectedAssetPath?: string
   selectedAssetProperties?: string[]
 }
@@ -144,7 +136,6 @@ export interface MeasurementQueryOptions {
 
 export interface MeasurementQuery {
   Databases?: string[]
-  Measurement?: string // kept for backwards compatibility
   Measurements?: string[]
   Options: MeasurementQueryOptions
 }
@@ -246,7 +237,7 @@ export interface Measurement {
   CollectorUUID: string
   Collector?: Collector
   DatabaseUUID: string
-  Database: TimeseriesDatabase
+  Database?: TimeseriesDatabase
   UoM: string
 }
 

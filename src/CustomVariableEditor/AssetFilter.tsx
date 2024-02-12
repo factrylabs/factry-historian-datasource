@@ -12,7 +12,6 @@ export function AssetFilterRow(props: {
   templateVariables: Array<SelectableValue<string>>
 }) {
   const [parentAssets, setParentAssets] = useState<Array<SelectableValue<string>>>()
-  let initialLoadDone = false
 
   const onPathChange = (event: FormEvent<HTMLInputElement>) => {
     props.onChange({
@@ -34,9 +33,8 @@ export function AssetFilterRow(props: {
         } as SelectableValue<string>
       })
       .concat(props.templateVariables)
-    if (!initialLoadDone) {
+    if (!parentAssets) {
       setParentAssets(selectableValues.filter((e) => props.initialValue?.ParentUUIDs?.includes(e.value ?? '')))
-      initialLoadDone = true
     }
     return selectableValues
   }

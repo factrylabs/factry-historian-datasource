@@ -12,7 +12,6 @@ export function AssetPropertyFilterRow(props: {
   templateVariables: SelectableValue<string>
 }) {
   const [selectedAssets, setAssets] = useState<Array<SelectableValue<string>>>()
-  let initialLoadDone = false
 
   const onAssetsChange = (values: Array<SelectableValue<string>>) => {
     props.onChange({
@@ -35,9 +34,8 @@ export function AssetPropertyFilterRow(props: {
         } as SelectableValue<string>
       })
       .concat(props.templateVariables)
-    if (!initialLoadDone) {
+    if (!selectedAssets) {
       setAssets(selectableValues.filter((e) => props.initialValue?.AssetUUIDs?.includes(e.value ?? '')))
-      initialLoadDone = true
     }
     return selectableValues
   }

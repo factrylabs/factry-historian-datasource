@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 
 import { SelectableValue } from '@grafana/data'
 import { AsyncMultiSelect } from '@grafana/ui'
@@ -9,11 +9,12 @@ export interface DatabaseSelectProps {
   datasource: DataSource
   onChange: (val: string[]) => void
   initialValue?: string[]
+  selectedDatabases: Array<SelectableValue<string>> | undefined
+  setSelectedDatabases: React.Dispatch<React.SetStateAction<Array<SelectableValue<string>> | undefined>>
   templateVariables: Array<SelectableValue<string>>
 }
 
 export function DatabaseSelect(props: DatabaseSelectProps) {
-  const [databases, setDatabases] = useState<Array<SelectableValue<string>>>()
   let initialLoadDone = false
 
   const loadDatabaseOptions = async (query: string): Promise<Array<SelectableValue<string>>> => {
@@ -30,7 +31,7 @@ export function DatabaseSelect(props: DatabaseSelectProps) {
       })
       .concat(props.templateVariables)
     if (!initialLoadDone) {
-      setDatabases(selectableValues.filter((e) => props.initialValue?.includes(e.value ?? '')))
+      props.setSelectedDatabases(selectableValues.filter((e) => props.initialValue?.includes(e.value ?? '')))
       initialLoadDone = true
     }
     return selectableValues
@@ -38,16 +39,16 @@ export function DatabaseSelect(props: DatabaseSelectProps) {
 
   const onDatabaseChange = (values: Array<SelectableValue<string>>) => {
     props.onChange(values.map((e) => e.value ?? ''))
-    setDatabases(values)
+    props.setSelectedDatabases(values)
   }
 
   return (
     <AsyncMultiSelect
-      placeholder="Select database(s)"
+      placeholder="select database(s)"
       onChange={(value) => onDatabaseChange(value)}
       defaultOptions
       loadOptions={loadDatabaseOptions}
-      value={databases}
+      value={props.selectedDatabases}
     />
   )
 }
