@@ -153,6 +153,9 @@ export interface EventQuery {
   Statuses?: string[]
   Properties?: string[]
   PropertyFilter: EventPropertyFilter[]
+  QueryAssetProperties: boolean
+  AssetProperties?: string[]
+  Options?: MeasurementQueryOptions
 }
 
 export enum EventTypePropertyType {

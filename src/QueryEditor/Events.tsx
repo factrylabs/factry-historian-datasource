@@ -1,20 +1,32 @@
-import React from 'react'
-import { InlineField, InlineFieldRow, MultiSelect, Select } from '@grafana/ui'
+import React, { ChangeEvent, FormEvent } from 'react'
+import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, MultiSelect, Select } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { toSelectableValue } from 'components/TagsSection/util'
-import { getChildAssets, matchedAssets } from './util'
-import { EventPropertyFilter, EventQuery, labelWidth, PropertyDatatype, PropertyType, QueryEditorState } from 'types'
+import { defaultQueryOptions, getChildAssets, matchedAssets, tagsToQueryTags } from './util'
+import {
+  EventPropertyFilter,
+  EventQuery,
+  labelWidth,
+  MeasurementQueryOptions,
+  PropertyDatatype,
+  PropertyType,
+  QueryEditorState,
+} from 'types'
+import { EventAssetProperties } from './EventAssetProperties'
+import { DataSource } from 'datasource'
 
 export interface Props {
+  datasource: DataSource
   state: QueryEditorState
+  appIsAlertingType: boolean
   saveState(state: QueryEditorState): void
   onChangeEventQuery: (query: EventQuery) => void
 }
 
-export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Element => {
+export const Events = ({ datasource, state, appIsAlertingType, saveState, onChangeEventQuery }: Props): JSX.Element => {
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
@@ -237,78 +249,143 @@ export const Events = ({ state, saveState, onChangeEventQuery }: Props): JSX.Ele
     ].concat(templateVariables)
   }
 
+  const onChangeQueryAssetProperties = (event: FormEvent<HTMLInputElement>): void => {
+    const enabled = (event as ChangeEvent<HTMLInputElement>).target.checked
+    const updatedQuery = { ...state.eventsState.eventQuery, QueryAssetProperties: enabled } as EventQuery
+    if (enabled && !updatedQuery.Options) {
+      updatedQuery.Options = defaultQueryOptions(appIsAlertingType)
+    }
+    saveState({
+      ...state,
+      eventsState: {
+        ...state.eventsState,
+        eventQuery: updatedQuery,
+      },
+    })
+    onChangeEventQuery(updatedQuery)
+  }
+
+  const onChangeAssetProperties = (values: string[]): void => {
+    const updatedQuery = { ...state.eventsState.eventQuery, AssetProperties: values }
+    saveState({
+      ...state,
+      eventsState: {
+        ...state.eventsState,
+        eventQuery: updatedQuery,
+      },
+    })
+    onChangeEventQuery(updatedQuery)
+  }
+
+  const onChangeQueryOptions = (options: MeasurementQueryOptions): void => {
+    const updatedQuery = { ...state.eventsState.eventQuery, Options: options }
+    saveState({
+      ...state,
+      eventsState: {
+        ...state.eventsState,
+        eventQuery: updatedQuery,
+      },
+    })
+    onChangeEventQuery(updatedQuery)
+  }
+
   return (
     <>
-      <InlineFieldRow>
-        <InlineField grow labelWidth={labelWidth} label="Query Type" tooltip="Specify a property type to work with">
-          <Select
-            options={ Object.entries(PropertyType).map(([key, value]) => ({ label: key, value }))}
-            value={state.eventsState.eventQuery.Type}
-            onChange={onChangeQueryType}
-          />
-        </InlineField>
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
-          <Cascader
-            initialValue={state.eventsState.selectedAsset}
-            initialLabel={initialLabel()}
-            options={assetOptions}
-            displayAllSelectedLevels
-            onSelect={onAssetChange}
-            separator="\\"
-          />
-        </InlineField>
-      </InlineFieldRow>
+      <FieldSet label="Event query">
+        <InlineFieldRow>
+          <InlineField grow labelWidth={labelWidth} label="Query Type" tooltip="Specify a property type to work with">
+            <Select
+              options={Object.entries(PropertyType).map(([key, value]) => ({ label: key, value }))}
+              value={state.eventsState.eventQuery.Type}
+              onChange={onChangeQueryType}
+            />
+          </InlineField>
+        </InlineFieldRow>
+        <InlineFieldRow>
+          <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
+            <Cascader
+              initialValue={state.eventsState.selectedAsset}
+              initialLabel={initialLabel()}
+              options={assetOptions}
+              displayAllSelectedLevels
+              onSelect={onAssetChange}
+              separator="\\"
+            />
+          </InlineField>
+        </InlineFieldRow>
 
-      <InlineFieldRow>
-        <InlineField
-          label="Event types"
-          grow
-          labelWidth={labelWidth}
-          tooltip="Specify one or more event type to work with"
-        >
-          <MultiSelect
-            value={state.eventsState.selectedEventTypes}
-            options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
-            onChange={onSelectEventTypes}
+        <InlineFieldRow>
+          <InlineField
+            label="Event types"
+            grow
+            labelWidth={labelWidth}
+            tooltip="Specify one or more event type to work with"
+          >
+            <MultiSelect
+              value={state.eventsState.selectedEventTypes}
+              options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
+              onChange={onSelectEventTypes}
+            />
+          </InlineField>
+        </InlineFieldRow>
+        <InlineFieldRow>
+          <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
+            <MultiSelect
+              value={state.eventsState.selectedProperties}
+              options={availableProperties()}
+              onChange={onSelectProperties}
+            />
+          </InlineField>
+        </InlineFieldRow>
+        <InlineFieldRow>
+          <InlineField
+            label="Statuses"
+            grow
+            labelWidth={labelWidth}
+            tooltip="Specify one or more status to work with, selecting none will use all statuses"
+          >
+            <MultiSelect
+              value={state.eventsState.selectedStatuses}
+              options={availableStatuses()}
+              onChange={onSelectStatuses}
+            />
+          </InlineField>
+        </InlineFieldRow>
+        <InlineFieldRow>
+          <InlineField label="WHERE" labelWidth={labelWidth}>
+            <TagsSection
+              tags={state.eventsState.tags}
+              operators={['=', '!=', '<', '<=', '>', '>=']}
+              getTagKeyOptions={() => Promise.resolve(availableSimpleProperties())}
+              getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
+              onChange={handleTagsSectionChange}
+            />
+          </InlineField>
+        </InlineFieldRow>
+      </FieldSet>
+      <FieldSet label="Query asset properties">
+        <InlineFieldRow>
+          <InlineField label="Enabled" labelWidth={labelWidth}>
+            <InlineSwitch
+              value={state.eventsState.eventQuery.QueryAssetProperties}
+              onChange={onChangeQueryAssetProperties}
+            />
+          </InlineField>
+        </InlineFieldRow>
+        {state.eventsState.eventQuery.QueryAssetProperties && (
+          <EventAssetProperties
+            appIsAlertingType={appIsAlertingType}
+            datasource={datasource}
+            queryOptions={state.eventsState.eventQuery.Options ?? defaultQueryOptions(appIsAlertingType)}
+            selectedAssetProperties={state.eventsState.eventQuery.AssetProperties ?? []}
+            selectedAssets={matchedAssets(state.eventsState.selectedAsset, state.assets)}
+            templateVariables={templateVariables}
+            tags={tagsToQueryTags(state.eventsState.eventQuery.Options?.Tags)}
+            onChangeAssetProperties={onChangeAssetProperties}
+            onChangeQueryOptions={onChangeQueryOptions}
           />
-        </InlineField>
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
-          <MultiSelect
-            value={state.eventsState.selectedProperties}
-            options={availableProperties()}
-            onChange={onSelectProperties}
-          />
-        </InlineField>
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField
-          label="Statuses"
-          grow
-          labelWidth={labelWidth}
-          tooltip="Specify one or more status to work with, selecting none will use all statuses"
-        >
-          <MultiSelect
-            value={state.eventsState.selectedStatuses}
-            options={availableStatuses()}
-            onChange={onSelectStatuses}
-          />
-        </InlineField>
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="WHERE" labelWidth={labelWidth}>
-          <TagsSection
-            tags={state.eventsState.tags}
-            operators={['=', '!=', '<', '<=', '>', '>=']}
-            getTagKeyOptions={() => Promise.resolve(availableSimpleProperties())}
-            getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
-            onChange={handleTagsSectionChange}
-          />
-        </InlineField>
-      </InlineFieldRow>
+        )}
+      </FieldSet>
     </>
   )
 }

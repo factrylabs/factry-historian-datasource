@@ -7,7 +7,7 @@ import { Assets } from 'QueryEditor/Assets'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { Measurements } from 'QueryEditor/Measurements'
-import { propertyFilterToQueryTags, sortByName, tagsToQueryTags } from 'QueryEditor/util'
+import { defaultQueryOptions, propertyFilterToQueryTags, sortByName, tagsToQueryTags } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import {
   HistorianDataSourceOptions,
@@ -48,7 +48,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       Page: 1,
     },
     databases: [],
-    measurements: [],
     assetProperties: [],
     assets: [],
     assetsState: {
@@ -83,6 +82,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         PropertyFilter: [],
         EventTypes: [],
         Properties: [],
+        QueryAssetProperties: false,
       },
       tags: [],
       selectedStatuses: [],
@@ -287,19 +287,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
                 this.state.measurementQuery ?? {
                   Databases: [],
                   Measurements: [],
-                  Options: {
-                    GroupBy: ['status'],
-                    Aggregation: {
-                      Name: AggregationName.Last,
-                      Period: '$__interval',
-                    },
-                    Tags: { status: 'Good' },
-                    IncludeLastKnownPoint: false,
-                    FillInitialEmptyValues: false,
-                    UseEngineeringSpecs: !this.appIsAlertingType,
-                    DisplayDatabaseName: false,
-                    DisplayDescription: false,
-                  },
+                  Options: defaultQueryOptions(this.appIsAlertingType),
                 }
               )
               break
@@ -501,7 +489,9 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         title: 'Events',
         content: (
           <Events
+            datasource={this.props.datasource}
             state={this.state}
+            appIsAlertingType={this.appIsAlertingType}
             saveState={(state) => this.saveState(state, true)}
             onChangeEventQuery={this.onChangeEventQuery}
           />

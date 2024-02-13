@@ -110,6 +110,54 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 	return response
 }
 
+func handleEventAssetMeasurementQuery(event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
+	assets, err := api.GetAssets("")
+	if err != nil {
+		return nil, err
+	}
+
+	assetProperties, err := api.GetAssetProperties("")
+	if err != nil {
+		return nil, err
+	}
+
+	measurementUUIDs := map[string]struct{}{}
+	assetUUIDs := []uuid.UUID{}
+	for _, assetString := range assetMeasurementQuery.Assets {
+		if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
+			assetUUIDs = append(assetUUIDs, filteredAssetUUIDs...)
+		}
+	}
+
+	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
+	for _, assetUUID := range assetUUIDs {
+		for _, property := range assetMeasurementQuery.AssetProperties {
+			for _, assetProperty := range assetProperties {
+				if (assetProperty.Name == property && assetProperty.AssetUUID == assetUUID) || assetProperty.UUID.String() == property {
+					measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
+					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
+					break
+				}
+			}
+		}
+	}
+
+	measurementQuery := schemas.MeasurementQuery{
+		Measurements: maps.Keys(measurementUUIDs),
+		Options:      assetMeasurementQuery.Options,
+	}
+
+	q := historianQuery(measurementQuery, backendQuery)
+	q.Start = event.StartTime
+	q.End = event.StopTime
+	frames, err := handleQuery(measurementQuery, q, api)
+	if err != nil {
+		return nil, err
+	}
+
+	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
+}
+
 func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
 	assets, err := api.GetAssets("")
 	if err != nil {
@@ -147,7 +195,8 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		Options:      assetMeasurementQuery.Options,
 	}
 
-	frames, err := handleQuery(measurementQuery, backendQuery, api)
+	q := historianQuery(measurementQuery, backendQuery)
+	frames, err := handleQuery(measurementQuery, q, api)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +256,8 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([
 }
 
 func handleMeasurementQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	frames, err := handleQuery(measurementQuery, backendQuery, api)
+	q := historianQuery(measurementQuery, backendQuery)
+	frames, err := handleQuery(measurementQuery, q, api)
 	if err != nil {
 		return nil, err
 	}
@@ -215,16 +265,15 @@ func handleMeasurementQuery(measurementQuery schemas.MeasurementQuery, backendQu
 	return sortByStatus(setMeasurementFrameNames(frames, measurementQuery.Options)), nil
 }
 
-func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	q := historianQuery(measurementQuery, backendQuery)
-	result, err := api.MeasurementQuery(q)
+func handleQuery(measurementQuery schemas.MeasurementQuery, query schemas.Query, api *api.API) (data.Frames, error) {
+	result, err := api.MeasurementQuery(query)
 	if err != nil {
 		return nil, err
 	}
 
 	if measurementQuery.Options.IncludeLastKnownPoint || measurementQuery.Options.FillInitialEmptyValues {
-		lastPointQuery := q
-		start := q.Start
+		lastPointQuery := query
+		start := query.Start
 		lastPointQuery.End = &start
 		lastPointQuery.Start = time.Time{}.Add(time.Millisecond)
 		lastPointQuery.Aggregation = &schemas.Aggregation{
@@ -239,7 +288,7 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 
 			// If unfiltered query last point for each resulting data frame
 			for _, frame := range result {
-				getLastQueryForFrame := getLastQueryForFrame(frame, q)
+				getLastQueryForFrame := getLastQueryForFrame(frame, query)
 				lastResult, err := api.MeasurementQuery(getLastQueryForFrame)
 				if err != nil {
 					return nil, err
@@ -258,7 +307,7 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend
 
 		result = mergeFrames(lastKnowPointResults, result)
 		if measurementQuery.Options.FillInitialEmptyValues {
-			result = fillInitialEmptyIntervals(result, q)
+			result = fillInitialEmptyIntervals(result, query)
 		}
 
 		if !measurementQuery.Options.IncludeLastKnownPoint {
@@ -370,7 +419,27 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 	case string(schemas.EventTypePropertyTypeSimple):
 		return EventQueryResultToDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet)
+		eventAssetPropertyFrames := make(map[uuid.UUID]data.Frames)
+
+		if eventQuery.QueryAssetProperties && eventQuery.Options != nil {
+			assetMeasurementQuery := schemas.AssetMeasurementQuery{
+				Assets:          eventQuery.Assets,
+				AssetProperties: eventQuery.AssetProperties,
+				Options:         *eventQuery.Options,
+			}
+			for _, event := range events {
+				var err error
+				frames, err := handleEventAssetMeasurementQuery(event, assetMeasurementQuery, backendQuery, api)
+				if err != nil {
+					return nil, err
+				}
+
+				eventAssetPropertyFrames[event.UUID] = frames
+			}
+
+		}
+
+		return EventQueryResultToTrendDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet, eventAssetPropertyFrames)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
 

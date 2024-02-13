@@ -55,13 +55,13 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 
 // eventFrameColumn is used to keep track of the columns in the event frame
 type eventFrameColumn struct {
-	Field             *data.Field
-	EventPropertyUUID uuid.UUID
-	EventUUID         uuid.UUID
+	Field     *data.Field
+	Name      string
+	EventUUID uuid.UUID
 }
 
 // EventQueryResultToTrendDataFrame converts a event query result to data frames
-func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}) (data.Frames, error) {
+func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		uuidToAssetMap[asset.UUID] = asset
@@ -104,8 +104,8 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 			}
 
 			identifier := eventFrameColumn{
-				EventPropertyUUID: periodicEventTypeProperties[j].UUID,
-				EventUUID:         events[i].UUID,
+				Name:      periodicEventTypeProperties[j].UUID.String(),
+				EventUUID: events[i].UUID,
 			}
 
 			labels[PropertyColumnName] = periodicEventTypeProperties[j].Name
@@ -144,6 +144,45 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 					periodicPropertyData[offset] = map[eventFrameColumn]interface{}{}
 				}
 				periodicPropertyData[offset][identifier] = periodicPropertyValues.Values[k]
+			}
+		}
+
+		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]
+		for _, assetPropertyFrame := range assetPropertyFrames {
+			timeField, found := assetPropertyFrame.FieldByName("time")
+			if found == -1 {
+				break
+			}
+			valueField, found := assetPropertyFrame.FieldByName("value")
+			if found == -1 {
+				break
+			}
+
+			identifier := eventFrameColumn{
+				Name:      valueField.Name,
+				EventUUID: events[i].UUID,
+			}
+			switch valueField.Type() {
+			case data.FieldTypeNullableFloat64:
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*float64{})
+			case data.FieldTypeNullableString:
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*string{})
+			case data.FieldTypeNullableBool:
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*bool{})
+			}
+			columns = append(columns, identifier)
+
+			for k := 0; k < timeField.Len(); k++ {
+				timestamp, ok := timeField.At(k).(time.Time)
+				if !ok {
+					continue
+				}
+
+				offset := timestamp.Sub(events[i].StartTime).Seconds()
+				if _, ok := periodicPropertyData[offset]; !ok {
+					periodicPropertyData[offset] = map[eventFrameColumn]interface{}{}
+				}
+				periodicPropertyData[offset][identifier] = valueField.CopyAt(k)
 			}
 		}
 	}

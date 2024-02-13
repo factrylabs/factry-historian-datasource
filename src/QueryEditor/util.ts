@@ -2,7 +2,16 @@ import { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { CascaderOption } from 'components/Cascader/Cascader'
 import { QueryTag } from 'components/TagsSection/TagsSection'
-import { AggregationName, Asset, AssetProperty, Attributes, EventPropertyFilter, FillType, Measurement } from 'types'
+import {
+  AggregationName,
+  Asset,
+  AssetProperty,
+  Attributes,
+  EventPropertyFilter,
+  FillType,
+  Measurement,
+  MeasurementQueryOptions,
+} from 'types'
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -258,5 +267,21 @@ export function measurementToSelectableValue(measurement: Measurement): Selectab
     label: measurement.Name,
     value: measurement.UUID,
     description: `(${measurement.Database?.Name ?? '-'}) (${measurement.Datatype}) ${measurement.Description}`,
+  }
+}
+
+export function defaultQueryOptions(appIsAlertingType: boolean): MeasurementQueryOptions {
+  return {
+    GroupBy: ['status'],
+    Aggregation: {
+      Name: AggregationName.Last,
+      Period: '$__interval',
+    },
+    Tags: { status: 'Good' },
+    IncludeLastKnownPoint: false,
+    FillInitialEmptyValues: false,
+    UseEngineeringSpecs: !appIsAlertingType,
+    DisplayDatabaseName: false,
+    DisplayDescription: false,
   }
 }

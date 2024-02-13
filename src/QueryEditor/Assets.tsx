@@ -1,8 +1,8 @@
 import React from 'react'
-import { CascaderOption, InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
+import { CascaderOption, InlineField, InlineFieldRow } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
-import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
+import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { QueryTag } from 'components/TagsSection/types'
 import { QueryOptions } from './QueryOptions'
 import { getChildAssets, matchedAssets, replaceAsset } from './util'
@@ -48,21 +48,6 @@ export const Assets = ({
       },
     })
     onChangeAssetMeasurementQuery(updatedQuery)
-  }
-
-  const availableProperties = (selected: string | undefined): Array<SelectableValue<string>> => {
-    const replaced = getTemplateSrv().replace(selected)
-    const props = state.assetProperties
-      .filter(
-        (e) => e.AssetUUID === replaced || matchedAssets(replaced, state.assets).find((a) => a.UUID === e.AssetUUID)
-      )
-      .map((e) => e.Name)
-    return props
-      .filter((value, index, self) => self.indexOf(value) === index)
-      .map((e) => {
-        return { label: e, value: e } as SelectableValue<string>
-      })
-      .concat(templateVariables)
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
@@ -156,12 +141,12 @@ export const Assets = ({
           labelWidth={labelWidth}
           tooltip="Specify one or more asset properties to work with"
         >
-          <MultiSelect
-            value={state.assetsState.selectedProperties}
-            options={availableProperties(replacedAsset)}
+          <AssetProperties
+            assetProperties={state.assetProperties}
+            initialValue={state.assetsState.selectedProperties.map((e) => e.value ?? '')}
+            selectedAssets={matchedAssets(replacedAsset, state.assets)}
+            templateVariables={templateVariables}
             onChange={onSelectProperties}
-            allowCustomValue
-            createOptionPosition="first"
           />
         </InlineField>
       </InlineFieldRow>
