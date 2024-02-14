@@ -152,6 +152,10 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 		data.NewField("Offset", nil, []float64{}),
 	}
 
+	fields[0].Config = &data.FieldConfig{
+		Unit: "s",
+	}
+
 	offsets := maps.Keys(periodicPropertyData)
 	sort.Float64s(offsets)
 
