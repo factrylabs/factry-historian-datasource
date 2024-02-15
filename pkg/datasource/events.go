@@ -27,7 +27,7 @@ const (
 )
 
 // EventQueryResultToDataFrame converts a event query result to data frames
-func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}) (data.Frames, error) {
+func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
 	dataFrames := data.Frames{}
 	groupedEvents := map[uuid.UUID][]schemas.Event{}
 	eventTypePropertiesForEventType := map[uuid.UUID][]schemas.EventTypeProperty{}
@@ -47,7 +47,7 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 	}
 
 	for eventTypeUUID, groupedEvents := range groupedEvents {
-		dataFrames = append(dataFrames, dataFrameForEventType(assets, eventTypesByUUID[eventTypeUUID], groupedEvents, eventTypePropertiesForEventType[eventTypeUUID]))
+		dataFrames = append(dataFrames, dataFrameForEventType(assets, eventTypesByUUID[eventTypeUUID], groupedEvents, eventTypePropertiesForEventType[eventTypeUUID], assetPropertyFieldTypes, eventAssetPropertyFrames))
 	}
 
 	return dataFrames, nil
@@ -216,7 +216,7 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 	}, nil
 }
 
-func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, events []schemas.Event, eventTypeProperties []schemas.EventTypeProperty) *data.Frame {
+func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, events []schemas.Event, eventTypeProperties []schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
 	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		UUIDToAssetMap[asset.UUID] = asset
@@ -243,6 +243,18 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 		fieldByColumn[StartTimeColumnName],
 		fieldByColumn[StopTimeColumnName],
 		fieldByColumn[DurationColumnName],
+	}
+
+	for assetProperty := range assetPropertyFieldTypes {
+		switch assetPropertyFieldTypes[assetProperty] {
+		case data.FieldTypeNullableFloat64:
+			fieldByColumn[assetProperty] = data.NewField(assetProperty, nil, []*float64{})
+		case data.FieldTypeNullableBool:
+			fieldByColumn[assetProperty] = data.NewField(assetProperty, nil, []*bool{})
+		case data.FieldTypeNullableString:
+			fieldByColumn[assetProperty] = data.NewField(assetProperty, nil, []*string{})
+		}
+		fields = append(fields, fieldByColumn[assetProperty])
 	}
 
 	for _, eventTypeProperty := range eventTypeProperties {
@@ -301,6 +313,48 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 
 			setUOMFieldConfig(fieldByColumn[eventTypeProperty.Name], eventTypeProperty)
 			addValueToField(fieldByColumn[eventTypeProperty.Name], event.Properties.Properties[eventTypeProperty.Name])
+		}
+
+		assetPropertyFrames := eventAssetPropertyFrames[event.UUID]
+		for assetProperty := range assetPropertyFieldTypes {
+			found := false
+			field := fieldByColumn[assetProperty]
+			for _, assetPropertyFrame := range assetPropertyFrames {
+				custom := assetPropertyFrame.Meta.Custom.(map[string]interface{})
+				name := custom["AssetProperty"].(string)
+				if assetProperty != name {
+					continue
+				}
+
+				valueField, exists := assetPropertyFrame.FieldByName("value")
+				if exists == -1 {
+					break
+				}
+
+				found = true
+				wantedType := field.Type()
+				actualType := valueField.Type()
+				value := valueField.At(0)
+
+				if wantedType == actualType {
+					field.Append(value)
+				} else {
+					stringValue := ""
+
+					switch actualType {
+					case data.FieldTypeNullableFloat64:
+						stringValue = fmt.Sprintf("%v", *value.(*float64))
+					case data.FieldTypeNullableBool:
+						stringValue = fmt.Sprintf("%v", *value.(*bool))
+					case data.FieldTypeNullableString:
+						stringValue = fmt.Sprintf("%v", *value.(*string))
+					}
+					field.Append(&stringValue)
+				}
+			}
+			if !found {
+				field.Append(nil)
+			}
 		}
 	}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/url"
 	"regexp"
 	"strings"
@@ -108,54 +107,6 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 
 	response.Error = fmt.Errorf("unsupported query type %s", backendQuery.QueryType)
 	return response
-}
-
-func handleEventAssetMeasurementQuery(event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets("")
-	if err != nil {
-		return nil, err
-	}
-
-	assetProperties, err := api.GetAssetProperties("")
-	if err != nil {
-		return nil, err
-	}
-
-	measurementUUIDs := map[string]struct{}{}
-	assetUUIDs := []uuid.UUID{}
-	for _, assetString := range assetMeasurementQuery.Assets {
-		if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
-			assetUUIDs = append(assetUUIDs, filteredAssetUUIDs...)
-		}
-	}
-
-	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
-	for _, assetUUID := range assetUUIDs {
-		for _, property := range assetMeasurementQuery.AssetProperties {
-			for _, assetProperty := range assetProperties {
-				if (assetProperty.Name == property && assetProperty.AssetUUID == assetUUID) || assetProperty.UUID.String() == property {
-					measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
-					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
-					break
-				}
-			}
-		}
-	}
-
-	measurementQuery := schemas.MeasurementQuery{
-		Measurements: maps.Keys(measurementUUIDs),
-		Options:      assetMeasurementQuery.Options,
-	}
-
-	q := historianQuery(measurementQuery, backendQuery)
-	q.Start = event.StartTime
-	q.End = event.StopTime
-	frames, err := handleQuery(measurementQuery, q, api)
-	if err != nil {
-		return nil, err
-	}
-
-	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
 }
 
 func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
@@ -353,102 +304,6 @@ func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, a
 	}
 
 	return setRawFrameNames(result), nil
-}
-
-func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets("")
-	if err != nil {
-		return nil, err
-	}
-
-	eventTypes, err := api.GetEventTypes("")
-	if err != nil {
-		return nil, err
-	}
-
-	assetUUIDs := []uuid.UUID{}
-	eventTypeUUIDs := []uuid.UUID{}
-	for _, assetString := range eventQuery.Assets {
-		if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
-			assetUUIDs = append(assetUUIDs, filteredAssetUUIDs...)
-		}
-	}
-	for _, eventTypeString := range eventQuery.EventTypes {
-		if filteredEventTypeUUIDs := filterEventTypeUUIDs(eventTypes, eventTypeString); len(filteredEventTypeUUIDs) > 0 {
-			eventTypeUUIDs = append(eventTypeUUIDs, filteredEventTypeUUIDs...)
-		}
-	}
-	if len(assetUUIDs) == 0 || len(eventTypeUUIDs) == 0 {
-		return data.Frames{}, nil
-	}
-
-	filter := schemas.EventFilter{
-		StartTime:         backendQuery.TimeRange.From,
-		StopTime:          backendQuery.TimeRange.To,
-		AssetUUIDs:        assetUUIDs,
-		EventTypeUUIDs:    eventTypeUUIDs,
-		PreloadProperties: true,
-		Limit:             math.MaxInt32,
-		PropertyFilter:    eventQuery.PropertyFilter,
-		Status:            eventQuery.Statuses,
-	}
-
-	events, err := api.EventQuery(filter)
-	if err != nil {
-		return nil, err
-	}
-
-	allEventTypeProperties, err := api.GetEventTypeProperties("")
-	if err != nil {
-		return nil, err
-	}
-
-	eventTypeSet := map[uuid.UUID]struct{}{}
-	for _, eventTypeUUID := range eventTypeUUIDs {
-		eventTypeSet[eventTypeUUID] = struct{}{}
-	}
-
-	eventTypeProperties := []schemas.EventTypeProperty{}
-	for _, eventTypeProperty := range allEventTypeProperties {
-		if _, ok := eventTypeSet[eventTypeProperty.EventTypeUUID]; ok {
-			eventTypeProperties = append(eventTypeProperties, eventTypeProperty)
-		}
-	}
-
-	selectedPropertiesSet := map[string]struct{}{}
-	for _, property := range eventQuery.Properties {
-		selectedPropertiesSet[property] = struct{}{}
-	}
-
-	switch eventQuery.Type {
-	case string(schemas.EventTypePropertyTypeSimple):
-		return EventQueryResultToDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet)
-	case string(schemas.EventTypePropertyTypePeriodic):
-		eventAssetPropertyFrames := make(map[uuid.UUID]data.Frames)
-
-		if eventQuery.QueryAssetProperties && eventQuery.Options != nil {
-			assetMeasurementQuery := schemas.AssetMeasurementQuery{
-				Assets:          eventQuery.Assets,
-				AssetProperties: eventQuery.AssetProperties,
-				Options:         *eventQuery.Options,
-			}
-			for _, event := range events {
-				var err error
-				frames, err := handleEventAssetMeasurementQuery(event, assetMeasurementQuery, backendQuery, api)
-				if err != nil {
-					return nil, err
-				}
-
-				eventAssetPropertyFrames[event.UUID] = frames
-			}
-
-		}
-
-		return EventQueryResultToTrendDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet, eventAssetPropertyFrames)
-	default:
-		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
-
-	}
 }
 
 func fillQueryVariables(query string, databaseType string, backendQuery backend.DataQuery) string {

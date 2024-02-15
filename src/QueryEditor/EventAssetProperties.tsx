@@ -12,6 +12,7 @@ export interface Props {
   datasource: DataSource
   selectedAssets: Asset[]
   selectedAssetProperties: string[]
+  queryType: string
   queryOptions: MeasurementQueryOptions
   tags: QueryTag[]
   appIsAlertingType: boolean
@@ -55,6 +56,12 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
         appIsAlertingType={props.appIsAlertingType}
         datatypes={[]}
         templateVariables={props.templateVariables}
+        hideInterval={props.queryType === 'simple'}
+        hideFill={props.queryType === 'simple'}
+        hideLimit={props.queryType === 'simple'}
+        hideGroupBy={props.queryType === 'simple'}
+        hideTagFilter={props.queryType === 'simple'}
+        hideAdvancedOptions={props.queryType === 'simple'}
         onChange={props.onChangeQueryOptions}
       />
     </>

@@ -381,6 +381,7 @@ export const Events = ({ datasource, state, appIsAlertingType, saveState, onChan
             selectedAssets={matchedAssets(state.eventsState.selectedAsset, state.assets)}
             templateVariables={templateVariables}
             tags={tagsToQueryTags(state.eventsState.eventQuery.Options?.Tags)}
+            queryType={state.eventsState.eventQuery.Type}
             onChangeAssetProperties={onChangeAssetProperties}
             onChangeQueryOptions={onChangeQueryOptions}
           />

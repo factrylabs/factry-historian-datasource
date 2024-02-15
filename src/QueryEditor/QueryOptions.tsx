@@ -11,6 +11,12 @@ export interface Props {
   tags: QueryTag[]
   appIsAlertingType: boolean
   datatypes: string[]
+  hideInterval?: boolean
+  hideFill?: boolean
+  hideLimit?: boolean
+  hideGroupBy?: boolean
+  hideTagFilter?: boolean
+  hideAdvancedOptions?: boolean
   templateVariables: Array<SelectableValue<string>>
   onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
 }
@@ -21,6 +27,12 @@ export const QueryOptions = ({
   appIsAlertingType,
   datatypes,
   templateVariables,
+  hideInterval = false,
+  hideFill = false,
+  hideLimit = false,
+  hideGroupBy = false,
+  hideTagFilter = false,
+  hideAdvancedOptions = false,
   onChange,
 }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
@@ -138,7 +150,7 @@ export const QueryOptions = ({
             onChange={onAggregationChange}
           />
         </InlineField>
-        {state.Aggregation?.Name && (
+        {!hideInterval && state.Aggregation?.Name && (
           <InlineField>
             <Select
               value={state.Aggregation?.Period}
@@ -149,7 +161,7 @@ export const QueryOptions = ({
             />
           </InlineField>
         )}
-        {state.Aggregation?.Name && (
+        {!hideFill && state.Aggregation?.Name && (
           <InlineField>
             <Select
               value={state.Aggregation?.Fill}
@@ -161,55 +173,63 @@ export const QueryOptions = ({
           </InlineField>
         )}
       </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
-          Group by
-        </InlineLabel>
-        <GroupBySection groups={state.GroupBy || []} onChange={onGroupByChange} />
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="Filter tags" labelWidth={labelWidth}>
-          <TagsSection tags={tags} conditions={['AND']} onChange={handleTagsSectionChange} />
-        </InlineField>
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField label="Limit" labelWidth={labelWidth}>
-          <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={state.Limit} />
-        </InlineField>
-      </InlineFieldRow>
-      <CollapsableSection label="Advanced options" isOpen={false}>
+      {!hideGroupBy && (
         <InlineFieldRow>
-          <InlineField
-            label="Include last known point"
-            tooltip="Includes the last known point before the selected time range"
-            labelWidth={labelWidth}
-          >
-            <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
+          <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
+            Group by
+          </InlineLabel>
+          <GroupBySection groups={state.GroupBy || []} onChange={onGroupByChange} />
+        </InlineFieldRow>
+      )}
+      {!hideTagFilter && (
+        <InlineFieldRow>
+          <InlineField label="Filter tags" labelWidth={labelWidth}>
+            <TagsSection tags={tags} conditions={['AND']} onChange={handleTagsSectionChange} />
           </InlineField>
         </InlineFieldRow>
+      )}
+      {!hideLimit && (
         <InlineFieldRow>
-          <InlineField label="Fill empty initial intervals" labelWidth={labelWidth}>
-            <InlineSwitch value={state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
+          <InlineField label="Limit" labelWidth={labelWidth}>
+            <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={state.Limit} />
           </InlineField>
         </InlineFieldRow>
-        {!appIsAlertingType && (
+      )}
+      {!hideAdvancedOptions && (
+        <CollapsableSection label="Advanced options" isOpen={false}>
           <InlineFieldRow>
-            <InlineField label="Use engineering specs" labelWidth={labelWidth}>
-              <InlineSwitch value={state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
+            <InlineField
+              label="Include last known point"
+              tooltip="Includes the last known point before the selected time range"
+              labelWidth={labelWidth}
+            >
+              <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
             </InlineField>
           </InlineFieldRow>
-        )}
-        <InlineFieldRow>
-          <InlineField label="Display database name" labelWidth={labelWidth}>
-            <InlineSwitch value={state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
-          </InlineField>
-        </InlineFieldRow>
-        <InlineFieldRow>
-          <InlineField label="Display description" labelWidth={labelWidth}>
-            <InlineSwitch value={state.DisplayDescription} onChange={onChangeDisplayDescription} />
-          </InlineField>
-        </InlineFieldRow>
-      </CollapsableSection>
+          <InlineFieldRow>
+            <InlineField label="Fill empty initial intervals" labelWidth={labelWidth}>
+              <InlineSwitch value={state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
+            </InlineField>
+          </InlineFieldRow>
+          {!appIsAlertingType && (
+            <InlineFieldRow>
+              <InlineField label="Use engineering specs" labelWidth={labelWidth}>
+                <InlineSwitch value={state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
+              </InlineField>
+            </InlineFieldRow>
+          )}
+          <InlineFieldRow>
+            <InlineField label="Display database name" labelWidth={labelWidth}>
+              <InlineSwitch value={state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField label="Display description" labelWidth={labelWidth}>
+              <InlineSwitch value={state.DisplayDescription} onChange={onChangeDisplayDescription} />
+            </InlineField>
+          </InlineFieldRow>
+        </CollapsableSection>
+      )}
     </>
   )
 }

@@ -166,6 +166,16 @@ func getFrameID(frame *data.Frame) string {
 	return fmt.Sprintf("%s%s", measurementUUID, getFrameSuffix(frame, false, false))
 }
 
+// getAssetName returns the asset name for a given asset
+func getAssetName(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUID) string {
+	asset, ok := uuidToAssetMap[assetUUID]
+	if !ok {
+		return ""
+	}
+
+	return asset.Name
+}
+
 // getAssetPath returns the asset path for a given asset
 func getAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUID) string {
 	asset, ok := uuidToAssetMap[assetUUID]
@@ -272,12 +282,20 @@ func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetPropert
 				additionalFrames = append(additionalFrames, frame)
 			}
 
+			assetPath := getAssetPath(UUIDToAssetMap, property.AssetUUID)
+			asstName := getAssetName(UUIDToAssetMap, property.AssetUUID)
+			custom := frame.Meta.Custom.(map[string]interface{})
+			custom["AssetProperty"] = property.Name
+			custom["AssetPropertyUUID"] = property.UUID
+			custom["AssetUUID"] = property.AssetUUID
+			custom["AssetPath"] = assetPath
+			custom["AssetName"] = asstName
 			if field, _ := frame.FieldByName("value"); field != nil {
 				if field.Config == nil {
 					field.Config = &data.FieldConfig{}
 				}
 
-				field.Config.DisplayNameFromDS = getAssetPath(UUIDToAssetMap, property.AssetUUID) + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
+				field.Config.DisplayNameFromDS = assetPath + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
 			}
 		}
 	}
