@@ -2,6 +2,7 @@ import { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { CascaderOption } from 'components/Cascader/Cascader'
 import { QueryTag } from 'components/TagsSection/TagsSection'
+import { useEffect, useState } from 'react'
 import {
   AggregationName,
   Asset,
@@ -284,4 +285,18 @@ export function defaultQueryOptions(appIsAlertingType: boolean): MeasurementQuer
     DisplayDatabaseName: false,
     DisplayDescription: false,
   }
+}
+
+export const useDebounce = <T>(
+  initialValue: T,
+  delay: number,
+  updateFunc: (value: T) => void
+): [T, React.Dispatch<React.SetStateAction<T>>] => {
+  const [actualValue, setActualValue] = useState<T>(initialValue)
+  useEffect(() => {
+    const debounceId = setTimeout(() => updateFunc(actualValue), delay)
+    return () => clearTimeout(debounceId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actualValue, delay])
+  return [actualValue, setActualValue]
 }

@@ -287,6 +287,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
                 this.state.measurementQuery ?? {
                   Databases: [],
                   Measurements: [],
+                  IsRegex: false,
                   Options: defaultQueryOptions(this.appIsAlertingType),
                 }
               )
@@ -437,6 +438,9 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
     if (props.query.queryType === 'MeasurementQuery') {
       const query = props.query.query as MeasurementQuery
+      if (query.IsRegex && !query.Regex) {
+        return
+      }
       if (!query?.Measurements) {
         return
       }

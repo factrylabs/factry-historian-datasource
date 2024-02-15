@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"strings"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource"
@@ -53,15 +54,28 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 		return err
 	}
 
-	resourcePath := req.Path
-	switch resourcePath {
-	case ResourceTypeMeasurements:
-		o, err := dsi.API.GetMeasurements(url.RawQuery)
-		if err != nil {
-			return err
-		}
+	resourcePath := strings.Split(req.Path, "/")
+	if len(resourcePath) == 0 {
+		return ErrorInvalidResourceCallQuery
+	}
 
-		return resource.SendJSON(sender, o)
+	switch resourcePath[0] {
+	case ResourceTypeMeasurements:
+		if len(resourcePath) == 2 {
+			o, err := dsi.API.GetMeasurement(resourcePath[1])
+			if err != nil {
+				return err
+			}
+
+			return resource.SendJSON(sender, o)
+		} else {
+			o, err := dsi.API.GetMeasurements(url.RawQuery)
+			if err != nil {
+				return err
+			}
+
+			return resource.SendJSON(sender, o)
+		}
 	case ResourceTypeCollectors:
 		o, err := dsi.API.GetCollectors()
 		if err != nil {

@@ -30,6 +30,8 @@ type MeasurementQuery struct {
 	Measurement  string
 	Measurements []string
 	Options      MeasurementQueryOptions
+	Regex        string
+	IsRegex      bool
 }
 
 // RawQuery is used to query raw time series data

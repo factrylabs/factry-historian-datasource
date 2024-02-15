@@ -206,9 +206,14 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 
 func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([]string, error) {
 	parsedMeasurements := []string{}
-	measurements := measurementQuery.Measurements
-	if measurementQuery.Measurement != "" {
-		measurements = append(measurements, measurementQuery.Measurement)
+	var measurements []string
+	if measurementQuery.IsRegex {
+		measurements = []string{fmt.Sprintf("/%s/", measurementQuery.Regex)}
+	} else {
+		measurements = measurementQuery.Measurements
+		if measurementQuery.Measurement != "" {
+			measurements = append(measurements, measurementQuery.Measurement)
+		}
 	}
 	databases, err := api.GetTimeseriesDatabases("")
 	if err != nil {

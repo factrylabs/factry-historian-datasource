@@ -4,11 +4,10 @@ import { InlineField, InlineFieldRow } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { DatabaseSelect } from 'components/util/DatabaseSelect'
 import { MeasurementSelect } from 'components/util/MeasurementSelect'
-import { isRegex } from 'components/TagsSection/util'
 import { QueryTag } from 'components/TagsSection/types'
 import { QueryOptions } from './QueryOptions'
 import { tagsToQueryTags } from './util'
-import { labelWidth, MeasurementQuery, MeasurementQueryOptions, TimeseriesDatabase } from 'types'
+import { labelWidth, Measurement, MeasurementQuery, MeasurementQueryOptions, TimeseriesDatabase } from 'types'
 
 export interface Props {
   query: MeasurementQuery
@@ -21,6 +20,7 @@ export interface Props {
 export const Measurements = (props: Props): React.JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [databases, setDatabases] = useState<TimeseriesDatabase[]>()
+  const [selectedMeasurements, setSelectedMeasurements] = useState<Measurement[]>()
   const [selectedDatabases, setSelectedDatabases] = useState<Array<SelectableValue<string>>>()
   const [datatypes, setDatatypes] = useState<string[]>([])
 
@@ -29,36 +29,36 @@ export const Measurements = (props: Props): React.JSX.Element => {
     const load = async () => {
       const databases = await props.datasource.getTimeseriesDatabases()
       setDatabases(databases)
-      setLoading(false)
     }
     load()
   }, [props.datasource])
 
+  // load the selected measurements for the measurements component
   useEffect(() => {
-    const getDatatypesOfMeasurements = async (measurements: string[]): Promise<string[]> => {
-      if (
-        !measurements ||
-        measurements.length === 0 ||
-        measurements.findIndex((e) => isRegex(e ?? '') || e.startsWith('$')) !== -1 // if any of the 'measurements' is a regex or dashboard variable
-      ) {
-        // no filtering of aggregations will be done with empty array
-        return []
-      }
-
-      const datatypes = new Set<string>()
-      for (const measurement of measurements) {
-        const filter = { Keyword: measurement }
-        const result = await props.datasource.getMeasurements(filter, { Page: 0, Limit: 0 })
-        result.map((e) => e.Datatype).forEach((datatype) => datatypes.add(datatype))
-      }
-
-      return Array.from(datatypes)
-    }
     const load = async () => {
-      const datatypesOfSelectedMeasurements = await getDatatypesOfMeasurements(props.query.Measurements ?? [])
-      setDatatypes(datatypesOfSelectedMeasurements)
+      if (props.query.Measurements && props.query.Measurements.length > 0) {
+        let selectedMeasurementsUpdate: Measurement[] = []
+        const datatypes = new Set<string>()
+        for (const measurement of props.query.Measurements) {
+          if (measurement.startsWith('$')) {
+            continue
+          }
+
+          let selectedMeasurement: Measurement | undefined
+          selectedMeasurement = selectedMeasurements?.find((e) => e.UUID === measurement)
+          if (!selectedMeasurement) {
+            selectedMeasurement = await props.datasource.getMeasurement(measurement)
+          }
+          selectedMeasurementsUpdate.push(selectedMeasurement)
+          datatypes.add(selectedMeasurement.Datatype)
+        }
+        setSelectedMeasurements(selectedMeasurementsUpdate)
+        setDatatypes(Array.from(datatypes))
+      }
+      setLoading(false)
     }
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.datasource, props.query.Measurements])
 
   const onTimeseriesDatabaseChange = (values: string[]): void => {
@@ -82,6 +82,20 @@ export const Measurements = (props: Props): React.JSX.Element => {
     })
   }
 
+  const onChangeIsRegex = (value: boolean): void => {
+    props.onChangeMeasurementQuery({
+      ...props.query,
+      IsRegex: value,
+    })
+  }
+
+  const onChangeRegex = (value: string): void => {
+    props.onChangeMeasurementQuery({
+      ...props.query,
+      Regex: value,
+    })
+  }
+
   return (
     <>
       {!loading && (
@@ -98,22 +112,18 @@ export const Measurements = (props: Props): React.JSX.Element => {
               />
             </InlineField>
           </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField
-              label="Measurements"
-              labelWidth={labelWidth}
-              tooltip="Specify measurements to work with, you can use regex by entering your pattern between forward slashes"
-            >
-              <MeasurementSelect
-                query={props.query}
-                datasource={props.datasource}
-                databases={databases}
-                selectedDatabases={selectedDatabases?.map((e) => e.value ?? '')}
-                templateVariables={props.templateVariables}
-                onChange={onMeasurementsChange}
-              />
-            </InlineField>
-          </InlineFieldRow>
+
+          <MeasurementSelect
+            query={props.query}
+            datasource={props.datasource}
+            databases={databases}
+            measurements={selectedMeasurements ?? []}
+            selectedDatabases={selectedDatabases?.map((e) => e.value ?? '')}
+            templateVariables={props.templateVariables}
+            onChange={onMeasurementsChange}
+            onChangeIsRegex={onChangeIsRegex}
+            onChangeRegex={onChangeRegex}
+          />
           <QueryOptions
             state={props.query.Options}
             tags={tagsToQueryTags(props.query.Options.Tags)}

@@ -136,6 +136,8 @@ export interface MeasurementQueryOptions {
 
 export interface MeasurementQuery {
   Databases?: string[]
+  IsRegex: boolean
+  Regex?: string
   Measurements?: string[]
   Options: MeasurementQueryOptions
 }

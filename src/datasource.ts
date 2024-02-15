@@ -142,6 +142,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return filter
   }
 
+  async getMeasurement(uuid: string): Promise<Measurement> {
+    return this.getResource(`measurements/${uuid}`)
+  }
+
   async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {
     const params: Record<string, unknown> = {
       ...this.templateReplaceMeasurementFilter(filter),
