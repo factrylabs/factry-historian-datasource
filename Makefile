@@ -1,8 +1,10 @@
 major = 1
 minor = 0
 patch = 2
+prerelease = -alpha
 project_name=grafana-datasource
 
+COMMIT=$(shell git rev-parse --short HEAD)
 PROTO_DIR= pkg/proto
 PROTO_FILES = $(PROTO_DIR)/*.proto
 
@@ -10,10 +12,9 @@ PROTO_FILES = $(PROTO_DIR)/*.proto
 .PHONY: outdated help version version_major_bump version_minor_bump version_patch_bump
 
 all: migrate_all
-version_bump_major: version_major_bump tag_version ## Bumps the current major version
-version_bump_minor: version_minor_bump tag_version ## Bumps the current minor version
-version_bump_patch: version_patch_bump tag_version ## Bumps the current patch version
-version_bump_prerelease: version_prerelease_bump tag_version ## Bumps the current prerelease version
+version_bump_major: version_major_bump set_frontend_version tag_version  ## Bumps the current major version
+version_bump_minor: version_minor_bump set_frontend_version tag_version ## Bumps the current minor version
+version_bump_patch: version_patch_bump set_frontend_version tag_version ## Bumps the current patch version
 
 outdated: ## Checks the dependecies of this project to see if they're all up to date
 	export GO111MODULE=off; go install github.com/psampaz/go-mod-outdated
@@ -23,29 +24,33 @@ help: ## These help instructions
 	@grep -E '^[a-z0-9A-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 version: ## Prints the current version
-	@echo v$(major).$(minor).$(patch)$(prerelease)$(prerelease-identifier)
+ifdef prerelease
+	@echo v$(major).$(minor).$(patch)$(prerelease)+$(COMMIT)
+else
+	@echo v$(major).$(minor).$(patch)
+endif
 
 ver: ## Prints the current version without the 'v' prefix
-	@echo $(major).$(minor).$(patch)$(prerelease)$(prerelease-identifier)
+ifdef prerelease
+	@echo $(major).$(minor).$(patch)$(prerelease)+$(COMMIT)
+else
+	@echo $(major).$(minor).$(patch)
+endif
+
+set_frontend_version: ## Sets the version in the frontend
+	@pnpm version --no-git-tag-version --allow-same-version $(shell make version)
 
 version_major_bump:
 	@sed 's/^patch = $(patch)$$/patch = 0/' Makefile > tmp && mv tmp Makefile
 	@sed 's/^minor = $(minor)$$/minor = 0/' Makefile > tmp && mv tmp Makefile
 	@sed 's/^major = $(major)$$/major = $(shell expr $(major) + 1)/' Makefile > tmp && mv tmp Makefile
-	@pnpm version $(shell expr $(major) + 1).0.0$(prerelease)$(prerelease-identifier)
 
 version_minor_bump:
 	@sed 's/^patch = $(patch)$$/patch = 0/' Makefile > tmp && mv tmp Makefile
 	@sed 's/^minor = $(minor)$$/minor = $(shell expr $(minor) + 1)/' Makefile > tmp && mv tmp Makefile
-	@pnpm version $(major).$(shell expr $(minor) + 1).0$(prerelease)$(prerelease-identifier)
 
 version_patch_bump:
 	@sed -i  's/^patch = $(patch)$$/patch = $(shell expr $(patch) + 1)/' Makefile
-	@pnpm version $(major).$(minor).$(shell expr $(patch) + 1)$(prerelease)$(prerelease-identifier)
-
-version_prerelease_bump:
-	@sed -i  's/^prerelease-identifier = $(prerelease-identifier)$$/prerelease-identifier = $(shell expr $(prerelease-identifier) + 1)/' Makefile
-	@pnpm version -f $(major).$(minor).$(patch)$(prerelease)$(shell expr $(prerelease-identifier) + 1)
 
 tag_version:
 ifdef message

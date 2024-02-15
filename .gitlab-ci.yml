@@ -2,7 +2,7 @@ image: golang:latest
 
 variables:
   PROJECT_NAME: grafana-datasource
-  REMOTE: "historian.factry.dev"
+  REMOTES: "historian.factry.dev demo.factry.io"
   REMOTE_PATH: "/opt/factry/grafana-datasource"
   CLIENT_PORTAL_SERVER : "portal.factry.cloud"
   CLIENT_PORTAL_DOWNLOAD_PATH: "/opt/factry/portal.factry.cloud"
@@ -12,14 +12,13 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" # Run on Merge Requests
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS # Don't run branch pipeline if there's an open MR for branch
       when: never
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^release-.*$/ # Run branch pipelines on main and release branches
-    - if: $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^release-.*$/ || $CI_COMMIT_BRANCH == 'staging' || $CI_COMMIT_BRANCH == 'qa' # Run branch pipelines on main and release branches
+    - if: $CI_COMMIT_TAG =~ /^v(\d\.){2}\d(-.*)?$/
 
 stages:
   - test
   - build
   - deploy
-  - release
   - publish
 
 before_script:
@@ -40,10 +39,10 @@ vet:
 build-frontend:
   stage: build
   image: node:18
-  before_script:
+  script:
     - npm install -g pnpm@latest
     - pnpm config set store-dir .pnpm-store
-  script:
+    - make set_frontend_version
     - pnpm install
     - npm run build
   artifacts:
@@ -62,12 +61,17 @@ build-backend:
     paths:
       - $CI_PROJECT_DIR/dist
 
-deploy:
+deploy-branch:
   stage: deploy
   script:
-    - ssh gitlab@$REMOTE rm -rf $REMOTE_PATH/$CI_COMMIT_BRANCH
-    - ssh gitlab@$REMOTE mkdir $REMOTE_PATH/$CI_COMMIT_BRANCH
-    - scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$CI_COMMIT_BRANCH
+    - for REMOTE in $REMOTES; do
+        ssh gitlab@$REMOTE rm -rf $REMOTE_PATH/$CI_COMMIT_BRANCH;
+        ssh gitlab@$REMOTE mkdir $REMOTE_PATH/$CI_COMMIT_BRANCH;
+        scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$CI_COMMIT_BRANCH;
+        ssh gitlab@$REMOTE rm -rf $REMOTE_PATH/$VERSION;
+        ssh gitlab@$REMOTE mkdir $REMOTE_PATH/$VERSION;
+        scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$VERSION;
+      done
   artifacts:
     expire_in: 1 day
     paths:
@@ -75,24 +79,25 @@ deploy:
   rules:
     - if: $CI_COMMIT_BRANCH == 'staging' || $CI_COMMIT_BRANCH == 'qa' || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-release:
-  stage: release
-  rules:
-    - if: $CI_COMMIT_MESSAGE =~ /ci-bump/ && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+deploy-tag:
+  stage: deploy
   script:
-    - git tag -l | xargs git tag -d
-    - git fetch --tags
-    - make version_bump_patch message="[ci skip] Bumping patch version of $CI_PROJECT_NAME"
-    - PACKAGE_VERSION=$(make version)
-    - git checkout -B "release-$PACKAGE_VERSION"
-    - git tag -f $PACKAGE_VERSION
-    - "git push origin : $PACKAGE_VERSION"
-    - git push --set-upstream -o merge_request.create origin "release-$PACKAGE_VERSION"
+    - for REMOTE in $REMOTES; do
+        ssh gitlab@$REMOTE rm -rf $REMOTE_PATH/$CI_COMMIT_TAG;
+        ssh gitlab@$REMOTE mkdir $REMOTE_PATH/$CI_COMMIT_TAG;
+        scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$CI_COMMIT_TAG;
+      done
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - $CI_PROJECT_DIR/dist
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v(\d\.){2}\d(-.*)?$/
 
 publish:
   stage: publish
   rules:
-    - if: $CI_COMMIT_TAG =~ /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+    - if: $CI_COMMIT_TAG =~ /^v(\d\.){2}\d(-.*)?$/
       when: manual
   script:
     - apt-get update
