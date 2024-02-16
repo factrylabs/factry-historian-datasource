@@ -44,7 +44,7 @@ export function DatabaseSelect(props: DatabaseSelectProps) {
 
   return (
     <AsyncMultiSelect
-      placeholder="select database(s)"
+      placeholder="All databases"
       onChange={(value) => onDatabaseChange(value)}
       defaultOptions
       loadOptions={loadDatabaseOptions}
