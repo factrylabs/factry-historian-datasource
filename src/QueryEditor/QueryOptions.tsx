@@ -24,6 +24,27 @@ export const QueryOptions = ({
   onChange,
 }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
+
+  const getAggregationOptions = (
+    datatypes: string[],
+    options: MeasurementQueryOptions
+  ): Array<SelectableValue<string>> => {
+    const validAggregations = getAggregationsForDatatypes(datatypes)
+    if (options.Aggregation?.Name && !validAggregations.find((e) => options.Aggregation?.Name === e.value)) {
+      onChange(
+        {
+          ...state,
+          Aggregation: {
+            ...state.Aggregation,
+            Name: 'last',
+          },
+        },
+        tags
+      )
+    }
+    return validAggregations.concat(templateVariables)
+  }
+
   const onAggregationChange = (event: SelectableValue<string>) => {
     let aggregation = undefined
     if (event?.value) {
@@ -113,7 +134,7 @@ export const QueryOptions = ({
             value={state.Aggregation?.Name}
             placeholder="select an aggregation"
             isClearable
-            options={getAggregationsForDatatypes(datatypes).concat(templateVariables)}
+            options={getAggregationOptions(datatypes, state)}
             onChange={onAggregationChange}
           />
         </InlineField>

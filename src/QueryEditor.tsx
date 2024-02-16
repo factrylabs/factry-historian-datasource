@@ -59,7 +59,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             Database: '',
             GroupBy: ['status'],
             Aggregation: {
-              Name: AggregationName.Last,
+              Name: AggregationName.Mean,
               Period: '$__interval',
             },
             Tags: { status: 'Good' },
