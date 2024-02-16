@@ -36,7 +36,7 @@ export function AssetFilterRow(props: {
     if (!parentAssets) {
       setParentAssets(selectableValues.filter((e) => props.initialValue?.ParentUUIDs?.includes(e.value ?? '')))
     }
-    return selectableValues
+    return [{ label: 'No parent', value: '' } as SelectableValue<string>].concat(selectableValues)
   }
 
   const onParentAssetsChange = (values: Array<SelectableValue<string>>) => {
@@ -51,8 +51,8 @@ export function AssetFilterRow(props: {
     <>
       <InlineFieldRow>
         <InlineField
-          label={'Path'}
-          aria-label={'Path'}
+          label={'Filter by asset path'}
+          aria-label={'Filter by asset path'}
           labelWidth={20}
           tooltip={<div>Searches asset by path, to use a regex surround pattern with /</div>}
         >

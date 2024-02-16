@@ -51,8 +51,8 @@ export function EventTypePropertyFilterRow(props: {
     <>
       <InlineFieldRow>
         <InlineField
-          label={'Event types'}
-          aria-label={'Event types'}
+          label={'Filter by event types'}
+          aria-label={'Filter by event types'}
           labelWidth={20}
           tooltip={<div>Searches event types by name, to use a regex surround pattern with /</div>}
         >
@@ -67,14 +67,9 @@ export function EventTypePropertyFilterRow(props: {
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField
-          label={'Event types'}
-          aria-label={'Event types'}
-          labelWidth={20}
-          tooltip={<div>Searches event types by name, to use a regex surround pattern with /</div>}
-        >
+        <InlineField label={'Property types'} aria-label={'Property types'} labelWidth={20}>
           <Select
-            placeholder="Select type"
+            placeholder="Select property type"
             width={25}
             onChange={(value) => onTypeChange(value)}
             options={Object.entries(EventTypePropertyType).map(([key, value]) => {

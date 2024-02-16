@@ -19,8 +19,8 @@ export function DatabaseFilterRow(props: {
     <>
       <InlineFieldRow>
         <InlineField
-          label={'Keyword'}
-          aria-label={'Keyword'}
+          label={'Filter database'}
+          aria-label={'Filter database'}
           labelWidth={20}
           tooltip={<div>Searches database by name, to use a regex surround pattern with /</div>}
         >

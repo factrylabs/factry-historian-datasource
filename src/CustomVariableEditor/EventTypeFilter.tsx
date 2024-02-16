@@ -19,8 +19,8 @@ export function EventTypeFilterRow(props: {
     <>
       <InlineFieldRow>
         <InlineField
-          label={'Keyword'}
-          aria-label={'Keyword'}
+          label={'Filter event type'}
+          aria-label={'Filter event type'}
           labelWidth={20}
           tooltip={<div>Searches database by name, to use a regex surround pattern with /</div>}
         >

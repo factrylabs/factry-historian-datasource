@@ -34,8 +34,8 @@ export function MeasurementFilterRow(props: MeasurementFilterProps) {
     <>
       <InlineFieldRow>
         <InlineField
-          label={'Keyword'}
-          aria-label={'Keyword'}
+          label={'Filter measurement'}
+          aria-label={'Filter measurement'}
           labelWidth={20}
           tooltip={<div>Searches measurement by name</div>}
         >
@@ -44,10 +44,10 @@ export function MeasurementFilterRow(props: MeasurementFilterProps) {
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineField
-          label={'Database'}
-          aria-label={'Database'}
+          label={'Filter by database'}
+          aria-label={'Filter by database'}
           labelWidth={20}
-          tooltip={<div>Searches measurement by database</div>}
+          tooltip={<div>Filters measurements by database</div>}
         >
           <DatabaseSelect
             datasource={props.datasource}
