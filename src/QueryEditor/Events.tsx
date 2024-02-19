@@ -7,6 +7,7 @@ import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { toSelectableValue } from 'components/TagsSection/util'
 import { defaultQueryOptions, getChildAssets, matchedAssets, tagsToQueryTags } from './util'
 import {
+  Asset,
   EventPropertyFilter,
   EventQuery,
   labelWidth,
@@ -55,14 +56,17 @@ export const Events = ({ datasource, state, appIsAlertingType, saveState, onChan
     onChangeEventQuery(updatedQuery)
   }
 
+  const getSelectedAssets = (selected: string | undefined, assets: Asset[]): Asset[] => {
+    const replacedAssets = datasource.multiSelectReplace(selected)
+    return replacedAssets.flatMap((e) => matchedAssets(e, assets))
+  }
+
   const availableEventTypes = (selected: string | undefined): Array<SelectableValue<string>> => {
-    const replaced = getTemplateSrv().replace(selected)
+    const assets = getSelectedAssets(selected, state.assets)
     return state.eventTypes
       .filter((e) =>
         state.eventConfigurations.some(
-          (ec) =>
-            (ec.AssetUUID === replaced || matchedAssets(replaced, state.assets).find((a) => a.UUID === ec.AssetUUID)) &&
-            ec.EventTypeUUID === e.UUID
+          (ec) => assets.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === e.UUID
         )
       )
       .map((e) => {
@@ -323,7 +327,7 @@ export const Events = ({ datasource, state, appIsAlertingType, saveState, onChan
           >
             <MultiSelect
               value={state.eventsState.selectedEventTypes}
-              options={availableEventTypes(getTemplateSrv().replace(state.eventsState.selectedAsset))}
+              options={availableEventTypes(state.eventsState.selectedAsset)}
               onChange={onSelectEventTypes}
             />
           </InlineField>
@@ -378,7 +382,7 @@ export const Events = ({ datasource, state, appIsAlertingType, saveState, onChan
             datasource={datasource}
             queryOptions={state.eventsState.eventQuery.Options ?? defaultQueryOptions(appIsAlertingType)}
             selectedAssetProperties={state.eventsState.eventQuery.AssetProperties ?? []}
-            selectedAssets={matchedAssets(state.eventsState.selectedAsset, state.assets)}
+            selectedAssets={getSelectedAssets(state.eventsState.selectedAsset, state.assets)}
             templateVariables={templateVariables}
             tags={tagsToQueryTags(state.eventsState.eventQuery.Options?.Tags)}
             queryType={state.eventsState.eventQuery.Type}

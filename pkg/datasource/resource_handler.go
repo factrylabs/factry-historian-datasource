@@ -20,6 +20,8 @@ const (
 	ResourceTypeEventTypes          = "event-types"
 	ResourceTypeEventTypeProperties = "event-type-properties"
 	ResourceTypeEventConfigurations = "event-configurations"
+	ResourceTypeTagKeys             = "tag-keys"
+	ResourceTypeTagValues           = "tag-values"
 )
 
 // HistorianResourceQuery is a struct for a resource query
@@ -125,6 +127,20 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 		}
 
 		return resource.SendJSON(sender, o)
+	case ResourceTypeTagKeys:
+		keys, err := handleGetTagKeys(dsi.API, resourcePath, url.RawQuery)
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, keys)
+	case ResourceTypeTagValues:
+		values, err := handleGetTagValues(dsi.API, resourcePath, url.RawQuery)
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, values)
 	}
 
 	return ErrorInvalidResourceCallQuery

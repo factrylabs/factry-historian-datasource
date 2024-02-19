@@ -4,11 +4,13 @@ import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
 import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { QueryTag } from 'components/TagsSection/types'
+import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
 import { getChildAssets, matchedAssets, replaceAsset } from './util'
-import { AssetMeasurementQuery, labelWidth, MeasurementQueryOptions, QueryEditorState } from 'types'
+import { AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions, QueryEditorState } from 'types'
 
 export interface Props {
+  datasource: DataSource
   state: QueryEditorState
   appIsAlertingType: boolean
   templateVariables: Array<SelectableValue<string>>
@@ -17,6 +19,7 @@ export interface Props {
 }
 
 export const Assets = ({
+  datasource,
   state,
   appIsAlertingType,
   templateVariables,
@@ -115,6 +118,49 @@ export const Assets = ({
     return state.assetsState.selectedAsset || ''
   }
 
+  const getTagKeyOptions = async (): Promise<string[]> => {
+    let options = new Set<string>()
+
+    for (const assetProperty of getSelectedAssetProperties()) {
+      const keys = await datasource.getTagKeysForMeasurement(assetProperty.MeasurementUUID)
+      keys.forEach((e) => options.add(e))
+    }
+
+    return Array.from(options)
+  }
+
+  const getTagValueOptions = async (key: string): Promise<string[]> => {
+    let options = new Set<string>()
+
+    for (const assetProperty of getSelectedAssetProperties()) {
+      const values = await datasource.getTagValuesForMeasurement(assetProperty.MeasurementUUID, key)
+      values.forEach((e) => options.add(e))
+    }
+
+    return Array.from(options)
+  }
+
+  const getSelectedAssetProperties = (): AssetProperty[] => {
+    const assetProperties = new Set<AssetProperty>()
+    const selectedAssetProperties = state.assetsState.options.query.AssetProperties.flatMap((e) =>
+      datasource.multiSelectReplace(e)
+    )
+    const selectedAssets = state.assetsState.options.query.Assets.flatMap((e) =>
+      datasource.multiSelectReplace(e)
+    ).flatMap((e) => matchedAssets(e, state.assets).map((asset) => asset.UUID))
+
+    for (const assetProperty of state.assetProperties) {
+      const propertySelected =
+        selectedAssetProperties.find((e) => e === assetProperty.UUID || e === assetProperty.Name) !== undefined
+
+      const assetSelected = selectedAssets.find((e) => e === assetProperty.AssetUUID)
+      if (propertySelected && assetSelected) {
+        assetProperties.add(assetProperty)
+      }
+    }
+    return Array.from(assetProperties)
+  }
+
   return (
     <>
       <InlineFieldRow>
@@ -156,6 +202,8 @@ export const Assets = ({
         appIsAlertingType={appIsAlertingType}
         datatypes={[]}
         templateVariables={templateVariables}
+        getTagKeyOptions={getTagKeyOptions}
+        getTagValueOptions={getTagValueOptions}
         onChange={handleChangeMeasurementQueryOptions}
       />
     </>

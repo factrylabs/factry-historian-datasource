@@ -7,7 +7,14 @@ import { MeasurementSelect } from 'components/util/MeasurementSelect'
 import { QueryTag } from 'components/TagsSection/types'
 import { QueryOptions } from './QueryOptions'
 import { tagsToQueryTags } from './util'
-import { labelWidth, Measurement, MeasurementQuery, MeasurementQueryOptions, TimeseriesDatabase } from 'types'
+import {
+  labelWidth,
+  Measurement,
+  MeasurementFilter,
+  MeasurementQuery,
+  MeasurementQueryOptions,
+  TimeseriesDatabase,
+} from 'types'
 
 export interface Props {
   query: MeasurementQuery
@@ -96,6 +103,46 @@ export const Measurements = (props: Props): React.JSX.Element => {
     })
   }
 
+  const getTagKeyOptions = async (): Promise<string[]> => {
+    let options = new Set<string>()
+
+    if (props.query.IsRegex) {
+      const filter: MeasurementFilter = {
+        Keyword: props.query.Regex,
+        DatabaseUUIDs: props.query.Databases,
+      }
+      const measurementKeys = await props.datasource.getTagKeysForMeasurements(filter)
+      measurementKeys.forEach((e) => options.add(e))
+    } else {
+      for (const measurement of props.query.Measurements ?? []) {
+        const measurementKeys = await props.datasource.getTagKeysForMeasurement(measurement)
+        measurementKeys.forEach((e) => options.add(e))
+      }
+    }
+
+    return Array.from(options)
+  }
+
+  const getTagValueOptions = async (key: string): Promise<string[]> => {
+    let options = new Set<string>()
+
+    if (props.query.IsRegex) {
+      const filter: MeasurementFilter = {
+        Keyword: props.query.Regex,
+        DatabaseUUIDs: props.query.Databases,
+      }
+      const tagValues = await props.datasource.getTagValuesForMeasurements(filter, key)
+      tagValues.forEach((e) => options.add(e))
+    } else {
+      for (const measurement of props.query.Measurements ?? []) {
+        const tagValues = await props.datasource.getTagValuesForMeasurement(measurement, key)
+        tagValues.forEach((e) => options.add(e))
+      }
+    }
+
+    return Array.from(options)
+  }
+
   return (
     <>
       {!loading && (
@@ -130,6 +177,8 @@ export const Measurements = (props: Props): React.JSX.Element => {
             appIsAlertingType={props.appIsAlertingType}
             datatypes={datatypes}
             templateVariables={props.templateVariables}
+            getTagKeyOptions={getTagKeyOptions}
+            getTagValueOptions={getTagValueOptions}
             onChange={onChangeMeasurementQueryOptions}
           />
         </>

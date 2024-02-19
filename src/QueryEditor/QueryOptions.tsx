@@ -18,6 +18,8 @@ export interface Props {
   hideTagFilter?: boolean
   hideAdvancedOptions?: boolean
   templateVariables: Array<SelectableValue<string>>
+  getTagKeyOptions?: () => Promise<string[]>
+  getTagValueOptions?: (key: string) => Promise<string[]>
   onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
 }
 
@@ -33,6 +35,8 @@ export const QueryOptions = ({
   hideGroupBy = false,
   hideTagFilter = false,
   hideAdvancedOptions = false,
+  getTagKeyOptions,
+  getTagValueOptions,
   onChange,
 }: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
@@ -184,7 +188,13 @@ export const QueryOptions = ({
       {!hideTagFilter && (
         <InlineFieldRow>
           <InlineField label="Filter tags" labelWidth={labelWidth}>
-            <TagsSection tags={tags} conditions={['AND']} onChange={handleTagsSectionChange} />
+            <TagsSection
+              tags={tags}
+              conditions={['AND']}
+              getTagKeyOptions={getTagKeyOptions}
+              getTagValueOptions={getTagValueOptions}
+              onChange={handleTagsSectionChange}
+            />
           </InlineField>
         </InlineFieldRow>
       )}

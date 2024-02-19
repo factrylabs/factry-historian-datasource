@@ -469,6 +469,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         title: 'Assets',
         content: (
           <Assets
+            datasource={this.props.datasource}
             state={this.state}
             appIsAlertingType={this.appIsAlertingType}
             templateVariables={this.templateVariables}

@@ -37,6 +37,45 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
     props.onChangeAssetProperties(selectedAssetProperties)
   }
 
+  const getTagKeyOptions = async (): Promise<string[]> => {
+    let options = new Set<string>()
+
+    for (const assetProperty of getSelectedAssetProperties()) {
+      const keys = await props.datasource.getTagKeysForMeasurement(assetProperty.MeasurementUUID)
+      keys.forEach((e) => options.add(e))
+    }
+
+    return Array.from(options)
+  }
+
+  const getTagValueOptions = async (key: string): Promise<string[]> => {
+    let options = new Set<string>()
+
+    for (const assetProperty of getSelectedAssetProperties()) {
+      const values = await props.datasource.getTagValuesForMeasurement(assetProperty.MeasurementUUID, key)
+      values.forEach((e) => options.add(e))
+    }
+
+    return Array.from(options)
+  }
+
+  const getSelectedAssetProperties = (): AssetProperty[] => {
+    const assetPropertiesSet = new Set<AssetProperty>()
+    const selectedAssetProperties = props.selectedAssetProperties.flatMap((e) => props.datasource.multiSelectReplace(e))
+
+    for (const assetProperty of assetProperties) {
+      const propertySelected =
+        selectedAssetProperties.find((e) => e === assetProperty.UUID || e === assetProperty.Name) !== undefined
+
+      const assetSelected = props.selectedAssets.find((e) => e.UUID === assetProperty.AssetUUID)
+      if (propertySelected && assetSelected) {
+        assetPropertiesSet.add(assetProperty)
+      }
+    }
+
+    return Array.from(assetPropertiesSet)
+  }
+
   return (
     <>
       <InlineFieldRow>
@@ -62,6 +101,8 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
         hideGroupBy={props.queryType === 'simple'}
         hideTagFilter={props.queryType === 'simple'}
         hideAdvancedOptions={props.queryType === 'simple'}
+        getTagKeyOptions={getTagKeyOptions}
+        getTagValueOptions={getTagValueOptions}
         onChange={props.onChangeQueryOptions}
       />
     </>

@@ -216,4 +216,26 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   async getEventConfigurations(): Promise<EventConfiguration[]> {
     return this.getResource('event-configurations')
   }
+
+  async getTagKeysForMeasurement(measurement: string): Promise<string[]> {
+    return this.getResource(`tag-keys/${measurement}`)
+  }
+
+  async getTagKeysForMeasurements(filter: MeasurementFilter): Promise<string[]> {
+    const params: Record<string, unknown> = {
+      ...this.templateReplaceMeasurementFilter(filter),
+    }
+    return this.getResource(`tag-keys`, params)
+  }
+
+  async getTagValuesForMeasurement(measurement: string, key: string): Promise<string[]> {
+    return this.getResource(`tag-values/${measurement}/${key}`)
+  }
+
+  async getTagValuesForMeasurements(filter: MeasurementFilter, key: string): Promise<string[]> {
+    const params: Record<string, unknown> = {
+      ...this.templateReplaceMeasurementFilter(filter),
+    }
+    return this.getResource(`tag-values/${key}`, params)
+  }
 }
