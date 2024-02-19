@@ -68,9 +68,6 @@ deploy-branch:
         ssh gitlab@$REMOTE rm -rf $REMOTE_PATH/$CI_COMMIT_BRANCH;
         ssh gitlab@$REMOTE mkdir $REMOTE_PATH/$CI_COMMIT_BRANCH;
         scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$CI_COMMIT_BRANCH;
-        ssh gitlab@$REMOTE rm -rf $REMOTE_PATH/$VERSION;
-        ssh gitlab@$REMOTE mkdir $REMOTE_PATH/$VERSION;
-        scp -r dist/* gitlab@$REMOTE:$REMOTE_PATH/$VERSION;
       done
   artifacts:
     expire_in: 1 day
