@@ -339,3 +339,13 @@ export type VariableQuery =
   | DatabaseVariableQuery
   | EventTypePropertyVariableQuery
   | AssetPropertyVariableQuery
+
+export interface AnnotationsQueryEditorState {
+  loading: boolean
+  assetProperties: AssetProperty[]
+  assets: Asset[]
+  eventsState: EventsTabState
+  eventTypes: EventType[]
+  eventTypeProperties: EventTypeProperty[]
+  eventConfigurations: EventConfiguration[]
+}

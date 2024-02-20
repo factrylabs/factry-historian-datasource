@@ -1,6 +1,7 @@
 import { DataQueryRequest, DataSourceInstanceSettings } from '@grafana/data'
 import { DataSourceWithBackend, TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { VariableSupport } from 'variable_support'
+import { AnnotationsQueryEditor } from 'AnnotationsQueryEditor/AnnotationsQueryEditor'
 import {
   Asset,
   AssetFilter,
@@ -38,6 +39,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     super(instanceSettings)
     this.defaultTab = instanceSettings.jsonData.defaultTab ?? TabIndex.Assets
     this.variables = new VariableSupport(this)
+    this.annotations = {
+      QueryEditor: AnnotationsQueryEditor,
+    }
   }
 
   query(request: DataQueryRequest<Query>): any {

@@ -22,12 +22,20 @@ import { DataSource } from 'datasource'
 export interface Props {
   datasource: DataSource
   state: QueryEditorState
-  appIsAlertingType: boolean
+  appIsAlertingType?: boolean
+  isAnnotationQuery?: boolean
   saveState(state: QueryEditorState): void
   onChangeEventQuery: (query: EventQuery) => void
 }
 
-export const Events = ({ datasource, state, appIsAlertingType, saveState, onChangeEventQuery }: Props): JSX.Element => {
+export const Events = ({
+  datasource,
+  state,
+  appIsAlertingType = false,
+  isAnnotationQuery = false,
+  saveState,
+  onChangeEventQuery,
+}: Props): JSX.Element => {
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
@@ -299,7 +307,9 @@ export const Events = ({ datasource, state, appIsAlertingType, saveState, onChan
         <InlineFieldRow>
           <InlineField grow labelWidth={labelWidth} label="Query Type" tooltip="Specify a property type to work with">
             <Select
-              options={Object.entries(PropertyType).map(([key, value]) => ({ label: key, value }))}
+              options={Object.entries(PropertyType)
+                .filter(([_, value]) => !isAnnotationQuery || value === PropertyType.Simple)
+                .map(([key, value]) => ({ label: key, value }))}
               value={state.eventsState.eventQuery.Type}
               onChange={onChangeQueryType}
             />
