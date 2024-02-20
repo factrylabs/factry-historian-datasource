@@ -135,6 +135,11 @@ func handleEventAssetMeasurementQuery(queryType string, event schemas.Event, ass
 	q.Start = event.StartTime
 	q.End = event.StopTime
 	now := time.Now()
+
+	if q.Aggregation == nil {
+		return nil, fmt.Errorf("no aggregation specified")
+	}
+
 	if queryType == "simple" {
 		stopTime := now
 		if event.StopTime != nil {
