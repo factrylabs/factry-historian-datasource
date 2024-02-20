@@ -278,24 +278,24 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 		fieldByColumn[eventTypeProperty.Name] = field
 	}
 
-	for _, event := range events {
-		fieldByColumn[EventUUIDColumnName].Append(event.UUID.String())
-		fieldByColumn[AssetUUIDColumnName].Append(event.AssetUUID.String())
-		fieldByColumn[EventTypeUUIDColumnName].Append(event.EventTypeUUID.String())
-		fieldByColumn[AssetColumnName].Append(UUIDToAssetMap[event.AssetUUID].Name)
-		fieldByColumn[AssetPathColumnName].Append(getAssetPath(UUIDToAssetMap, event.AssetUUID))
+	for i := range events {
+		fieldByColumn[EventUUIDColumnName].Append(events[i].UUID.String())
+		fieldByColumn[AssetUUIDColumnName].Append(events[i].AssetUUID.String())
+		fieldByColumn[EventTypeUUIDColumnName].Append(events[i].EventTypeUUID.String())
+		fieldByColumn[AssetColumnName].Append(UUIDToAssetMap[events[i].AssetUUID].Name)
+		fieldByColumn[AssetPathColumnName].Append(getAssetPath(UUIDToAssetMap, events[i].AssetUUID))
 		fieldByColumn[EventTypeColumnName].Append(eventType.Name)
-		fieldByColumn[StartTimeColumnName].Append(&event.StartTime)
-		fieldByColumn[StopTimeColumnName].Append(event.StopTime)
+		fieldByColumn[StartTimeColumnName].Append(&events[i].StartTime)
+		fieldByColumn[StopTimeColumnName].Append(events[i].StopTime)
 
-		if event.StopTime != nil {
-			duration := event.StopTime.Sub(event.StartTime).Seconds()
+		if events[i].StopTime != nil {
+			duration := events[i].StopTime.Sub(events[i].StartTime).Seconds()
 			fieldByColumn[DurationColumnName].Append(&duration)
 		} else {
 			fieldByColumn[DurationColumnName].Append(nil)
 		}
 
-		if event.Properties == nil {
+		if events[i].Properties == nil {
 			for _, eventPropertyType := range eventTypeProperties {
 				if eventPropertyType.Type == schemas.EventTypePropertyTypePeriodic {
 					continue
@@ -312,10 +312,10 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 			}
 
 			setUOMFieldConfig(fieldByColumn[eventTypeProperty.Name], eventTypeProperty)
-			addValueToField(fieldByColumn[eventTypeProperty.Name], event.Properties.Properties[eventTypeProperty.Name])
+			addValueToField(fieldByColumn[eventTypeProperty.Name], events[i].Properties.Properties[eventTypeProperty.Name])
 		}
 
-		assetPropertyFrames := eventAssetPropertyFrames[event.UUID]
+		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]
 		for assetProperty := range assetPropertyFieldTypes {
 			found := false
 			field := fieldByColumn[assetProperty]
