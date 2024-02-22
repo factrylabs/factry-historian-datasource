@@ -18,22 +18,18 @@ export interface QueryEditorState {
   loading: boolean
   tabIndex: number
   measurementQuery?: MeasurementQuery
+  assetMeasurementQuery?: AssetMeasurementQuery
+  selectedAssetPath?: string
+  selectedAssetProperties?: string[]
   databases: TimeseriesDatabase[]
   pagination: Pagination
   assetProperties: AssetProperty[]
   assets: Asset[]
-  assetsState: AssetsTabState
   eventsState: EventsTabState
   rawState: RawTabState
   eventTypes: EventType[]
   eventTypeProperties: EventTypeProperty[]
   eventConfigurations: EventConfiguration[]
-}
-
-export interface AssetsTabState {
-  options: AssetMeasurementQueryState
-  selectedAsset?: string
-  selectedProperties: Array<SelectableValue<string>>
 }
 
 export interface RawTabState {
@@ -47,17 +43,6 @@ export interface EventsTabState {
   selectedEventTypes?: Array<SelectableValue<string>>
   selectedStatuses?: Array<SelectableValue<string>>
   selectedProperties?: Array<SelectableValue<string>>
-  tags: QueryTag[]
-}
-
-export interface MeasurementQueryState {
-  query: MeasurementQuery
-  filter: MeasurementFilter
-  tags: QueryTag[]
-}
-
-export interface AssetMeasurementQueryState {
-  query: AssetMeasurementQuery
   tags: QueryTag[]
 }
 

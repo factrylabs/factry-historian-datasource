@@ -1,13 +1,13 @@
 import React, { Component } from 'react'
 import { RadioButtonGroup, InlineField, InlineFieldRow } from '@grafana/ui'
-import { CoreApp, QueryEditorProps, SelectableValue } from '@grafana/data'
+import { CoreApp, QueryEditorProps } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { toSelectableValue } from 'components/TagsSection/util'
 import { Assets } from 'QueryEditor/Assets'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { Measurements } from 'QueryEditor/Measurements'
-import { defaultQueryOptions, propertyFilterToQueryTags, sortByName, tagsToQueryTags } from 'QueryEditor/util'
+import { defaultQueryOptions, propertyFilterToQueryTags, sortByName } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import {
   HistorianDataSourceOptions,
@@ -17,10 +17,8 @@ import {
   QueryEditorState,
   EventQuery,
   AssetMeasurementQuery,
-  AssetMeasurementQueryState,
   TabIndex,
   Measurement,
-  AggregationName,
   PropertyType,
 } from './types'
 
@@ -50,31 +48,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     databases: [],
     assetProperties: [],
     assets: [],
-    assetsState: {
-      options: {
-        query: {
-          Assets: [],
-          AssetProperties: [],
-          Options: {
-            Database: '',
-            GroupBy: ['status'],
-            Aggregation: {
-              Name: AggregationName.Mean,
-              Period: '$__interval',
-            },
-            Tags: { status: 'Good' },
-            IncludeLastKnownPoint: false,
-            FillInitialEmptyValues: false,
-            UseEngineeringSpecs: !this.appIsAlertingType,
-            DisplayDatabaseName: false,
-            DisplayDescription: false,
-          },
-        },
-        tags: [{ key: 'status', value: 'Good' }],
-      },
-      selectedAsset: '',
-      selectedProperties: [],
-    },
     eventsState: {
       eventQuery: {
         Type: PropertyType.Simple,
@@ -117,10 +90,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       return {
         ...prevState,
         tabIndex: tabIndex,
-        assetsState: {
-          ...this.state.assetsState,
-          selectedAsset: query.tabIndex === TabIndex.Assets ? query.selectedAssetPath : undefined,
-        },
         eventsState: {
           ...this.state.eventsState,
           selectedAsset: query.tabIndex === TabIndex.Events ? query.selectedAssetPath : undefined,
@@ -146,28 +115,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     } else {
       switch (tabIndex) {
         case TabIndex.Assets: {
-          const assetMeasurementQuery = query.query as AssetMeasurementQuery
-          const queryOptions: AssetMeasurementQueryState = {
-            tags: tagsToQueryTags(assetMeasurementQuery.Options.Tags),
-            query: assetMeasurementQuery,
-          }
           this.setState(
             (prevState) => {
               return {
                 ...prevState,
                 loading: false,
                 tabIndex: tabIndex,
-                assetsState: {
-                  ...this.state.assetsState,
-                  options: queryOptions,
-                  selectedAsset: query.selectedAssetPath,
-                  selectedProperties: assetMeasurementQuery.AssetProperties.map((e) => {
-                    const prop = this.state.assetProperties.find(
-                      (a) => a.Name === e && a.AssetUUID === query.selectedAssetPath
-                    )
-                    return { label: prop?.Name ?? e, value: prop?.UUID ?? e } as SelectableValue<string>
-                  }),
-                },
               }
             },
             () => {
@@ -246,13 +199,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   async loadDataForTab(tabIndex: number): Promise<void[]> {
     let promises = []
-    switch (tabIndex || TabIndex.Assets) {
-      case TabIndex.Assets:
-        promises.push(this.getAssets())
-        break
-      case TabIndex.Measurements:
-        promises.push(this.getTimeSeriesDatabases())
-        break
+    switch (tabIndex) {
       case TabIndex.Events:
         promises.push(this.getAssets())
         promises.push(this.getEventTypes())
@@ -277,12 +224,17 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         this.loadDataForTab(index).then(() => {
           switch (index) {
             case TabIndex.Assets:
-              if (this.state.assetsState.options.query) {
-                this.onChangeAssetMeasurementQuery(this.state.assetsState.options.query)
-              }
+              this.onChangeAssetMeasurementQuery(
+                this.state.selectedAssetPath,
+                this.state.selectedAssetProperties,
+                this.state.assetMeasurementQuery ?? {
+                  AssetProperties: [],
+                  Assets: [],
+                  Options: defaultQueryOptions(this.appIsAlertingType),
+                }
+              )
               break
             case TabIndex.Measurements:
-              // TODO save queries in state to keep state when switching tabs
               this.onChangeMeasurementQuery(
                 this.state.measurementQuery ?? {
                   Databases: [],
@@ -357,12 +309,24 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     })
   }
 
-  onChangeAssetMeasurementQuery(assetMeasurementQuery: AssetMeasurementQuery): void {
+  onChangeAssetMeasurementQuery(
+    selectedAssetPath: string | undefined,
+    selectedAssetProperties: string[] | undefined,
+    assetMeasurementQuery: AssetMeasurementQuery
+  ): void {
     const { onChange, query } = this.props
     query.queryType = 'AssetMeasurementQuery'
     query.query = assetMeasurementQuery
+    query.selectedAssetPath = selectedAssetPath
+    query.selectedAssetProperties = selectedAssetProperties
     onChange(query)
     this.onRunQuery(this.props)
+    this.setState({
+      ...this.state,
+      assetMeasurementQuery: assetMeasurementQuery,
+      selectedAssetPath: selectedAssetPath,
+      selectedAssetProperties: selectedAssetProperties,
+    } as QueryEditorState)
   }
 
   onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
@@ -412,10 +376,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     }
     query.tabIndex = state.tabIndex
     switch (state.tabIndex) {
-      case TabIndex.Assets:
-        query.selectedAssetPath = state.assetsState.selectedAsset
-        query.selectedAssetProperties = state.assetsState.selectedProperties.map((e) => e.value || '')
-        break
       case TabIndex.Events:
         query.selectedAssetPath = state.eventsState.selectedAsset
         break
@@ -469,18 +429,19 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         title: 'Assets',
         content: (
           <Assets
+            query={this.props.query.query as AssetMeasurementQuery}
+            selectedAssetPath={this.props.query.selectedAssetPath}
+            selectedAssetProperties={this.props.query.selectedAssetProperties}
             datasource={this.props.datasource}
-            state={this.state}
             appIsAlertingType={this.appIsAlertingType}
             templateVariables={this.templateVariables}
-            saveState={(state) => this.saveState(state, true)}
             onChangeAssetMeasurementQuery={this.onChangeAssetMeasurementQuery}
           />
         ),
       },
       {
         title: 'Measurements',
-        content: this.props.query.query && (
+        content: (
           <Measurements
             query={this.props.query.query as MeasurementQuery}
             appIsAlertingType={this.appIsAlertingType}
@@ -525,7 +486,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             />
           </InlineField>
         </InlineFieldRow>
-        {!this.state.loading && tabs[this.state.tabIndex].content}
+        {!this.state.loading && this.props.query.query && tabs[this.state.tabIndex].content}
       </>
     )
   }

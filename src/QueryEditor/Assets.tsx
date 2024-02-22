@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { CascaderOption, InlineField, InlineFieldRow } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { Cascader } from 'components/Cascader/Cascader'
@@ -6,29 +6,44 @@ import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { QueryTag } from 'components/TagsSection/types'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
-import { getChildAssets, matchedAssets, replaceAsset } from './util'
-import { AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions, QueryEditorState } from 'types'
+import { getChildAssets, matchedAssets, replaceAsset, tagsToQueryTags } from './util'
+import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
 
 export interface Props {
+  query: AssetMeasurementQuery
+  selectedAssetPath?: string
+  selectedAssetProperties?: string[]
   datasource: DataSource
-  state: QueryEditorState
   appIsAlertingType: boolean
   templateVariables: Array<SelectableValue<string>>
-  saveState(state: QueryEditorState): void
-  onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
+  onChangeAssetMeasurementQuery: (
+    selectedAssetPath: string | undefined,
+    selectedAssetProperties: string[] | undefined,
+    query: AssetMeasurementQuery
+  ) => void
 }
 
-export const Assets = ({
-  datasource,
-  state,
-  appIsAlertingType,
-  templateVariables,
-  saveState,
-  onChangeAssetMeasurementQuery,
-}: Props): JSX.Element => {
-  const replacedAsset = replaceAsset(state.assetsState.selectedAsset, state.assets)
-  const assetOptions = getChildAssets(null, state.assets, state.assetProperties).concat(
-    templateVariables.map((e) => {
+export const Assets = (props: Props): JSX.Element => {
+  const [loading, setLoading] = useState(true)
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [assetProperties, setAssetProperties] = useState<AssetProperty[]>([])
+
+  useEffect(() => {
+    const load = async () => {
+      const assets = await props.datasource.getAssets()
+      setAssets(assets)
+      const assetProperties = await props.datasource.getAssetProperties()
+      setAssetProperties(assetProperties)
+      setLoading(false)
+    }
+    if (loading) {
+      load()
+    }
+  }, [loading, props.datasource])
+
+  const replacedAsset = replaceAsset(props.selectedAssetPath, assets)
+  const assetOptions = getChildAssets(null, assets, assetProperties).concat(
+    props.templateVariables.map((e) => {
       return { value: e.value, label: e.label } as CascaderOption
     })
   )
@@ -36,93 +51,53 @@ export const Assets = ({
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const assetProperties = items.map((e) => e.value)
     const updatedQuery = {
-      ...state.assetsState.options.query,
+      ...props.query,
       AssetProperties: assetProperties,
     } as AssetMeasurementQuery
-    saveState({
-      ...state,
-      assetsState: {
-        ...state.assetsState,
-        selectedProperties: items,
-        options: {
-          ...state.assetsState.options,
-          query: updatedQuery,
-        },
-      },
-    })
-    onChangeAssetMeasurementQuery(updatedQuery)
+    props.onChangeAssetMeasurementQuery(
+      props.selectedAssetPath,
+      items.map((e) => e.value || ''),
+      updatedQuery
+    )
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
     let properties: string[] = []
-    let selectedProperties: Array<SelectableValue<string>> = []
     if (property) {
-      const assetProperty = state.assetProperties.find((e) => e.UUID === property)
+      const assetProperty = assetProperties.find((e) => e.UUID === property)
       if (assetProperty) {
-        selectedProperties = [
-          {
-            value: assetProperty.Name,
-            label: assetProperty.Name,
-          } as SelectableValue<string>,
-        ]
         properties = [assetProperty.Name]
       }
     }
     const updatedQuery = {
-      ...state.assetsState.options.query,
+      ...props.query,
       Assets: [asset],
       AssetProperties: properties,
     } as AssetMeasurementQuery
-    saveState({
-      ...state,
-      assetsState: {
-        ...state.assetsState,
-        selectedProperties: selectedProperties,
-        options: {
-          ...state.assetsState.options,
-          query: updatedQuery,
-        },
-        selectedAsset: asset,
-      },
-    })
-    onChangeAssetMeasurementQuery(updatedQuery)
+    props.onChangeAssetMeasurementQuery(asset, properties, updatedQuery)
   }
 
   const handleChangeMeasurementQueryOptions = (options: MeasurementQueryOptions, tags: QueryTag[]): void => {
-    saveState({
-      ...state,
-      assetsState: {
-        ...state.assetsState,
-        options: {
-          ...state.assetsState.options,
-          query: {
-            ...state.assetsState.options.query,
-            Options: options,
-          },
-          tags: tags,
-        },
-      },
-    })
-    onChangeAssetMeasurementQuery({
-      ...state.assetsState.options.query,
+    props.onChangeAssetMeasurementQuery(props.selectedAssetPath, props.selectedAssetProperties, {
+      ...props.query,
       Options: options,
     })
   }
 
   const initialLabel = (): string => {
-    const asset = state.assets.find((e) => e.UUID === state.assetsState.selectedAsset)
+    const asset = assets.find((e) => e.UUID === props.selectedAssetPath)
     if (asset) {
       return asset.AssetPath || ''
     }
 
-    return state.assetsState.selectedAsset || ''
+    return props.selectedAssetPath || ''
   }
 
   const getTagKeyOptions = async (): Promise<string[]> => {
     let options = new Set<string>()
 
     for (const assetProperty of getSelectedAssetProperties()) {
-      const keys = await datasource.getTagKeysForMeasurement(assetProperty.MeasurementUUID)
+      const keys = await props.datasource.getTagKeysForMeasurement(assetProperty.MeasurementUUID)
       keys.forEach((e) => options.add(e))
     }
 
@@ -133,7 +108,7 @@ export const Assets = ({
     let options = new Set<string>()
 
     for (const assetProperty of getSelectedAssetProperties()) {
-      const values = await datasource.getTagValuesForMeasurement(assetProperty.MeasurementUUID, key)
+      const values = await props.datasource.getTagValuesForMeasurement(assetProperty.MeasurementUUID, key)
       values.forEach((e) => options.add(e))
     }
 
@@ -142,16 +117,16 @@ export const Assets = ({
 
   const getSelectedAssetProperties = (): AssetProperty[] => {
     const assetProperties = new Set<AssetProperty>()
-    const selectedAssetProperties = state.assetsState.options.query.AssetProperties.flatMap((e) =>
-      datasource.multiSelectReplace(e)
+    const selectedAssetProperties = props.selectedAssetProperties?.flatMap((e) =>
+      props.datasource.multiSelectReplace(e)
     )
-    const selectedAssets = state.assetsState.options.query.Assets.flatMap((e) =>
-      datasource.multiSelectReplace(e)
-    ).flatMap((e) => matchedAssets(e, state.assets).map((asset) => asset.UUID))
+    const selectedAssets = props.query.Assets.flatMap((e) => props.datasource.multiSelectReplace(e)).flatMap((e) =>
+      matchedAssets(e, assets).map((asset) => asset.UUID)
+    )
 
-    for (const assetProperty of state.assetProperties) {
+    for (const assetProperty of assetProperties) {
       const propertySelected =
-        selectedAssetProperties.find((e) => e === assetProperty.UUID || e === assetProperty.Name) !== undefined
+        selectedAssetProperties?.find((e) => e === assetProperty.UUID || e === assetProperty.Name) !== undefined
 
       const assetSelected = selectedAssets.find((e) => e === assetProperty.AssetUUID)
       if (propertySelected && assetSelected) {
@@ -163,49 +138,53 @@ export const Assets = ({
 
   return (
     <>
-      <InlineFieldRow>
-        <InlineField
-          label="Assets"
-          grow
-          labelWidth={labelWidth}
-          tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes"
-        >
-          <Cascader
-            initialValue={state.assetsState.selectedAsset}
-            initialLabel={initialLabel()}
-            options={assetOptions}
-            displayAllSelectedLevels
-            onSelect={onAssetChange}
-            separator="\\"
+      {!loading && (
+        <>
+          <InlineFieldRow>
+            <InlineField
+              label="Assets"
+              grow
+              labelWidth={labelWidth}
+              tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes"
+            >
+              <Cascader
+                initialValue={props.selectedAssetPath}
+                initialLabel={initialLabel()}
+                options={assetOptions}
+                displayAllSelectedLevels
+                onSelect={onAssetChange}
+                separator="\\"
+              />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField
+              label="Properties"
+              grow
+              labelWidth={labelWidth}
+              tooltip="Specify one or more asset properties to work with"
+            >
+              <AssetProperties
+                assetProperties={assetProperties}
+                initialValue={props.selectedAssetProperties ?? []}
+                selectedAssets={matchedAssets(replacedAsset, assets)}
+                templateVariables={props.templateVariables}
+                onChange={onSelectProperties}
+              />
+            </InlineField>
+          </InlineFieldRow>
+          <QueryOptions
+            state={props.query.Options}
+            tags={tagsToQueryTags(props.query.Options.Tags)}
+            appIsAlertingType={props.appIsAlertingType}
+            datatypes={[]}
+            templateVariables={props.templateVariables}
+            getTagKeyOptions={getTagKeyOptions}
+            getTagValueOptions={getTagValueOptions}
+            onChange={handleChangeMeasurementQueryOptions}
           />
-        </InlineField>
-      </InlineFieldRow>
-      <InlineFieldRow>
-        <InlineField
-          label="Properties"
-          grow
-          labelWidth={labelWidth}
-          tooltip="Specify one or more asset properties to work with"
-        >
-          <AssetProperties
-            assetProperties={state.assetProperties}
-            initialValue={state.assetsState.selectedProperties.map((e) => e.value ?? '')}
-            selectedAssets={matchedAssets(replacedAsset, state.assets)}
-            templateVariables={templateVariables}
-            onChange={onSelectProperties}
-          />
-        </InlineField>
-      </InlineFieldRow>
-      <QueryOptions
-        state={state.assetsState.options.query.Options}
-        tags={state.assetsState.options.tags}
-        appIsAlertingType={appIsAlertingType}
-        datatypes={[]}
-        templateVariables={templateVariables}
-        getTagKeyOptions={getTagKeyOptions}
-        getTagValueOptions={getTagValueOptions}
-        onChange={handleChangeMeasurementQueryOptions}
-      />
+        </>
+      )}
     </>
   )
 }

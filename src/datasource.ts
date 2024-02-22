@@ -46,7 +46,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
 
   query(request: DataQueryRequest<Query>): any {
     request.targets = request.targets
-      .filter((target) => !target.hide)
+      .filter((target) => {
+        return !target.hide && target.query !== undefined
+      })
       .map((target) => {
         switch (target.queryType) {
           case 'AssetMeasurementQuery': {
@@ -103,7 +105,6 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         }
         return target
       })
-
     return super.query(request)
   }
 
