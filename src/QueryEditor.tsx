@@ -2,12 +2,11 @@ import React, { Component } from 'react'
 import { RadioButtonGroup, InlineField, InlineFieldRow } from '@grafana/ui'
 import { CoreApp, QueryEditorProps } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
-import { toSelectableValue } from 'components/TagsSection/util'
 import { Assets } from 'QueryEditor/Assets'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { Measurements } from 'QueryEditor/Measurements'
-import { defaultQueryOptions, propertyFilterToQueryTags, sortByName } from 'QueryEditor/util'
+import { defaultQueryOptions } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import {
   HistorianDataSourceOptions,
@@ -18,7 +17,6 @@ import {
   EventQuery,
   AssetMeasurementQuery,
   TabIndex,
-  Measurement,
   PropertyType,
 } from './types'
 
@@ -46,22 +44,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       Page: 1,
     },
     databases: [],
-    assetProperties: [],
-    assets: [],
-    eventsState: {
-      eventQuery: {
-        Type: PropertyType.Simple,
-        Statuses: [],
-        PropertyFilter: [],
-        EventTypes: [],
-        Properties: [],
-        QueryAssetProperties: false,
-      },
-      tags: [],
-      selectedStatuses: [],
-      selectedEventTypes: [],
-      selectedProperties: [],
-    },
     rawState: {
       rawQuery: {
         Query: '',
@@ -71,9 +53,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         Database: '',
       },
     },
-    eventTypes: [],
-    eventTypeProperties: [],
-    eventConfigurations: [],
   } as QueryEditorState
 
   templateVariables = getTemplateSrv()
@@ -90,10 +69,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       return {
         ...prevState,
         tabIndex: tabIndex,
-        eventsState: {
-          ...this.state.eventsState,
-          selectedAsset: query.tabIndex === TabIndex.Events ? query.selectedAssetPath : undefined,
-        },
       }
     })
 
@@ -145,25 +120,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           break
         }
         case TabIndex.Events:
-          const eventQuery = query.query as EventQuery
           this.setState(
             (prevState) => {
               return {
                 ...prevState,
                 loading: false,
                 tabIndex: tabIndex,
-                eventsState: {
-                  ...this.state.eventsState,
-                  eventQuery: eventQuery,
-                  tags: propertyFilterToQueryTags(eventQuery.PropertyFilter ?? []),
-                  selectedAsset: query.selectedAssetPath,
-                  selectedStatuses: eventQuery.Statuses?.map((e) => toSelectableValue(e)),
-                  selectedEventTypes: eventQuery.EventTypes
-                    ? eventQuery.EventTypes.map((e) => {
-                        return { label: this.state.eventTypes.find((et) => et.UUID === e)?.Name, value: e }
-                      })
-                    : undefined,
-                },
               }
             },
             () => {
@@ -200,12 +162,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   async loadDataForTab(tabIndex: number): Promise<void[]> {
     let promises = []
     switch (tabIndex) {
-      case TabIndex.Events:
-        promises.push(this.getAssets())
-        promises.push(this.getEventTypes())
-        promises.push(this.getEventTypeProperties())
-        promises.push(this.getEventConfigurations())
-        break
       case TabIndex.RawQuery:
         promises.push(this.getTimeSeriesDatabases())
         break
@@ -225,8 +181,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           switch (index) {
             case TabIndex.Assets:
               this.onChangeAssetMeasurementQuery(
-                this.state.selectedAssetPath,
-                this.state.selectedAssetProperties,
                 this.state.assetMeasurementQuery ?? {
                   AssetProperties: [],
                   Assets: [],
@@ -241,6 +195,19 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
                   Measurements: [],
                   IsRegex: false,
                   Options: defaultQueryOptions(this.appIsAlertingType),
+                }
+              )
+              break
+            case TabIndex.Events:
+              this.onChangeEventQuery(
+                this.state.eventQuery ?? {
+                  Type: PropertyType.Simple,
+                  Assets: [],
+                  Statuses: [],
+                  PropertyFilter: [],
+                  EventTypes: [],
+                  Properties: [],
+                  QueryAssetProperties: false,
                 }
               )
               break
@@ -263,69 +230,15 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     })
   }
 
-  async getAssets(): Promise<void> {
-    await this.props.datasource.getAssets().then(async (assets) => {
-      const assetProperties = await this.props.datasource.getAssetProperties()
-      let measurements: Measurement[] = []
-      await Promise.all(
-        assets.map(async (asset) => {
-          let m = await this.props.datasource.getMeasurements({ AssetUUID: asset.UUID }, this.state.pagination)
-          measurements = measurements.concat(m)
-        })
-      )
-
-      this.setState((prevState) => {
-        return {
-          ...prevState,
-          assetProperties: assetProperties.sort(sortByName),
-          assets: assets,
-          measurements: [...new Map(measurements.map((item) => [item.UUID, item])).values()],
-        }
-      })
-    })
-  }
-
-  async getEventTypes(): Promise<void> {
-    this.props.datasource.getEventTypes().then((eventTypes) => {
-      this.setState((prevState) => {
-        return { ...prevState, eventTypes: eventTypes }
-      })
-    })
-  }
-
-  async getEventTypeProperties(): Promise<void> {
-    this.props.datasource.getEventTypeProperties().then((eventTypeProperties) => {
-      this.setState((prevState) => {
-        return { ...prevState, eventTypeProperties: eventTypeProperties }
-      })
-    })
-  }
-
-  async getEventConfigurations(): Promise<void> {
-    this.props.datasource.getEventConfigurations().then((eventConfigurations) => {
-      this.setState((prevState) => {
-        return { ...prevState, eventConfigurations: eventConfigurations }
-      })
-    })
-  }
-
-  onChangeAssetMeasurementQuery(
-    selectedAssetPath: string | undefined,
-    selectedAssetProperties: string[] | undefined,
-    assetMeasurementQuery: AssetMeasurementQuery
-  ): void {
+  onChangeAssetMeasurementQuery(assetMeasurementQuery: AssetMeasurementQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'AssetMeasurementQuery'
     query.query = assetMeasurementQuery
-    query.selectedAssetPath = selectedAssetPath
-    query.selectedAssetProperties = selectedAssetProperties
     onChange(query)
     this.onRunQuery(this.props)
     this.setState({
       ...this.state,
       assetMeasurementQuery: assetMeasurementQuery,
-      selectedAssetPath: selectedAssetPath,
-      selectedAssetProperties: selectedAssetProperties,
     } as QueryEditorState)
   }
 
@@ -375,11 +288,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       return
     }
     query.tabIndex = state.tabIndex
-    switch (state.tabIndex) {
-      case TabIndex.Events:
-        query.selectedAssetPath = state.eventsState.selectedAsset
-        break
-    }
     onChange(query)
     if (updateState) {
       this.setState(state)
@@ -430,8 +338,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Assets
             query={this.props.query.query as AssetMeasurementQuery}
-            selectedAssetPath={this.props.query.selectedAssetPath}
-            selectedAssetProperties={this.props.query.selectedAssetProperties}
             datasource={this.props.datasource}
             appIsAlertingType={this.appIsAlertingType}
             templateVariables={this.templateVariables}
@@ -455,10 +361,9 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         title: 'Events',
         content: (
           <Events
+            query={this.props.query.query as EventQuery}
             datasource={this.props.datasource}
-            state={this.state}
             appIsAlertingType={this.appIsAlertingType}
-            saveState={(state) => this.saveState(state, true)}
             onChangeEventQuery={this.onChangeEventQuery}
           />
         ),

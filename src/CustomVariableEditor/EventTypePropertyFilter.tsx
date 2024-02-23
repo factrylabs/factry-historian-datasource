@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 
+import { SelectableValue } from '@grafana/data'
 import { AsyncMultiSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { EventTypeFilter, EventTypePropertiesFilter, EventTypePropertyType } from 'types'
-import { SelectableValue } from '@grafana/data'
+import { EventTypeFilter, EventTypePropertiesFilter, EventTypePropertyType, labelWidth } from 'types'
 
 export function EventTypePropertyFilterRow(props: {
   datasource: DataSource
@@ -22,6 +22,7 @@ export function EventTypePropertyFilterRow(props: {
   }
 
   const loadEventTypeOptions = async (query: string): Promise<Array<SelectableValue<string>>> => {
+    console.log(query)
     const filter: EventTypeFilter = {
       Keyword: query,
     }
@@ -53,7 +54,7 @@ export function EventTypePropertyFilterRow(props: {
         <InlineField
           label={'Filter by event types'}
           aria-label={'Filter by event types'}
-          labelWidth={20}
+          labelWidth={labelWidth}
           tooltip={<div>Searches event types by name, to use a regex surround pattern with /</div>}
         >
           <AsyncMultiSelect
@@ -67,7 +68,7 @@ export function EventTypePropertyFilterRow(props: {
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label={'Property types'} aria-label={'Property types'} labelWidth={20}>
+        <InlineField label={'Property types'} aria-label={'Property types'} labelWidth={labelWidth}>
           <Select
             placeholder="Select property type"
             width={25}
@@ -76,7 +77,7 @@ export function EventTypePropertyFilterRow(props: {
               return { label: key, value: value as string }
             })}
             isClearable
-            value={selectedEventTypes}
+            value={props.initialValue?.Types}
           />
         </InlineField>
       </InlineFieldRow>

@@ -1,6 +1,5 @@
-import { DataSourceJsonData, SelectableValue } from '@grafana/data'
+import { DataSourceJsonData } from '@grafana/data'
 import { DataQuery } from '@grafana/schema'
-import { QueryTag } from 'components/TagsSection/TagsSection'
 
 export const labelWidth = 25
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
@@ -19,31 +18,15 @@ export interface QueryEditorState {
   tabIndex: number
   measurementQuery?: MeasurementQuery
   assetMeasurementQuery?: AssetMeasurementQuery
-  selectedAssetPath?: string
-  selectedAssetProperties?: string[]
+  eventQuery?: EventQuery
   databases: TimeseriesDatabase[]
   pagination: Pagination
-  assetProperties: AssetProperty[]
-  assets: Asset[]
-  eventsState: EventsTabState
   rawState: RawTabState
-  eventTypes: EventType[]
-  eventTypeProperties: EventTypeProperty[]
-  eventConfigurations: EventConfiguration[]
 }
 
 export interface RawTabState {
   rawQuery: RawQuery
   filter: MeasurementFilter
-}
-
-export interface EventsTabState {
-  eventQuery: EventQuery
-  selectedAsset?: string
-  selectedEventTypes?: Array<SelectableValue<string>>
-  selectedStatuses?: Array<SelectableValue<string>>
-  selectedProperties?: Array<SelectableValue<string>>
-  tags: QueryTag[]
 }
 
 export interface Query extends DataQuery {
@@ -135,7 +118,7 @@ export interface AssetMeasurementQuery {
 
 export interface EventQuery {
   Type: string
-  Assets?: string[]
+  Assets: string[]
   EventTypes?: string[]
   Statuses?: string[]
   Properties?: string[]
@@ -185,7 +168,7 @@ export interface EventTypePropertiesFilter {
 export interface EventPropertyFilter {
   Property: string
   Datatype: string
-  Value: string | number | boolean
+  Value?: string | number | boolean
   Operator: string
   Condition: string
 }
@@ -324,13 +307,3 @@ export type VariableQuery =
   | DatabaseVariableQuery
   | EventTypePropertyVariableQuery
   | AssetPropertyVariableQuery
-
-export interface AnnotationsQueryEditorState {
-  loading: boolean
-  assetProperties: AssetProperty[]
-  assets: Asset[]
-  eventsState: EventsTabState
-  eventTypes: EventType[]
-  eventTypeProperties: EventTypeProperty[]
-  eventConfigurations: EventConfiguration[]
-}

@@ -1,7 +1,6 @@
 import React from 'react'
 import { MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
-import { matchedAssets } from 'QueryEditor/util'
 import { Asset, AssetProperty } from 'types'
 
 export interface Props {
@@ -19,7 +18,7 @@ export const AssetProperties = (props: Props): JSX.Element => {
 
   const availableProperties = (assets: Asset[]): Array<SelectableValue<string>> => {
     const properties = props.assetProperties
-      .filter((e) => matchedAssets(e.AssetUUID, assets).find((a) => a.UUID === e.AssetUUID))
+      .filter((e) => props.selectedAssets.find((a) => a.UUID === e.AssetUUID))
       .map((e) => e.Name)
     return properties
       .filter((value, index, self) => self.indexOf(value) === index)

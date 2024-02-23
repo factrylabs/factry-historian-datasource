@@ -1,80 +1,88 @@
-import React, { ChangeEvent, FormEvent } from 'react'
+import React, { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, MultiSelect, Select } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { toSelectableValue } from 'components/TagsSection/util'
-import { defaultQueryOptions, getChildAssets, matchedAssets, tagsToQueryTags } from './util'
+import { defaultQueryOptions, getChildAssets, matchedAssets, propertyFilterToQueryTags, tagsToQueryTags } from './util'
+import { EventAssetProperties } from './EventAssetProperties'
+import { DataSource } from 'datasource'
 import {
   Asset,
+  EventConfiguration,
   EventPropertyFilter,
   EventQuery,
+  EventType,
+  EventTypeProperty,
   labelWidth,
   MeasurementQueryOptions,
   PropertyDatatype,
   PropertyType,
-  QueryEditorState,
 } from 'types'
-import { EventAssetProperties } from './EventAssetProperties'
-import { DataSource } from 'datasource'
 
 export interface Props {
+  query: EventQuery
   datasource: DataSource
-  state: QueryEditorState
   appIsAlertingType?: boolean
   isAnnotationQuery?: boolean
-  saveState(state: QueryEditorState): void
   onChangeEventQuery: (query: EventQuery) => void
 }
 
-export const Events = ({
-  datasource,
-  state,
-  appIsAlertingType = false,
-  isAnnotationQuery = false,
-  saveState,
-  onChangeEventQuery,
-}: Props): JSX.Element => {
+export const Events = (props: Props): JSX.Element => {
+  const [loading, setLoading] = useState(true)
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [eventTypes, setEventTypes] = useState<EventType[]>([])
+  const [eventTypeProperties, setEventTypeProperties] = useState<EventTypeProperty[]>([])
+  const [eventConfigurations, setEventConfigurations] = useState<EventConfiguration[]>([])
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
       return { label: `$${e.name}`, value: `$${e.name}` }
     })
-  const assetOptions = getChildAssets(null, state.assets).concat(templateVariables)
+  const assetOptions = getChildAssets(null, assets).concat(templateVariables)
+
+  useEffect(() => {
+    const load = async () => {
+      const assets = await props.datasource.getAssets()
+      setAssets(assets)
+      const eventTypes = await props.datasource.getEventTypes()
+      setEventTypes(eventTypes)
+      const eventTypeProperties = await props.datasource.getEventTypeProperties()
+      setEventTypeProperties(eventTypeProperties)
+      const eventConfigurations = await props.datasource.getEventConfigurations()
+      setEventConfigurations(eventConfigurations)
+      setLoading(false)
+    }
+    if (loading) {
+      load()
+    }
+  }, [loading, props.datasource])
 
   const onSelectEventTypes = (items: Array<SelectableValue<string>>): void => {
-    const eventTypes = items.map((e) => {
-      const eventType = state.eventTypes.find((et) => et.Name === e.value)
+    const selectedEventTypes = items.map((e) => {
+      const eventType = eventTypes.find((et) => et.Name === e.value)
       if (eventType) {
         return eventType.UUID
       }
 
       return e.value || ''
     })
-    const updatedQuery = { ...state.eventsState.eventQuery, EventTypes: eventTypes }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        eventQuery: updatedQuery,
-        selectedEventTypes: items,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    const updatedQuery = { ...props.query, EventTypes: selectedEventTypes }
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const getSelectedAssets = (selected: string | undefined, assets: Asset[]): Asset[] => {
-    const replacedAssets = datasource.multiSelectReplace(selected)
-    return replacedAssets.flatMap((e) => matchedAssets(e, assets))
+    const replacedAssets = props.datasource.multiSelectReplace(selected)
+    return matchedAssets(replacedAssets, assets)
   }
 
   const availableEventTypes = (selected: string | undefined): Array<SelectableValue<string>> => {
-    const assets = getSelectedAssets(selected, state.assets)
-    return state.eventTypes
+    const selectedAssets = getSelectedAssets(selected, assets)
+    return eventTypes
       .filter((e) =>
-        state.eventConfigurations.some(
-          (ec) => assets.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === e.UUID
+        eventConfigurations.some(
+          (ec) => selectedAssets.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === e.UUID
         )
       )
       .map((e) => {
@@ -93,56 +101,29 @@ export const Events = ({
     const statuses = items.map((e) => {
       return e.value || ''
     })
-    const updatedQuery = { ...state.eventsState.eventQuery, Statuses: statuses }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        eventQuery: updatedQuery,
-        selectedStatuses: items,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    const updatedQuery = { ...props.query, Statuses: statuses }
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const onAssetChange = (value: string): void => {
     const updatedQuery = {
-      ...state.eventsState.eventQuery,
+      ...props.query,
       Assets: [value],
     }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        selectedAsset: value,
-        eventQuery: updatedQuery,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const onChangeQueryType = (item: SelectableValue<string>): void => {
     const updatedQuery = {
-      ...state.eventsState.eventQuery,
+      ...props.query,
       Type: item.value || PropertyType.Simple,
     }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        eventQuery: updatedQuery,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
     const filter: EventPropertyFilter[] = []
     updatedTags.forEach((tag) => {
-      if (tag.value === undefined || tag.value === 'select tag value') {
-        return
-      }
-
       const dataType = getDatatype(tag.key)
       let eventPropertyFilter: EventPropertyFilter = {
         Property: tag.key,
@@ -153,21 +134,14 @@ export const Events = ({
       }
       filter.push(eventPropertyFilter)
     })
-    const updatedQuery = { ...state.eventsState.eventQuery, PropertyFilter: filter } as EventQuery
-    onChangeEventQuery(updatedQuery)
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        eventQuery: updatedQuery,
-        tags: updatedTags,
-      },
-    } as QueryEditorState)
+
+    const updatedQuery = { ...props.query, PropertyFilter: filter } as EventQuery
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const getDatatype = (property: string): PropertyDatatype => {
-    const datatype = state.eventTypeProperties
-      .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+    const datatype = eventTypeProperties
+      .filter((e) => props.query.EventTypes?.includes(e.EventTypeUUID))
       .find((e) => e.Name === property)?.Datatype
 
     if (!datatype) {
@@ -177,34 +151,36 @@ export const Events = ({
     return datatype
   }
 
-  const availableSimpleProperties = (): string[] => {
+  const availableSimpleProperties = (eventTypes: string[]): string[] => {
+    const selectedEventTypes = eventTypes.flatMap((e) => props.datasource.multiSelectReplace(e))
     return [
       ...new Set(
-        state.eventTypeProperties
+        eventTypeProperties
           .filter((e) => e.Type === PropertyType.Simple)
-          .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+          .filter((e) => selectedEventTypes.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
     ]
   }
 
-  const availablePeriodicProperties = (): string[] => {
+  const availablePeriodicProperties = (eventTypes: string[]): string[] => {
+    const selectedEventTypes = eventTypes.flatMap((e) => props.datasource.multiSelectReplace(e))
     return [
       ...new Set(
-        state.eventTypeProperties
+        eventTypeProperties
           .filter((e) => e.Type === PropertyType.Periodic)
-          .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+          .filter((e) => selectedEventTypes.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
     ]
   }
 
-  const availableProperties = (): Array<SelectableValue<string>> => {
+  const availableProperties = (eventTypes: string[]): Array<SelectableValue<string>> => {
     let properties = [] as string[]
-    if (state.eventsState.eventQuery.Type === PropertyType.Simple) {
-      properties = availableSimpleProperties()
+    if (props.query.Type === PropertyType.Simple) {
+      properties = availableSimpleProperties(eventTypes)
     } else {
-      properties = availablePeriodicProperties()
+      properties = availablePeriodicProperties(eventTypes)
     }
 
     return properties
@@ -216,21 +192,13 @@ export const Events = ({
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const properties = items.map((e) => e.value || '')
-    const updatedQuery = { ...state.eventsState.eventQuery, Properties: properties }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        selectedProperties: items,
-        eventQuery: updatedQuery,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    const updatedQuery = { ...props.query, Properties: properties }
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const availablePropertyValues = (key: string): string[] => {
-    const eventTypeProperty = state.eventTypeProperties
-      .filter((e) => state.eventsState.eventQuery.EventTypes?.includes(e.EventTypeUUID))
+    const eventTypeProperty = eventTypeProperties
+      .filter((e) => props.query.EventTypes?.includes(e.EventTypeUUID))
       .find((e) => e.Name === key)
 
     if (!eventTypeProperty) {
@@ -245,12 +213,16 @@ export const Events = ({
   }
 
   const initialLabel = (): string => {
-    const asset = state.assets.find((e) => e.UUID === state.eventsState.selectedAsset)
+    if (props.query.Assets.length === 0) {
+      return ''
+    }
+
+    const asset = assets.find((e) => e.UUID === props.query.Assets[0])
     if (asset) {
       return asset.AssetPath || ''
     }
 
-    return state.eventsState.selectedAsset || ''
+    return props.query.Assets[0]
   }
   const availableStatuses = (): Array<SelectableValue<string>> => {
     return [
@@ -263,144 +235,125 @@ export const Events = ({
 
   const onChangeQueryAssetProperties = (event: FormEvent<HTMLInputElement>): void => {
     const enabled = (event as ChangeEvent<HTMLInputElement>).target.checked
-    const updatedQuery = { ...state.eventsState.eventQuery, QueryAssetProperties: enabled } as EventQuery
+    const updatedQuery = { ...props.query, QueryAssetProperties: enabled } as EventQuery
     if (enabled && !updatedQuery.Options) {
-      updatedQuery.Options = defaultQueryOptions(appIsAlertingType)
+      updatedQuery.Options = defaultQueryOptions(props.appIsAlertingType ?? false)
     }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        eventQuery: updatedQuery,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const onChangeAssetProperties = (values: string[]): void => {
-    const updatedQuery = { ...state.eventsState.eventQuery, AssetProperties: values }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        eventQuery: updatedQuery,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    const updatedQuery = { ...props.query, AssetProperties: values }
+    props.onChangeEventQuery(updatedQuery)
   }
 
   const onChangeQueryOptions = (options: MeasurementQueryOptions): void => {
-    const updatedQuery = { ...state.eventsState.eventQuery, Options: options }
-    saveState({
-      ...state,
-      eventsState: {
-        ...state.eventsState,
-        eventQuery: updatedQuery,
-      },
-    })
-    onChangeEventQuery(updatedQuery)
+    const updatedQuery = { ...props.query, Options: options }
+    props.onChangeEventQuery(updatedQuery)
   }
 
   return (
     <>
-      <FieldSet label="Event query">
-        <InlineFieldRow>
-          <InlineField grow labelWidth={labelWidth} label="Query Type" tooltip="Specify a property type to work with">
-            <Select
-              options={Object.entries(PropertyType)
-                .filter(([_, value]) => !isAnnotationQuery || value === PropertyType.Simple)
-                .map(([key, value]) => ({ label: key, value }))}
-              value={state.eventsState.eventQuery.Type}
-              onChange={onChangeQueryType}
-            />
-          </InlineField>
-        </InlineFieldRow>
-        <InlineFieldRow>
-          <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
-            <Cascader
-              initialValue={state.eventsState.selectedAsset}
-              initialLabel={initialLabel()}
-              options={assetOptions}
-              displayAllSelectedLevels
-              onSelect={onAssetChange}
-              separator="\\"
-            />
-          </InlineField>
-        </InlineFieldRow>
+      {!loading && (
+        <>
+          <FieldSet label="Event query">
+            <InlineFieldRow>
+              <InlineField
+                grow
+                labelWidth={labelWidth}
+                label="Query Type"
+                tooltip="Specify a property type to work with"
+              >
+                <Select
+                  options={Object.entries(PropertyType)
+                    .filter(([_, value]) => !props.isAnnotationQuery || value === PropertyType.Simple)
+                    .map(([key, value]) => ({ label: key, value }))}
+                  value={props.query.Type}
+                  onChange={onChangeQueryType}
+                />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
+                <Cascader
+                  initialValue={props.query.Assets.length ? props.query.Assets[0] : ''}
+                  initialLabel={initialLabel()}
+                  options={assetOptions}
+                  displayAllSelectedLevels
+                  onSelect={onAssetChange}
+                  separator="\\"
+                />
+              </InlineField>
+            </InlineFieldRow>
 
-        <InlineFieldRow>
-          <InlineField
-            label="Event types"
-            grow
-            labelWidth={labelWidth}
-            tooltip="Specify one or more event type to work with"
-          >
-            <MultiSelect
-              value={state.eventsState.selectedEventTypes}
-              options={availableEventTypes(state.eventsState.selectedAsset)}
-              onChange={onSelectEventTypes}
-            />
-          </InlineField>
-        </InlineFieldRow>
-        <InlineFieldRow>
-          <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
-            <MultiSelect
-              value={state.eventsState.selectedProperties}
-              options={availableProperties()}
-              onChange={onSelectProperties}
-            />
-          </InlineField>
-        </InlineFieldRow>
-        <InlineFieldRow>
-          <InlineField
-            label="Statuses"
-            grow
-            labelWidth={labelWidth}
-            tooltip="Specify one or more status to work with, selecting none will use all statuses"
-          >
-            <MultiSelect
-              value={state.eventsState.selectedStatuses}
-              options={availableStatuses()}
-              onChange={onSelectStatuses}
-            />
-          </InlineField>
-        </InlineFieldRow>
-        <InlineFieldRow>
-          <InlineField label="WHERE" labelWidth={labelWidth}>
-            <TagsSection
-              tags={state.eventsState.tags}
-              operators={['=', '!=', '<', '<=', '>', '>=']}
-              getTagKeyOptions={() => Promise.resolve(availableSimpleProperties())}
-              getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
-              onChange={handleTagsSectionChange}
-            />
-          </InlineField>
-        </InlineFieldRow>
-      </FieldSet>
-      <FieldSet label="Query asset properties">
-        <InlineFieldRow>
-          <InlineField label="Enabled" labelWidth={labelWidth}>
-            <InlineSwitch
-              value={state.eventsState.eventQuery.QueryAssetProperties}
-              onChange={onChangeQueryAssetProperties}
-            />
-          </InlineField>
-        </InlineFieldRow>
-        {state.eventsState.eventQuery.QueryAssetProperties && (
-          <EventAssetProperties
-            appIsAlertingType={appIsAlertingType}
-            datasource={datasource}
-            queryOptions={state.eventsState.eventQuery.Options ?? defaultQueryOptions(appIsAlertingType)}
-            selectedAssetProperties={state.eventsState.eventQuery.AssetProperties ?? []}
-            selectedAssets={getSelectedAssets(state.eventsState.selectedAsset, state.assets)}
-            templateVariables={templateVariables}
-            tags={tagsToQueryTags(state.eventsState.eventQuery.Options?.Tags)}
-            queryType={state.eventsState.eventQuery.Type}
-            onChangeAssetProperties={onChangeAssetProperties}
-            onChangeQueryOptions={onChangeQueryOptions}
-          />
-        )}
-      </FieldSet>
+            <InlineFieldRow>
+              <InlineField
+                label="Event types"
+                grow
+                labelWidth={labelWidth}
+                tooltip="Specify one or more event type to work with"
+              >
+                <MultiSelect
+                  value={props.query.EventTypes}
+                  options={availableEventTypes(props.query.Assets.length ? props.query.Assets[0] : '')}
+                  onChange={onSelectEventTypes}
+                />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
+                <MultiSelect
+                  value={props.query.Properties}
+                  options={availableProperties(props.query.EventTypes ?? [])}
+                  onChange={onSelectProperties}
+                />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Statuses"
+                grow
+                labelWidth={labelWidth}
+                tooltip="Specify one or more status to work with, selecting none will use all statuses"
+              >
+                <MultiSelect value={props.query.Statuses} options={availableStatuses()} onChange={onSelectStatuses} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField label="WHERE" labelWidth={labelWidth}>
+                <TagsSection
+                  tags={propertyFilterToQueryTags(props.query.PropertyFilter ?? [])}
+                  operators={['=', '!=', '<', '<=', '>', '>=']}
+                  getTagKeyOptions={() => Promise.resolve(availableSimpleProperties(props.query.EventTypes ?? []))}
+                  getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
+                  onChange={handleTagsSectionChange}
+                />
+              </InlineField>
+            </InlineFieldRow>
+          </FieldSet>
+          <FieldSet label="Query asset properties">
+            <InlineFieldRow>
+              <InlineField label="Enabled" labelWidth={labelWidth}>
+                <InlineSwitch value={props.query.QueryAssetProperties} onChange={onChangeQueryAssetProperties} />
+              </InlineField>
+            </InlineFieldRow>
+            {props.query.QueryAssetProperties && (
+              <EventAssetProperties
+                appIsAlertingType={props.appIsAlertingType ?? false}
+                datasource={props.datasource}
+                queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
+                selectedAssetProperties={props.query.AssetProperties ?? []}
+                selectedAssets={getSelectedAssets(props.query.Assets.length ? props.query.Assets[0] : '', assets)}
+                templateVariables={templateVariables}
+                tags={tagsToQueryTags(props.query.Options?.Tags)}
+                queryType={props.query.Type}
+                onChangeAssetProperties={onChangeAssetProperties}
+                onChangeQueryOptions={onChangeQueryOptions}
+              />
+            )}
+          </FieldSet>
+        </>
+      )}
     </>
   )
 }

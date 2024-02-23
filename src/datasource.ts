@@ -82,7 +82,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) => this.multiSelectReplace(e))
             eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e))
             eventQuery.Properties = eventQuery.Properties?.flatMap((e) => this.multiSelectReplace(e))
-            eventQuery.PropertyFilter = eventQuery.PropertyFilter.map((e) => {
+            eventQuery.PropertyFilter = eventQuery.PropertyFilter.filter((e) => {
+              return e.Value !== undefined && e.Value !== 'select tag value'
+            }).map((e) => {
               e.Property = this.templateSrv.replace(e.Property)
               switch (e.Datatype) {
                 case PropertyDatatype.Number:
@@ -211,8 +213,16 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   async getEventTypeProperties(filter?: EventTypePropertiesFilter): Promise<EventTypeProperty[]> {
     let params: Record<string, unknown> = {}
     if (filter) {
-      params = {
+      const eventTypePropertiesFilter: EventTypePropertiesFilter = {
         ...filter,
+      }
+      if (eventTypePropertiesFilter.EventTypeUUIDs) {
+        eventTypePropertiesFilter.EventTypeUUIDs = eventTypePropertiesFilter.EventTypeUUIDs.flatMap((e) =>
+          this.multiSelectReplace(e)
+        )
+      }
+      params = {
+        ...eventTypePropertiesFilter,
       }
     }
     return this.getResource('event-type-properties', params)

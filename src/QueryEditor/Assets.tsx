@@ -6,21 +6,15 @@ import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { QueryTag } from 'components/TagsSection/types'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
-import { getChildAssets, matchedAssets, replaceAsset, tagsToQueryTags } from './util'
+import { getChildAssets, matchedAssets, tagsToQueryTags } from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
 
 export interface Props {
   query: AssetMeasurementQuery
-  selectedAssetPath?: string
-  selectedAssetProperties?: string[]
   datasource: DataSource
   appIsAlertingType: boolean
   templateVariables: Array<SelectableValue<string>>
-  onChangeAssetMeasurementQuery: (
-    selectedAssetPath: string | undefined,
-    selectedAssetProperties: string[] | undefined,
-    query: AssetMeasurementQuery
-  ) => void
+  onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
 }
 
 export const Assets = (props: Props): JSX.Element => {
@@ -41,7 +35,6 @@ export const Assets = (props: Props): JSX.Element => {
     }
   }, [loading, props.datasource])
 
-  const replacedAsset = replaceAsset(props.selectedAssetPath, assets)
   const assetOptions = getChildAssets(null, assets, assetProperties).concat(
     props.templateVariables.map((e) => {
       return { value: e.value, label: e.label } as CascaderOption
@@ -49,16 +42,12 @@ export const Assets = (props: Props): JSX.Element => {
   )
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
-    const assetProperties = items.map((e) => e.value)
+    const assetProperties = items.map((e) => e.value ?? '')
     const updatedQuery = {
       ...props.query,
       AssetProperties: assetProperties,
     } as AssetMeasurementQuery
-    props.onChangeAssetMeasurementQuery(
-      props.selectedAssetPath,
-      items.map((e) => e.value || ''),
-      updatedQuery
-    )
+    props.onChangeAssetMeasurementQuery(updatedQuery)
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
@@ -74,23 +63,27 @@ export const Assets = (props: Props): JSX.Element => {
       Assets: [asset],
       AssetProperties: properties,
     } as AssetMeasurementQuery
-    props.onChangeAssetMeasurementQuery(asset, properties, updatedQuery)
+    props.onChangeAssetMeasurementQuery(updatedQuery)
   }
 
   const handleChangeMeasurementQueryOptions = (options: MeasurementQueryOptions, tags: QueryTag[]): void => {
-    props.onChangeAssetMeasurementQuery(props.selectedAssetPath, props.selectedAssetProperties, {
+    props.onChangeAssetMeasurementQuery({
       ...props.query,
       Options: options,
     })
   }
 
   const initialLabel = (): string => {
-    const asset = assets.find((e) => e.UUID === props.selectedAssetPath)
+    if (props.query.Assets.length === 0) {
+      return ''
+    }
+
+    const asset = assets.find((e) => e.UUID === props.query.Assets[0])
     if (asset) {
       return asset.AssetPath || ''
     }
 
-    return props.selectedAssetPath || ''
+    return props.query.Assets[0]
   }
 
   const getTagKeyOptions = async (): Promise<string[]> => {
@@ -117,11 +110,9 @@ export const Assets = (props: Props): JSX.Element => {
 
   const getSelectedAssetProperties = (): AssetProperty[] => {
     const assetProperties = new Set<AssetProperty>()
-    const selectedAssetProperties = props.selectedAssetProperties?.flatMap((e) =>
-      props.datasource.multiSelectReplace(e)
-    )
-    const selectedAssets = props.query.Assets.flatMap((e) => props.datasource.multiSelectReplace(e)).flatMap((e) =>
-      matchedAssets(e, assets).map((asset) => asset.UUID)
+    const selectedAssetProperties = props.query.AssetProperties?.flatMap((e) => props.datasource.multiSelectReplace(e))
+    const selectedAssets = props.query.Assets.flatMap((e) =>
+      matchedAssets(props.datasource.multiSelectReplace(e), assets).map((asset) => asset.UUID)
     )
 
     for (const assetProperty of assetProperties) {
@@ -148,7 +139,7 @@ export const Assets = (props: Props): JSX.Element => {
               tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes"
             >
               <Cascader
-                initialValue={props.selectedAssetPath}
+                initialValue={props.query.Assets.length ? props.query.Assets[0] : ''}
                 initialLabel={initialLabel()}
                 options={assetOptions}
                 displayAllSelectedLevels
@@ -166,8 +157,11 @@ export const Assets = (props: Props): JSX.Element => {
             >
               <AssetProperties
                 assetProperties={assetProperties}
-                initialValue={props.selectedAssetProperties ?? []}
-                selectedAssets={matchedAssets(replacedAsset, assets)}
+                initialValue={props.query.AssetProperties ?? []}
+                selectedAssets={matchedAssets(
+                  props.datasource.multiSelectReplace(props.query.Assets.length ? props.query.Assets[0] : ''),
+                  assets
+                )}
                 templateVariables={props.templateVariables}
                 onChange={onSelectProperties}
               />

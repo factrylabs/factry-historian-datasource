@@ -1,5 +1,4 @@
 import { SelectableValue } from '@grafana/data'
-import { getTemplateSrv } from '@grafana/runtime'
 import { CascaderOption } from 'components/Cascader/Cascader'
 import { QueryTag } from 'components/TagsSection/TagsSection'
 import { useEffect, useState } from 'react'
@@ -210,41 +209,31 @@ export function propertyFilterToQueryTags(filter: EventPropertyFilter[]): QueryT
   return queryTags
 }
 
-export function matchedAssets(regex: string | undefined, assets: Asset[]): Asset[] {
-  if (!regex) {
+export function matchedAssets(selectedAssets: string[], assets: Asset[]): Asset[] {
+  if (selectedAssets.length === 0) {
     return []
   }
 
-  let re: RegExp | undefined = undefined
-  if (regex.startsWith('/') && regex.endsWith('/')) {
-    try {
-      re = new RegExp(`^${regex.substring(1, regex.length - 1)}$`)
-    } catch (e) {
-      void e
-    }
-  }
-
   const matched: Asset[] = []
-  for (const asset of assets) {
-    if (asset.UUID === regex || re?.test(asset.AssetPath || asset.Name)) {
-      matched.push(asset)
+
+  for (const selectedAsset of selectedAssets) {
+    let re: RegExp | undefined = undefined
+    if (selectedAsset.length >= 2 && selectedAsset.startsWith('/') && selectedAsset.endsWith('/')) {
+      try {
+        re = new RegExp(`^${selectedAsset.substring(1, selectedAsset.length - 1)}$`)
+      } catch (e) {
+        void e
+      }
+    }
+
+    for (const asset of assets) {
+      if (asset.UUID === selectedAsset || re?.test(asset.AssetPath || asset.Name)) {
+        matched.push(asset)
+      }
     }
   }
 
   return matched
-}
-
-export function replaceAsset(value: string | undefined, assets: Asset[]): string | undefined {
-  const template = getTemplateSrv()
-  if (template.containsTemplate(value)) {
-    const replacedValue = template.replace(value)
-    const asset = assets.find((e) => e.AssetPath === replacedValue || e.UUID === replacedValue)
-    if (asset) {
-      return asset.UUID
-    }
-  }
-
-  return value
 }
 
 interface Named {
