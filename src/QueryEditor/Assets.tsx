@@ -74,7 +74,7 @@ export const Assets = (props: Props): JSX.Element => {
   }
 
   const initialLabel = (): string => {
-    if (props.query.Assets.length === 0) {
+    if (!props.query.Assets || props.query.Assets.length === 0) {
       return ''
     }
 
@@ -139,7 +139,7 @@ export const Assets = (props: Props): JSX.Element => {
               tooltip="Specify an asset to work with, you can use regex by entering your pattern between forward slashes"
             >
               <Cascader
-                initialValue={props.query.Assets.length ? props.query.Assets[0] : ''}
+                initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
                 initialLabel={initialLabel()}
                 options={assetOptions}
                 displayAllSelectedLevels
@@ -159,7 +159,7 @@ export const Assets = (props: Props): JSX.Element => {
                 assetProperties={assetProperties}
                 initialValue={props.query.AssetProperties ?? []}
                 selectedAssets={matchedAssets(
-                  props.datasource.multiSelectReplace(props.query.Assets.length ? props.query.Assets[0] : ''),
+                  props.datasource.multiSelectReplace(props.query.Assets?.length ? props.query.Assets[0] : ''),
                   assets
                 )}
                 templateVariables={props.templateVariables}

@@ -51,13 +51,15 @@ export const Measurements = (props: Props): React.JSX.Element => {
             continue
           }
 
-          let selectedMeasurement: Measurement | undefined
-          selectedMeasurement = selectedMeasurements?.find((e) => e.UUID === measurement)
-          if (!selectedMeasurement) {
-            selectedMeasurement = await props.datasource.getMeasurement(measurement)
+          if (!props.query.IsRegex) {
+            let selectedMeasurement: Measurement | undefined
+            selectedMeasurement = selectedMeasurements?.find((e) => e.UUID === measurement)
+            if (!selectedMeasurement) {
+              selectedMeasurement = await props.datasource.getMeasurement(measurement)
+            }
+            selectedMeasurementsUpdate.push(selectedMeasurement)
+            datatypes.add(selectedMeasurement.Datatype)
           }
-          selectedMeasurementsUpdate.push(selectedMeasurement)
-          datatypes.add(selectedMeasurement.Datatype)
         }
         setSelectedMeasurements(selectedMeasurementsUpdate)
         setDatatypes(Array.from(datatypes))
@@ -173,7 +175,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
           />
           <QueryOptions
             state={props.query.Options}
-            tags={tagsToQueryTags(props.query.Options.Tags)}
+            tags={tagsToQueryTags(props.query.Options?.Tags)}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={datatypes}
             templateVariables={props.templateVariables}

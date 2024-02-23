@@ -134,7 +134,6 @@ export const Events = (props: Props): JSX.Element => {
       }
       filter.push(eventPropertyFilter)
     })
-
     const updatedQuery = { ...props.query, PropertyFilter: filter } as EventQuery
     props.onChangeEventQuery(updatedQuery)
   }
@@ -213,7 +212,7 @@ export const Events = (props: Props): JSX.Element => {
   }
 
   const initialLabel = (): string => {
-    if (props.query.Assets.length === 0) {
+    if (!props.query.Assets || props.query.Assets.length === 0) {
       return ''
     }
 
@@ -276,7 +275,7 @@ export const Events = (props: Props): JSX.Element => {
             <InlineFieldRow>
               <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
                 <Cascader
-                  initialValue={props.query.Assets.length ? props.query.Assets[0] : ''}
+                  initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
                   initialLabel={initialLabel()}
                   options={assetOptions}
                   displayAllSelectedLevels
@@ -295,7 +294,7 @@ export const Events = (props: Props): JSX.Element => {
               >
                 <MultiSelect
                   value={props.query.EventTypes}
-                  options={availableEventTypes(props.query.Assets.length ? props.query.Assets[0] : '')}
+                  options={availableEventTypes(props.query.Assets?.length ? props.query.Assets[0] : '')}
                   onChange={onSelectEventTypes}
                 />
               </InlineField>

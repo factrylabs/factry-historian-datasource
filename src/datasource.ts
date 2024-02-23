@@ -44,6 +44,17 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     }
   }
 
+  filterQuery(query: Query): boolean {
+    switch (query.queryType) {
+      case 'EventQuery':
+        const eventQuery = query.query as EventQuery
+        if (eventQuery.PropertyFilter?.find((e) => e.Value === 'select tag value')) {
+          return false
+        }
+    }
+    return true
+  }
+
   query(request: DataQueryRequest<Query>): any {
     request.targets = request.targets
       .filter((target) => {
@@ -82,10 +93,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) => this.multiSelectReplace(e))
             eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e))
             eventQuery.Properties = eventQuery.Properties?.flatMap((e) => this.multiSelectReplace(e))
-            eventQuery.PropertyFilter = eventQuery.PropertyFilter.filter((e) => {
-              return e.Value !== undefined && e.Value !== 'select tag value'
-            }).map((e) => {
+            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.map((e) => {
               e.Property = this.templateSrv.replace(e.Property)
+              if (e.Value === 'select tag value') {
+                return e
+              }
+
               switch (e.Datatype) {
                 case PropertyDatatype.Number:
                   e.Value = parseFloat(this.templateSrv.replace(String(e.Value)))

@@ -14,19 +14,11 @@ export enum TabIndex {
 }
 
 export interface QueryEditorState {
-  loading: boolean
   tabIndex: number
-  measurementQuery?: MeasurementQuery
-  assetMeasurementQuery?: AssetMeasurementQuery
-  eventQuery?: EventQuery
-  databases: TimeseriesDatabase[]
-  pagination: Pagination
-  rawState: RawTabState
-}
-
-export interface RawTabState {
+  measurementQuery: MeasurementQuery
+  assetMeasurementQuery: AssetMeasurementQuery
+  eventQuery: EventQuery
   rawQuery: RawQuery
-  filter: MeasurementFilter
 }
 
 export interface Query extends DataQuery {

@@ -10,6 +10,7 @@ import {
   EventPropertyFilter,
   FillType,
   Measurement,
+  MeasurementQuery,
   MeasurementQueryOptions,
 } from 'types'
 
@@ -288,4 +289,18 @@ export const useDebounce = <T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actualValue, delay])
   return [actualValue, setActualValue]
+}
+
+export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQuery {
+  const measurementQuery = {
+    ...query,
+  }
+  if (!query.IsRegex && query.Measurements?.find((e) => e.length >= 2 && e.startsWith('/') && e.endsWith('/'))) {
+    query.IsRegex = true
+    query.Regex = query.Measurements?.find((e) => e.length >= 2 && e.startsWith('/') && e.endsWith('/'))
+    query.Regex = query.Regex?.substring(1, query.Regex.length - 1)
+    query.Measurements = []
+  }
+
+  return measurementQuery
 }

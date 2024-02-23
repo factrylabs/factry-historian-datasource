@@ -6,7 +6,7 @@ import { Assets } from 'QueryEditor/Assets'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { Measurements } from 'QueryEditor/Measurements'
-import { defaultQueryOptions } from 'QueryEditor/util'
+import { defaultQueryOptions, migrateMeasurementQuery } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import {
   HistorianDataSourceOptions,
@@ -18,6 +18,7 @@ import {
   AssetMeasurementQuery,
   TabIndex,
   PropertyType,
+  EventPropertyFilter,
 } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -29,29 +30,35 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
     this.onChangeAssetMeasurementQuery = this.onChangeAssetMeasurementQuery.bind(this)
     this.onChangeEventQuery = this.onChangeEventQuery.bind(this)
-    this.saveState = this.saveState.bind(this)
   }
 
+  mountFinished = false
   appIsAlertingType = this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting
   state = {
-    loading: true,
     tabIndex: this.props.datasource.defaultTab,
-    filter: {
-      Database: '',
+    assetMeasurementQuery: {
+      AssetProperties: [] as string[],
+      Assets: [] as string[],
+      Options: defaultQueryOptions(this.appIsAlertingType),
     },
-    pagination: {
-      Limit: 100,
-      Page: 1,
+    measurementQuery: {
+      Databases: [] as string[],
+      Measurements: [] as string[],
+      IsRegex: false,
+      Options: defaultQueryOptions(this.appIsAlertingType),
     },
-    databases: [],
-    rawState: {
-      rawQuery: {
-        Query: '',
-        TimeseriesDatabase: '',
-      },
-      filter: {
-        Database: '',
-      },
+    eventQuery: {
+      Type: PropertyType.Simple,
+      Assets: [] as string[],
+      Statuses: [] as string[],
+      PropertyFilter: [] as EventPropertyFilter[],
+      EventTypes: [] as string[],
+      Properties: [] as string[],
+      QueryAssetProperties: false,
+    },
+    rawQuery: {
+      Query: '',
+      TimeseriesDatabase: '',
     },
   } as QueryEditorState
 
@@ -61,113 +68,11 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       return { label: `$${e.name}`, value: `$${e.name}` }
     })
 
-  async componentDidMount(): Promise<void> {
+  componentDidMount(): void {
     const { query } = this.props
     const tabIndex = query.tabIndex ?? this.state.tabIndex
-
-    this.setState((prevState) => {
-      return {
-        ...prevState,
-        tabIndex: tabIndex,
-      }
-    })
-
-    await this.loadDataForTab(tabIndex)
-
-    if (!query.query) {
-      this.setState(
-        (prevState) => {
-          return {
-            ...prevState,
-            loading: false,
-            tabIndex,
-          }
-        },
-        () => {
-          this.saveState(this.state)
-        }
-      )
-    } else {
-      switch (tabIndex) {
-        case TabIndex.Assets: {
-          this.setState(
-            (prevState) => {
-              return {
-                ...prevState,
-                loading: false,
-                tabIndex: tabIndex,
-              }
-            },
-            () => {
-              this.saveState(this.state)
-            }
-          )
-          break
-        }
-        case TabIndex.Measurements: {
-          this.setState(
-            (prevState) => {
-              return {
-                ...prevState,
-                loading: false,
-                tabIndex: tabIndex,
-              }
-            },
-            () => {
-              this.saveState(this.state)
-            }
-          )
-          break
-        }
-        case TabIndex.Events:
-          this.setState(
-            (prevState) => {
-              return {
-                ...prevState,
-                loading: false,
-                tabIndex: tabIndex,
-              }
-            },
-            () => {
-              this.saveState(this.state)
-            }
-          )
-          break
-        case TabIndex.RawQuery:
-          const rawQuery = query.query as RawQuery
-          this.setState(
-            (prevState) => {
-              return {
-                ...prevState,
-                loading: false,
-                tabIndex: tabIndex,
-                rawState: {
-                  ...this.state.rawState,
-                  filter: {
-                    DatabaseUUIDs: [rawQuery.TimeseriesDatabase],
-                  },
-                  rawQuery: rawQuery,
-                },
-              }
-            },
-            () => {
-              this.saveState(this.state)
-            }
-          )
-          break
-      }
-    }
-  }
-
-  async loadDataForTab(tabIndex: number): Promise<void[]> {
-    let promises = []
-    switch (tabIndex) {
-      case TabIndex.RawQuery:
-        promises.push(this.getTimeSeriesDatabases())
-        break
-    }
-
-    return Promise.all(promises)
+    this.setTabIndex(tabIndex)
+    this.mountFinished = true
   }
 
   setTabIndex(index: number): void {
@@ -176,64 +81,44 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         return { ...prevState, tabIndex: index }
       },
       () => {
-        this.saveState(this.state)
-        this.loadDataForTab(index).then(() => {
-          switch (index) {
-            case TabIndex.Assets:
-              this.onChangeAssetMeasurementQuery(
-                this.state.assetMeasurementQuery ?? {
-                  AssetProperties: [],
-                  Assets: [],
-                  Options: defaultQueryOptions(this.appIsAlertingType),
-                }
-              )
-              break
-            case TabIndex.Measurements:
-              this.onChangeMeasurementQuery(
-                this.state.measurementQuery ?? {
-                  Databases: [],
-                  Measurements: [],
-                  IsRegex: false,
-                  Options: defaultQueryOptions(this.appIsAlertingType),
-                }
-              )
-              break
-            case TabIndex.Events:
-              this.onChangeEventQuery(
-                this.state.eventQuery ?? {
-                  Type: PropertyType.Simple,
-                  Assets: [],
-                  Statuses: [],
-                  PropertyFilter: [],
-                  EventTypes: [],
-                  Properties: [],
-                  QueryAssetProperties: false,
-                }
-              )
-              break
-            case TabIndex.RawQuery:
-              if (this.state.rawState.rawQuery?.Query) {
-                this.onChangeRawQuery(this.state.rawState.rawQuery.Query)
-              }
-              break
+        switch (index) {
+          case TabIndex.Assets: {
+            const query =
+              this.props.query.queryType === 'AssetMeasurementQuery'
+                ? (this.props.query.query as AssetMeasurementQuery)
+                : undefined
+            this.onChangeAssetMeasurementQuery(query ?? this.state.assetMeasurementQuery)
+            break
           }
-        })
+          case TabIndex.Measurements: {
+            const query =
+              this.props.query.queryType === 'MeasurementQuery'
+                ? migrateMeasurementQuery(this.props.query.query as MeasurementQuery)
+                : undefined
+            this.onChangeMeasurementQuery(query ?? this.state.measurementQuery)
+            break
+          }
+          case TabIndex.Events: {
+            const query =
+              this.props.query.queryType === 'EventQuery' ? (this.props.query.query as EventQuery) : undefined
+            this.onChangeEventQuery(query ?? this.state.eventQuery)
+            break
+          }
+          case TabIndex.RawQuery: {
+            const query = this.props.query.queryType === 'RawQuery' ? (this.props.query.query as RawQuery) : undefined
+            this.onChangeRawQuery(query ?? this.state.rawQuery)
+            break
+          }
+        }
       }
     )
-  }
-
-  async getTimeSeriesDatabases(): Promise<void> {
-    await this.props.datasource.getTimeseriesDatabases().then((timeSeriesDatabases) => {
-      this.setState((prevState) => {
-        return { ...prevState, databases: timeSeriesDatabases }
-      })
-    })
   }
 
   onChangeAssetMeasurementQuery(assetMeasurementQuery: AssetMeasurementQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'AssetMeasurementQuery'
     query.query = assetMeasurementQuery
+    query.tabIndex = TabIndex.Assets
     onChange(query)
     this.onRunQuery(this.props)
     this.setState({
@@ -246,6 +131,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     const { onChange, query } = this.props
     query.queryType = 'MeasurementQuery'
     query.query = measurementQuery
+    query.tabIndex = TabIndex.Measurements
     onChange(query)
     this.onRunQuery(this.props)
     this.setState({
@@ -254,44 +140,30 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     } as QueryEditorState)
   }
 
-  onChangeRawQuery(queryString: string): void {
+  onChangeRawQuery(rawQuery: RawQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'RawQuery'
-    query.query = {
-      TimeseriesDatabase: this.state.rawState.filter.DatabaseUUIDs
-        ? this.state.rawState.filter.DatabaseUUIDs[0]
-        : undefined,
-      Query: queryString,
-    } as RawQuery
-    this.saveState({
-      ...this.state,
-      rawState: {
-        ...this.state.rawState,
-        rawQuery: query.query,
-      },
-    })
+    query.query = rawQuery
+    query.tabIndex = TabIndex.RawQuery
     onChange(query)
     this.onRunQuery(this.props)
+    this.setState({
+      ...this.state,
+      rawQuery: rawQuery,
+    } as QueryEditorState)
   }
 
   onChangeEventQuery(eventQuery: EventQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'EventQuery'
     query.query = eventQuery
+    query.tabIndex = TabIndex.Events
     onChange(query)
     this.onRunQuery(this.props)
-  }
-
-  saveState(state: QueryEditorState, updateState = false): void {
-    const { onChange, query } = this.props
-    if (!query) {
-      return
-    }
-    query.tabIndex = state.tabIndex
-    onChange(query)
-    if (updateState) {
-      this.setState(state)
-    }
+    this.setState({
+      ...this.state,
+      eventQuery: eventQuery,
+    } as QueryEditorState)
   }
 
   onRunQuery(
@@ -324,6 +196,13 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     if (props.query.queryType === 'EventQuery') {
       const query = props.query.query as EventQuery
       if (!query?.EventTypes || !query?.Assets) {
+        return
+      }
+    }
+
+    if (props.query.queryType === 'RawQuery') {
+      const query = props.query.query as RawQuery
+      if (!query?.Query) {
         return
       }
     }
@@ -372,8 +251,8 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         title: 'Raw',
         content: (
           <RawQueryEditor
-            state={this.state}
-            saveState={(state) => this.saveState(state, true)}
+            query={this.props.query.query as RawQuery}
+            datasource={this.props.datasource}
             onChangeRawQuery={this.onChangeRawQuery}
           />
         ),
@@ -391,7 +270,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             />
           </InlineField>
         </InlineFieldRow>
-        {!this.state.loading && this.props.query.query && tabs[this.state.tabIndex].content}
+        {this.mountFinished && this.props.query.query && tabs[this.state.tabIndex].content}
       </>
     )
   }

@@ -71,6 +71,10 @@ func (api *API) EventQuery(filter schemas.EventFilter) ([]schemas.Event, error) 
 		return nil, err
 	}
 
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
+	}
+
 	if err := json.Unmarshal(response.Body(), &queryResult); err != nil {
 		return nil, err
 	}
