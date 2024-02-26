@@ -1,6 +1,6 @@
-major = 1
+major = 2
 minor = 0
-patch = 2
+patch = 0
 prerelease = -alpha
 project_name=grafana-datasource
 
