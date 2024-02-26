@@ -14,16 +14,17 @@ import (
 
 // Constants for the event frames
 const (
-	StartTimeColumnName     = "StartTime"
-	StopTimeColumnName      = "StopTime"
-	AssetUUIDColumnName     = "AssetUUID"
-	AssetColumnName         = "Asset"
-	AssetPathColumnName     = "AssetPath"
-	DurationColumnName      = "Duration"
-	PropertyColumnName      = "Property"
-	EventTypeColumnName     = "EventType"
-	EventUUIDColumnName     = "EventUUID"
-	EventTypeUUIDColumnName = "EventTypeUUID"
+	StartTimeColumnName       = "StartTime"
+	StopTimeColumnName        = "StopTime"
+	AssetUUIDColumnName       = "AssetUUID"
+	AssetColumnName           = "Asset"
+	AssetPathColumnName       = "AssetPath"
+	DurationColumnName        = "Duration"
+	PropertyColumnName        = "Property"
+	EventTypeColumnName       = "EventType"
+	EventUUIDColumnName       = "EventUUID"
+	ParentEventUUIDColumnName = "ParentEventUUID"
+	EventTypeUUIDColumnName   = "EventTypeUUID"
 )
 
 // EventQueryResultToDataFrame converts a event query result to data frames
@@ -115,11 +116,15 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 			labels[StartTimeColumnName] = events[i].StartTime.Format(time.RFC3339)
 			labels[StopTimeColumnName] = ""
 			labels[EventUUIDColumnName] = events[i].UUID.String()
+			labels[ParentEventUUIDColumnName] = ""
 			labels[EventTypeUUIDColumnName] = events[i].EventTypeUUID.String()
 			labels[AssetUUIDColumnName] = events[i].AssetUUID.String()
 
 			if events[i].StopTime != nil {
 				labels[StopTimeColumnName] = events[i].StopTime.Format(time.RFC3339)
+			}
+			if events[i].ParentUUID != nil {
+				labels[ParentEventUUIDColumnName] = events[i].ParentUUID.String()
 			}
 
 			name := fmt.Sprintf("%s - %s - %s - %s - %s", labels[AssetPathColumnName], labels[EventTypeColumnName], labels[PropertyColumnName], labels[StartTimeColumnName], labels[StopTimeColumnName])
@@ -226,6 +231,7 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 	fieldByColumn[StartTimeColumnName] = data.NewField(StartTimeColumnName, nil, []*time.Time{})
 	fieldByColumn[StopTimeColumnName] = data.NewField(StopTimeColumnName, nil, []*time.Time{})
 	fieldByColumn[EventUUIDColumnName] = data.NewField(EventUUIDColumnName, nil, []string{})
+	fieldByColumn[ParentEventUUIDColumnName] = data.NewField(ParentEventUUIDColumnName, nil, []string{})
 	fieldByColumn[AssetUUIDColumnName] = data.NewField(AssetUUIDColumnName, nil, []string{})
 	fieldByColumn[AssetColumnName] = data.NewField(AssetColumnName, nil, []string{})
 	fieldByColumn[AssetPathColumnName] = data.NewField(AssetPathColumnName, nil, []string{})
@@ -235,6 +241,7 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 
 	fields := []*data.Field{
 		fieldByColumn[EventUUIDColumnName],
+		fieldByColumn[ParentEventUUIDColumnName],
 		fieldByColumn[AssetUUIDColumnName],
 		fieldByColumn[EventTypeUUIDColumnName],
 		fieldByColumn[AssetColumnName],
@@ -280,6 +287,11 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 
 	for i := range events {
 		fieldByColumn[EventUUIDColumnName].Append(events[i].UUID.String())
+		parentUUID := ""
+		if events[i].ParentUUID != nil {
+			parentUUID = events[i].ParentUUID.String()
+		}
+		fieldByColumn[ParentEventUUIDColumnName].Append(parentUUID)
 		fieldByColumn[AssetUUIDColumnName].Append(events[i].AssetUUID.String())
 		fieldByColumn[EventTypeUUIDColumnName].Append(events[i].EventTypeUUID.String())
 		fieldByColumn[AssetColumnName].Append(UUIDToAssetMap[events[i].AssetUUID].Name)
