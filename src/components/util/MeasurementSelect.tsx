@@ -1,6 +1,15 @@
 import React, { ChangeEvent } from 'react'
 import { SelectableValue } from '@grafana/data'
-import { AsyncMultiSelect, Checkbox, InlineField, InlineFieldRow, Input, VerticalGroup } from '@grafana/ui'
+import {
+  AsyncMultiSelect,
+  Checkbox,
+  HorizontalGroup,
+  Icon,
+  InlineField,
+  InlineFieldRow,
+  Input,
+  VerticalGroup,
+} from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { measurementToSelectableValue, useDebounce } from 'QueryEditor/util'
 import { Measurement, MeasurementFilter, MeasurementQuery, TimeseriesDatabase, labelWidth } from 'types'
@@ -78,6 +87,14 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
     setRegex(regex)
   }
 
+  const multipleDatatypesSelected = (measurements: Measurement[]): boolean => {
+    const datatypes = new Set<string>()
+    measurements.forEach((e) => {
+      datatypes.add(e.Datatype)
+    })
+    return datatypes.size > 1
+  }
+
   return (
     <>
       <InlineFieldRow>
@@ -88,15 +105,24 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
         >
           <VerticalGroup>
             {!props.query.IsRegex ? (
-              <AsyncMultiSelect
-                value={getSelectedMeasurements(props.query, props.measurements)}
-                placeholder="select measurement"
-                loadOptions={(query) => loadMeasurementOptions(query, props.selectedDatabases)}
-                defaultOptions
-                onChange={onMeasurementChange}
-                menuShouldPortal
-                key={props.selectedDatabases?.length} // Forcing this component to remount when selectedDatabases changes
-              />
+              <>
+                <HorizontalGroup>
+                  <AsyncMultiSelect
+                    value={getSelectedMeasurements(props.query, props.measurements)}
+                    placeholder="select measurement"
+                    loadOptions={(query) => loadMeasurementOptions(query, props.selectedDatabases)}
+                    defaultOptions
+                    onChange={onMeasurementChange}
+                    menuShouldPortal
+                    key={props.selectedDatabases?.length} // Forcing this component to remount when selectedDatabases changes
+                  />
+                  {multipleDatatypesSelected(props.measurements) && (
+                    <>
+                      <Icon name="exclamation-circle" title="Measurements with different datatypes selected" />
+                    </>
+                  )}
+                </HorizontalGroup>
+              </>
             ) : (
               <Input value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex} />
             )}
