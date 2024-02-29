@@ -4,13 +4,17 @@ import { InlineField } from '@grafana/ui'
 import { getTemplateSrv } from '@grafana/runtime'
 import { AddButton } from 'components/util/AddButton'
 import { Group } from './Group'
+import { toSelectableValue } from 'components/TagsSection/util'
 
 type Props = {
   groups: string[]
   onChange: (groups: string[]) => void
+  getTagKeyOptions?: () => Promise<string[]>
 }
 
-export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
+const defaultKeys = () => Promise.resolve(['status'])
+
+export const GroupBySection = ({ groups, onChange, getTagKeyOptions = defaultKeys }: Props): JSX.Element => {
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
@@ -33,37 +37,29 @@ export const GroupBySection = ({ groups, onChange }: Props): JSX.Element => {
     onChange([...groups, group])
   }
 
+  const getGroupByOptions = async () => {
+    const tags = await getTagKeyOptions()
+    return tags.map(toSelectableValue).concat(templateVariables)
+  }
+
   return (
     <>
       {groups.map((t, i) => {
-        if (i === 0) {
-          return (
-            <InlineField key={i}>
-              <Group
-                group={t}
-                options={templateVariables}
-                onChange={(newGroup) => onGroupChange(newGroup || '', i)}
-                onRemove={() => onGroupRemove(i)}
-              />
-            </InlineField>
-          )
-        } else {
-          return (
-            <InlineField key={i}>
-              <Group
-                group={t}
-                options={templateVariables}
-                onChange={(newGroup) => onGroupChange(newGroup || '', i)}
-                onRemove={() => onGroupRemove(i)}
-              />
-            </InlineField>
-          )
-        }
+        return (
+          <InlineField key={i}>
+            <Group
+              group={t}
+              loadOptions={getGroupByOptions}
+              onChange={(newGroup) => onGroupChange(newGroup || '', i)}
+              onRemove={() => onGroupRemove(i)}
+            />
+          </InlineField>
+        )
       })}
       <InlineField>
         <AddButton
           allowCustomValue
-          loadOptions={() => Promise.resolve(templateVariables)}
+          loadOptions={getGroupByOptions}
           onAdd={(v) => {
             addNewGroup(v)
           }}

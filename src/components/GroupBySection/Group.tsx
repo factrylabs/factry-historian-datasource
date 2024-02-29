@@ -5,20 +5,22 @@ import { SelectableValue } from '@grafana/data'
 
 type GroupProps = {
   group: string
-  options: Array<SelectableValue<string>>
+  loadOptions: () => Promise<SelectableValue[]>
   onRemove: () => void
   onChange: (group: string) => void
 }
 
-const defaultOptions = (options: Array<SelectableValue<string>>) =>
-  Promise.resolve([{ label: '-- remove filter --', value: undefined } as SelectableValue<string>].concat(options))
+export const Group = ({ group, loadOptions, onRemove, onChange }: GroupProps): JSX.Element => {
+  const defaultOptions = async () => {
+    const options = await loadOptions()
+    return [{ label: '-- remove filter --', value: undefined } as SelectableValue<string>].concat(options)
+  }
 
-export const Group = ({ group, options, onRemove, onChange }: GroupProps): JSX.Element => {
   return (
     <Seg
       allowCustomValue
       value={group}
-      loadOptions={() => defaultOptions(options)}
+      loadOptions={() => defaultOptions()}
       onChange={(v) => {
         const { value } = v
         if (value === undefined) {

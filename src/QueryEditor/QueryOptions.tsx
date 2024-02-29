@@ -182,7 +182,7 @@ export const QueryOptions = ({
           <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
             Group by
           </InlineLabel>
-          <GroupBySection groups={state.GroupBy || []} onChange={onGroupByChange} />
+          <GroupBySection getTagKeyOptions={getTagKeyOptions} groups={state.GroupBy || []} onChange={onGroupByChange} />
         </InlineFieldRow>
       )}
       {!hideTagFilter && (
