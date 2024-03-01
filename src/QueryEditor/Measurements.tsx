@@ -18,10 +18,12 @@ import {
 
 export interface Props {
   query: MeasurementQuery
+  seriesLimit: number
   appIsAlertingType: boolean
   datasource: DataSource
   templateVariables: Array<SelectableValue<string>>
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
+  onChangeSeriesLimit: (value: number) => void
 }
 
 export const Measurements = (props: Props): React.JSX.Element => {
@@ -175,6 +177,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
           />
           <QueryOptions
             state={props.query.Options}
+            seriesLimit={props.seriesLimit}
             tags={tagsToQueryTags(props.query.Options?.Tags)}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={datatypes}
@@ -182,6 +185,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
             onChange={onChangeMeasurementQueryOptions}
+            onChangeSeriesLimit={props.onChangeSeriesLimit}
           />
         </>
       )}

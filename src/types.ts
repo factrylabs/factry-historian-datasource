@@ -23,6 +23,7 @@ export interface QueryEditorState {
 
 export interface Query extends DataQuery {
   query: MeasurementQuery | AssetMeasurementQuery | RawQuery | EventQuery
+  seriesLimit: number
   tabIndex: number
   selectedAssetPath?: string
   selectedAssetProperties?: string[]

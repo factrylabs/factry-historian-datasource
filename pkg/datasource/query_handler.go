@@ -27,7 +27,8 @@ const (
 
 // Query is a struct which holds the query
 type Query struct {
-	Query json.RawMessage `json:"query"`
+	Query       json.RawMessage `json:"query"`
+	SeriesLimit int             `json:"seriesLimit"`
 }
 
 // QueryData handles incoming backend queries
@@ -63,7 +64,7 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 			}
 		}
 
-		response.Frames, response.Error = handleAssetMeasurementQuery(assetMeasurementQuery, backendQuery, api)
+		response.Frames, response.Error = handleAssetMeasurementQuery(assetMeasurementQuery, backendQuery, query.SeriesLimit, api)
 		return response
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
@@ -73,7 +74,7 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 			}
 		}
 
-		measurements, err := getMeasurements(measurementQuery, api)
+		measurements, err := getMeasurements(measurementQuery, query.SeriesLimit, api)
 		if err != nil {
 			return backend.DataResponse{
 				Error: err,
@@ -101,7 +102,7 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 			}
 		}
 
-		response.Frames, response.Error = handleEventQuery(eventQuery, backendQuery, api)
+		response.Frames, response.Error = handleEventQuery(eventQuery, backendQuery, query.SeriesLimit, api)
 		return response
 	}
 
@@ -109,7 +110,7 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 	return response
 }
 
-func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
+func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
 	assets, err := api.GetAssets("")
 	if err != nil {
 		return nil, err
@@ -133,6 +134,11 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			for _, assetProperty := range assetProperties {
 				if (assetProperty.Name == property && assetProperty.AssetUUID == assetUUID) || assetProperty.UUID.String() == property {
+					if len(measurementUUIDs) >= seriesLimit {
+						if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
+							break
+						}
+					}
 					measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
 					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 					break
@@ -155,7 +161,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
 }
 
-func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([]string, error) {
+func getMeasurements(measurementQuery schemas.MeasurementQuery, seriesLimit int, api *api.API) ([]string, error) {
 	parsedMeasurements := []string{}
 	var measurements []string
 	if measurementQuery.IsRegex {
@@ -194,7 +200,7 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, api *api.API) ([
 		for i, databaseUUID := range databaseUUIDs {
 			databasesQuery += fmt.Sprintf("&DatabaseUUIDs[%v]=%s", i, databaseUUID)
 		}
-		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v%v", measurement, databasesQuery))
+		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&limit=%v%v", measurement, seriesLimit, databasesQuery))
 		res, err := api.GetMeasurements(values.Encode())
 		if err != nil {
 			return nil, err

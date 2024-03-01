@@ -11,10 +11,12 @@ import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQue
 
 export interface Props {
   query: AssetMeasurementQuery
+  seriesLimit: number
   datasource: DataSource
   appIsAlertingType: boolean
   templateVariables: Array<SelectableValue<string>>
   onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
+  onChangeSeriesLimit: (value: number) => void
 }
 
 export const Assets = (props: Props): JSX.Element => {
@@ -169,6 +171,7 @@ export const Assets = (props: Props): JSX.Element => {
           </InlineFieldRow>
           <QueryOptions
             state={props.query.Options}
+            seriesLimit={props.seriesLimit}
             tags={tagsToQueryTags(props.query.Options.Tags)}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={[]}
@@ -176,6 +179,7 @@ export const Assets = (props: Props): JSX.Element => {
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
             onChange={handleChangeMeasurementQueryOptions}
+            onChangeSeriesLimit={props.onChangeSeriesLimit}
           />
         </>
       )}

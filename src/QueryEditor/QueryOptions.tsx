@@ -1,13 +1,14 @@
-import React, { useState } from 'react'
+import React, { ChangeEvent, useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
-import { getAggregationsForDatatypes, getFillTypes, getPeriods } from './util'
+import { getAggregationsForDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
 import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
 
 export interface Props {
   state: MeasurementQueryOptions
+  seriesLimit: number
   tags: QueryTag[]
   appIsAlertingType: boolean
   datatypes: string[]
@@ -21,25 +22,12 @@ export interface Props {
   getTagKeyOptions?: () => Promise<string[]>
   getTagValueOptions?: (key: string) => Promise<string[]>
   onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
+  onChangeSeriesLimit: (value: number) => void
 }
 
-export const QueryOptions = ({
-  state,
-  tags,
-  appIsAlertingType,
-  datatypes,
-  templateVariables,
-  hideInterval = false,
-  hideFill = false,
-  hideLimit = false,
-  hideGroupBy = false,
-  hideTagFilter = false,
-  hideAdvancedOptions = false,
-  getTagKeyOptions,
-  getTagValueOptions,
-  onChange,
-}: Props): JSX.Element => {
+export const QueryOptions = (props: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
+  const [seriesLimit, setSeriesLimit] = useDebounce<number>(props.seriesLimit, 500, props.onChangeSeriesLimit)
 
   const getAggregationOptions = (
     datatypes: string[],
@@ -47,30 +35,30 @@ export const QueryOptions = ({
   ): Array<SelectableValue<string>> => {
     const validAggregations = getAggregationsForDatatypes(datatypes)
     if (options.Aggregation?.Name !== 'last' && !validAggregations.find((e) => options.Aggregation?.Name === e.value)) {
-      onChange(
+      props.onChange(
         {
-          ...state,
+          ...props.state,
           Aggregation: {
-            ...state.Aggregation,
+            ...props.state.Aggregation,
             Name: 'last',
           },
         },
-        tags
+        props.tags
       )
     }
-    return validAggregations.concat(templateVariables)
+    return validAggregations.concat(props.templateVariables)
   }
 
   const onAggregationChange = (event: SelectableValue<string>) => {
     let aggregation = undefined
     if (event?.value) {
       aggregation = {
-        ...state.Aggregation,
+        ...props.state.Aggregation,
         Name: event.value,
-        Period: state.Aggregation?.Period || '$__interval',
+        Period: props.state.Aggregation?.Period || '$__interval',
       } as Aggregation
     }
-    onChange({ ...state, Aggregation: aggregation }, tags)
+    props.onChange({ ...props.state, Aggregation: aggregation }, props.tags)
   }
 
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
@@ -78,24 +66,24 @@ export const QueryOptions = ({
     updatedTags.forEach((tag) => {
       tags[tag.key] = tag.value
     })
-    onChange({ ...state, Tags: tags }, updatedTags)
+    props.onChange({ ...props.state, Tags: tags }, updatedTags)
   }
 
   const onGroupByChange = (groups: string[]): void => {
-    onChange({ ...state, GroupBy: groups }, tags)
+    props.onChange({ ...props.state, GroupBy: groups }, props.tags)
   }
 
   const onLimitChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    onChange({ ...state, Limit: event.target.valueAsNumber }, tags)
+    props.onChange({ ...props.state, Limit: event.target.valueAsNumber }, props.tags)
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
     if (selected.value) {
       const aggregation = {
-        ...state.Aggregation,
+        ...props.state.Aggregation,
         Period: selected.value,
       } as Aggregation
-      onChange({ ...state, Aggregation: aggregation }, tags)
+      props.onChange({ ...props.state, Aggregation: aggregation }, props.tags)
     }
   }
 
@@ -111,31 +99,35 @@ export const QueryOptions = ({
 
   const onFillChange = (selected: SelectableValue<string>): void => {
     const aggregation = {
-      ...state.Aggregation,
+      ...props.state.Aggregation,
       Fill: selected?.value,
     } as Aggregation
 
-    onChange({ ...state, Aggregation: aggregation }, tags)
+    props.onChange({ ...props.state, Aggregation: aggregation }, props.tags)
   }
 
   const onChangeIncludeLastKnownPoint = (e: any): void => {
-    onChange({ ...state, IncludeLastKnownPoint: e.target.checked }, tags)
+    props.onChange({ ...props.state, IncludeLastKnownPoint: e.target.checked }, props.tags)
   }
 
   const onChangeFillInitialEmptyValues = (e: any): void => {
-    onChange({ ...state, FillInitialEmptyValues: e.target.checked }, tags)
+    props.onChange({ ...props.state, FillInitialEmptyValues: e.target.checked }, props.tags)
   }
 
   const onChangeUseEngineeringSpecs = (e: any): void => {
-    onChange({ ...state, UseEngineeringSpecs: e.target.checked }, tags)
+    props.onChange({ ...props.state, UseEngineeringSpecs: e.target.checked }, props.tags)
   }
 
   const onChangeDisplayDatabaseName = (e: any): void => {
-    onChange({ ...state, DisplayDatabaseName: e.target.checked }, tags)
+    props.onChange({ ...props.state, DisplayDatabaseName: e.target.checked }, props.tags)
   }
 
   const onChangeDisplayDescription = (e: any): void => {
-    onChange({ ...state, DisplayDescription: e.target.checked }, tags)
+    props.onChange({ ...props.state, DisplayDescription: e.target.checked }, props.tags)
+  }
+
+  const onChangeSeriesLimit = (event: ChangeEvent<HTMLInputElement>): void => {
+    setSeriesLimit(Number(event.target.value))
   }
 
   return (
@@ -147,65 +139,69 @@ export const QueryOptions = ({
           tooltip="Specify an aggregation, leave empty to query raw data"
         >
           <Select
-            value={state.Aggregation?.Name}
+            value={props.state.Aggregation?.Name}
             placeholder="select an aggregation"
             isClearable
-            options={getAggregationOptions(datatypes, state)}
+            options={getAggregationOptions(props.datatypes, props.state)}
             onChange={onAggregationChange}
           />
         </InlineField>
-        {!hideInterval && state.Aggregation?.Name && (
+        {!props.hideInterval && props.state.Aggregation?.Name && (
           <InlineField>
             <Select
-              value={state.Aggregation?.Period}
-              options={periods.concat(templateVariables)}
+              value={props.state.Aggregation?.Period}
+              options={periods.concat(props.templateVariables)}
               allowCustomValue
               onChange={onPeriodChange}
               onCreateOption={onCreatePeriod}
             />
           </InlineField>
         )}
-        {!hideFill && state.Aggregation?.Name && (
+        {!props.hideFill && props.state.Aggregation?.Name && (
           <InlineField>
             <Select
-              value={state.Aggregation?.Fill}
+              value={props.state.Aggregation?.Fill}
               placeholder="(optional) select a fill type"
-              options={getFillTypes().concat(templateVariables)}
+              options={getFillTypes().concat(props.templateVariables)}
               onChange={onFillChange}
               isClearable
             />
           </InlineField>
         )}
       </InlineFieldRow>
-      {!hideGroupBy && (
+      {!props.hideGroupBy && (
         <InlineFieldRow>
           <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
             Group by
           </InlineLabel>
-          <GroupBySection getTagKeyOptions={getTagKeyOptions} groups={state.GroupBy || []} onChange={onGroupByChange} />
+          <GroupBySection
+            getTagKeyOptions={props.getTagKeyOptions}
+            groups={props.state.GroupBy || []}
+            onChange={onGroupByChange}
+          />
         </InlineFieldRow>
       )}
-      {!hideTagFilter && (
+      {!props.hideTagFilter && (
         <InlineFieldRow>
           <InlineField label="Filter tags" labelWidth={labelWidth}>
             <TagsSection
-              tags={tags}
+              tags={props.tags}
               conditions={['AND']}
-              getTagKeyOptions={getTagKeyOptions}
-              getTagValueOptions={getTagValueOptions}
+              getTagKeyOptions={props.getTagKeyOptions}
+              getTagValueOptions={props.getTagValueOptions}
               onChange={handleTagsSectionChange}
             />
           </InlineField>
         </InlineFieldRow>
       )}
-      {!hideLimit && (
+      {!props.hideLimit && (
         <InlineFieldRow>
           <InlineField label="Limit" labelWidth={labelWidth}>
-            <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={state.Limit} />
+            <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={props.state.Limit} />
           </InlineField>
         </InlineFieldRow>
       )}
-      {!hideAdvancedOptions && (
+      {!props.hideAdvancedOptions && (
         <CollapsableSection label="Advanced options" isOpen={false}>
           <InlineFieldRow>
             <InlineField
@@ -213,29 +209,38 @@ export const QueryOptions = ({
               tooltip="Includes the last known point before the selected time range"
               labelWidth={labelWidth}
             >
-              <InlineSwitch value={state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
+              <InlineSwitch value={props.state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
             <InlineField label="Fill empty initial intervals" labelWidth={labelWidth}>
-              <InlineSwitch value={state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
+              <InlineSwitch value={props.state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
             </InlineField>
           </InlineFieldRow>
-          {!appIsAlertingType && (
+          {!props.appIsAlertingType && (
             <InlineFieldRow>
               <InlineField label="Use engineering specs" labelWidth={labelWidth}>
-                <InlineSwitch value={state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
+                <InlineSwitch value={props.state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
               </InlineField>
             </InlineFieldRow>
           )}
           <InlineFieldRow>
             <InlineField label="Display database name" labelWidth={labelWidth}>
-              <InlineSwitch value={state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
+              <InlineSwitch value={props.state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
             <InlineField label="Display description" labelWidth={labelWidth}>
-              <InlineSwitch value={state.DisplayDescription} onChange={onChangeDisplayDescription} />
+              <InlineSwitch value={props.state.DisplayDescription} onChange={onChangeDisplayDescription} />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField
+              label="Series limit"
+              tooltip="The maximum amount of measurement series a query can return"
+              labelWidth={labelWidth}
+            >
+              <Input value={seriesLimit} type="number" min={1} onChange={onChangeSeriesLimit} />
             </InlineField>
           </InlineFieldRow>
         </CollapsableSection>

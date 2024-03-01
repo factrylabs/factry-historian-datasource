@@ -30,6 +30,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
     this.onChangeAssetMeasurementQuery = this.onChangeAssetMeasurementQuery.bind(this)
     this.onChangeEventQuery = this.onChangeEventQuery.bind(this)
+    this.onChangeSeriesLimit = this.onChangeSeriesLimit.bind(this)
   }
 
   mountFinished = false
@@ -166,6 +167,13 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     } as QueryEditorState)
   }
 
+  onChangeSeriesLimit(value: number): void {
+    const { onChange, query } = this.props
+    query.seriesLimit = value
+    onChange(query)
+    this.onRunQuery(this.props)
+  }
+
   onRunQuery(
     props: Readonly<Props> &
       Readonly<{
@@ -217,10 +225,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Assets
             query={this.props.query.query as AssetMeasurementQuery}
+            seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
             appIsAlertingType={this.appIsAlertingType}
             templateVariables={this.templateVariables}
             onChangeAssetMeasurementQuery={this.onChangeAssetMeasurementQuery}
+            onChangeSeriesLimit={this.onChangeSeriesLimit}
           />
         ),
       },
@@ -229,10 +239,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Measurements
             query={this.props.query.query as MeasurementQuery}
+            seriesLimit={this.props.query.seriesLimit}
             appIsAlertingType={this.appIsAlertingType}
             datasource={this.props.datasource}
             templateVariables={this.templateVariables}
             onChangeMeasurementQuery={this.onChangeMeasurementQuery}
+            onChangeSeriesLimit={this.onChangeSeriesLimit}
           />
         ),
       },
@@ -241,9 +253,11 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Events
             query={this.props.query.query as EventQuery}
+            seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
             appIsAlertingType={this.appIsAlertingType}
             onChangeEventQuery={this.onChangeEventQuery}
+            onChangeSeriesLimit={this.onChangeSeriesLimit}
           />
         ),
       },

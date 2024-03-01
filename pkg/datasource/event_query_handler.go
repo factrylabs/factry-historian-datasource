@@ -13,7 +13,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
+func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
 	assets, err := api.GetAssets("")
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 
 		for _, event := range events {
 			var err error
-			frames, err := handleEventAssetMeasurementQuery(eventQuery.Type, event, assetMeasurementQuery, assets, assetProperties, backendQuery, api)
+			frames, err := handleEventAssetMeasurementQuery(eventQuery.Type, event, assetMeasurementQuery, assets, assetProperties, backendQuery, seriesLimit, api)
 			if err != nil {
 				return nil, err
 			}
@@ -112,13 +112,19 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 	}
 }
 
-func handleEventAssetMeasurementQuery(queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets []schemas.Asset, assetProperties []schemas.AssetProperty, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
+func handleEventAssetMeasurementQuery(queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets []schemas.Asset, assetProperties []schemas.AssetProperty, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
 	measurementUUIDs := map[string]struct{}{}
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 
 	for _, property := range assetMeasurementQuery.AssetProperties {
 		for _, assetProperty := range assetProperties {
 			if (assetProperty.Name == property && assetProperty.AssetUUID == event.AssetUUID) || assetProperty.UUID.String() == property {
+				if len(measurementUUIDs) >= seriesLimit {
+					if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
+						break
+					}
+				}
+
 				measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
 				measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 				break

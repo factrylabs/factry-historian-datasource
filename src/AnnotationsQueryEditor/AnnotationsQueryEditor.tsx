@@ -11,6 +11,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
   constructor(props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>) {
     super(props)
     this.onChangeEventQuery = this.onChangeEventQuery.bind(this)
+    this.onChangeSeriesLimit = this.onChangeSeriesLimit.bind(this)
   }
 
   templateVariables = getTemplateSrv()
@@ -43,6 +44,13 @@ export class AnnotationsQueryEditor extends Component<Props> {
     this.onRunQuery(this.props)
   }
 
+  onChangeSeriesLimit(value: number): void {
+    const { onChange, query } = this.props
+    query.seriesLimit = value
+    onChange(query)
+    this.onRunQuery(this.props)
+  }
+
   onRunQuery(
     props: Readonly<Props> &
       Readonly<{
@@ -69,9 +77,11 @@ export class AnnotationsQueryEditor extends Component<Props> {
         {this.props.query.query && (
           <Events
             query={this.props.query.query as EventQuery}
+            seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
             isAnnotationQuery
             onChangeEventQuery={this.onChangeEventQuery}
+            onChangeSeriesLimit={this.onChangeSeriesLimit}
           />
         )}
       </>

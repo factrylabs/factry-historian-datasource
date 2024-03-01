@@ -1,4 +1,4 @@
-import { DataQueryRequest, DataSourceInstanceSettings } from '@grafana/data'
+import { CoreApp, DataQueryRequest, DataSourceInstanceSettings } from '@grafana/data'
 import { DataSourceWithBackend, TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { VariableSupport } from 'variable_support'
 import { AnnotationsQueryEditor } from 'AnnotationsQueryEditor/AnnotationsQueryEditor'
@@ -55,12 +55,21 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return true
   }
 
+  getDefaultQuery(app: CoreApp): Partial<Query> {
+    return {
+      seriesLimit: 50,
+    }
+  }
+
   query(request: DataQueryRequest<Query>): any {
     request.targets = request.targets
       .filter((target) => {
         return !target.hide && target.query !== undefined
       })
       .map((target) => {
+        if (!target.seriesLimit) {
+          target.seriesLimit = 50
+        }
         switch (target.queryType) {
           case 'AssetMeasurementQuery': {
             const assetMeasurementQuery = target.query as AssetMeasurementQuery

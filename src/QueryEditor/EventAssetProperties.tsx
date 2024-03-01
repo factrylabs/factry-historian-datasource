@@ -10,6 +10,7 @@ import { Asset, AssetProperty, MeasurementQueryOptions, labelWidth } from 'types
 
 export interface Props {
   datasource: DataSource
+  seriesLimit: number
   selectedAssets: Asset[]
   selectedAssetProperties: string[]
   queryType: string
@@ -19,6 +20,7 @@ export interface Props {
   templateVariables: Array<SelectableValue<string>>
   onChangeAssetProperties: (assetProperties: string[]) => void
   onChangeQueryOptions: (options: MeasurementQueryOptions) => void
+  onChangeSeriesLimit: (value: number) => void
 }
 
 export const EventAssetProperties = (props: Props): React.JSX.Element => {
@@ -91,6 +93,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
       </InlineFieldRow>
       <QueryOptions
         state={props.queryOptions}
+        seriesLimit={props.seriesLimit}
         tags={props.tags}
         appIsAlertingType={props.appIsAlertingType}
         datatypes={[]}
@@ -104,6 +107,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
         getTagKeyOptions={getTagKeyOptions}
         getTagValueOptions={getTagValueOptions}
         onChange={props.onChangeQueryOptions}
+        onChangeSeriesLimit={props.onChangeSeriesLimit}
       />
     </>
   )

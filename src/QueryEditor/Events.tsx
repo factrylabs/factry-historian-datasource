@@ -23,10 +23,12 @@ import {
 
 export interface Props {
   query: EventQuery
+  seriesLimit: number
   datasource: DataSource
   appIsAlertingType?: boolean
   isAnnotationQuery?: boolean
   onChangeEventQuery: (query: EventQuery) => void
+  onChangeSeriesLimit: (value: number) => void
 }
 
 export const Events = (props: Props): JSX.Element => {
@@ -340,6 +342,7 @@ export const Events = (props: Props): JSX.Element => {
               <EventAssetProperties
                 appIsAlertingType={props.appIsAlertingType ?? false}
                 datasource={props.datasource}
+                seriesLimit={props.seriesLimit}
                 queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
                 selectedAssetProperties={props.query.AssetProperties ?? []}
                 selectedAssets={getSelectedAssets(props.query.Assets.length ? props.query.Assets[0] : '', assets)}
@@ -348,6 +351,7 @@ export const Events = (props: Props): JSX.Element => {
                 queryType={props.query.Type}
                 onChangeAssetProperties={onChangeAssetProperties}
                 onChangeQueryOptions={onChangeQueryOptions}
+                onChangeSeriesLimit={props.onChangeSeriesLimit}
               />
             )}
           </FieldSet>
