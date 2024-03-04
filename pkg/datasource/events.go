@@ -91,14 +91,32 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 	columns := []eventFrameColumn{}
 
 	for i := range events {
-		labels := data.Labels{}
+		eventLabels := data.Labels{}
 		for j := range simpleEventTypeProperties {
 			name := simpleEventTypeProperties[j].Name
 			if value, ok := events[i].Properties.Properties[name]; ok {
-				labels[name] = fmt.Sprintf("%v", value)
+				eventLabels[name] = fmt.Sprintf("%v", value)
 			}
 		}
+
+		eventLabels[AssetPathColumnName] = getAssetPath(uuidToAssetMap, events[i].AssetUUID)
+		eventLabels[AssetColumnName] = uuidToAssetMap[events[i].AssetUUID].Name
+		eventLabels[EventTypeColumnName] = uuidToEventTypeMap[events[i].EventTypeUUID].Name
+		eventLabels[StartTimeColumnName] = events[i].StartTime.Format(time.RFC3339)
+		eventLabels[StopTimeColumnName] = ""
+		eventLabels[EventUUIDColumnName] = events[i].UUID.String()
+		eventLabels[EventTypeUUIDColumnName] = events[i].EventTypeUUID.String()
+		eventLabels[AssetUUIDColumnName] = events[i].AssetUUID.String()
+		if events[i].StopTime != nil {
+			eventLabels[StopTimeColumnName] = events[i].StopTime.Format(time.RFC3339)
+		}
+		if events[i].ParentUUID != nil {
+			eventLabels[ParentEventUUIDColumnName] = events[i].ParentUUID.String()
+		}
+
 		for j := range periodicEventTypeProperties {
+			labels := data.Labels{}
+			maps.Copy(labels, eventLabels)
 			periodicPropertyValues := util.PeriodicPropertyValues{}
 			if err := events[i].Properties.Properties.Get(periodicEventTypeProperties[j].Name, &periodicPropertyValues); err != nil {
 				continue
@@ -110,24 +128,8 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 			}
 
 			labels[PropertyColumnName] = periodicEventTypeProperties[j].Name
-			labels[AssetPathColumnName] = getAssetPath(uuidToAssetMap, events[i].AssetUUID)
-			labels[AssetColumnName] = uuidToAssetMap[events[i].AssetUUID].Name
-			labels[EventTypeColumnName] = uuidToEventTypeMap[events[i].EventTypeUUID].Name
-			labels[StartTimeColumnName] = events[i].StartTime.Format(time.RFC3339)
-			labels[StopTimeColumnName] = ""
-			labels[EventUUIDColumnName] = events[i].UUID.String()
-			labels[ParentEventUUIDColumnName] = ""
-			labels[EventTypeUUIDColumnName] = events[i].EventTypeUUID.String()
-			labels[AssetUUIDColumnName] = events[i].AssetUUID.String()
 
-			if events[i].StopTime != nil {
-				labels[StopTimeColumnName] = events[i].StopTime.Format(time.RFC3339)
-			}
-			if events[i].ParentUUID != nil {
-				labels[ParentEventUUIDColumnName] = events[i].ParentUUID.String()
-			}
-
-			name := fmt.Sprintf("%s - %s - %s - %s - %s", labels[AssetPathColumnName], labels[EventTypeColumnName], labels[PropertyColumnName], labels[StartTimeColumnName], labels[StopTimeColumnName])
+			name := events[i].UUID.String()
 
 			switch periodicEventTypeProperties[j].Datatype {
 			case schemas.EventTypePropertyDatatypeBool:
@@ -169,11 +171,11 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 			}
 			switch valueField.Type() {
 			case data.FieldTypeNullableFloat64:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*float64{})
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, eventLabels, []*float64{})
 			case data.FieldTypeNullableString:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*string{})
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, eventLabels, []*string{})
 			case data.FieldTypeNullableBool:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*bool{})
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, eventLabels, []*bool{})
 			}
 			columns = append(columns, identifier)
 
