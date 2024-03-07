@@ -65,10 +65,11 @@ frameLoop:
 			}
 
 			for i := 0; i < bFrame.Rows(); i++ {
-				if aFrame.Meta != nil && bFrame.Meta != nil {
-					aFrame.Meta.ExecutedQueryString = fmt.Sprintf("%s; %s", aFrame.Meta.ExecutedQueryString, bFrame.Meta.ExecutedQueryString)
-				}
 				aFrame.AppendRow(bFrame.RowCopy(i)...)
+			}
+
+			if aFrame.Meta != nil && bFrame.Meta != nil {
+				aFrame.Meta.ExecutedQueryString = fmt.Sprintf("%s; %s", aFrame.Meta.ExecutedQueryString, bFrame.Meta.ExecutedQueryString)
 			}
 		}
 	}
