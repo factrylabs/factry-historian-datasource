@@ -34,8 +34,6 @@ export const AssetProperties = (props: Props): JSX.Element => {
         value={props.initialValue}
         options={availableProperties(props.selectedAssets)}
         onChange={onSelectProperties}
-        allowCustomValue
-        createOptionPosition="first"
       />
     </>
   )

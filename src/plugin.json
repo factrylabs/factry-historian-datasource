@@ -8,6 +8,7 @@
   "executable": "gpx_factry-historian-datasource",
   "alerting": true,
   "annotations": true,
+  "category": "tsdb",
   "info": {
     "description": "A datasource plugin for Factry Historian",
     "author": {
@@ -32,15 +33,15 @@
     "screenshots": [
       {
         "name": "Asset property query example",
-        "path": "img/grafana-datasource-assets.png"
+        "path": "img/assets_query.png"
       },
       {
         "name": "Measurement query example",
-        "path": "img/grafana-datasource-measurements.png"
+        "path": "img/measurements_query.png"
       },
       {
         "name": "Event query example",
-        "path": "img/grafana-datasource-events.png"
+        "path": "img/events_query.png"
       }
     ],
     "version": "%VERSION%",

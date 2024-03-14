@@ -42,12 +42,7 @@ export function AssetPropertyFilterRow(props: {
   return (
     <>
       <InlineFieldRow>
-        <InlineField
-          label={'Assets'}
-          aria-label={'Assets'}
-          labelWidth={20}
-          tooltip={<div>Searches assets by path, to use a regex surround pattern with /</div>}
-        >
+        <InlineField label={'Assets'} aria-label={'Assets'} labelWidth={20}>
           <AsyncMultiSelect
             placeholder="Select asset(s)"
             width={25}

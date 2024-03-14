@@ -51,12 +51,7 @@ export function EventTypePropertyFilterRow(props: {
   return (
     <>
       <InlineFieldRow>
-        <InlineField
-          label={'Filter by event types'}
-          aria-label={'Filter by event types'}
-          labelWidth={labelWidth}
-          tooltip={<div>Searches event types by name, to use a regex surround pattern with /</div>}
-        >
+        <InlineField label={'Filter by event types'} aria-label={'Filter by event types'} labelWidth={labelWidth}>
           <AsyncMultiSelect
             placeholder="Select event type(s)"
             width={25}

@@ -236,7 +236,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
           </InlineFieldRow>
           <InlineFieldRow>
             <InlineField
-              label="Series limit"
+              label="Measurement limit"
               tooltip="The maximum amount of measurement series a query can return"
               labelWidth={labelWidth}
             >
