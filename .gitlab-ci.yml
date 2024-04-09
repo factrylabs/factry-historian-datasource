@@ -91,25 +91,56 @@ deploy-tag:
   rules:
     - if: $CI_COMMIT_TAG =~ /^v(\d\.){2}\d(-.*)?$/
 
-publish:
+# Uploads the artifacts to the portal
+.publish:
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.19
   stage: publish
   rules:
-    - if: $CI_COMMIT_TAG =~ /^v(\d\.){2}\d(-.*)?$/
-      when: manual
+    - if: $CI_COMMIT_TAG =~ /^v(\d+\.){2}\d+(-.*)?/
+      when: on_success
+  needs:
+    - job: build-backend
+      optional: false
+      artifacts: true
+    - job: build-frontend
+      optional: false
+      artifacts: true
+  variables:
+    PORTAL_URL: ""
+    PORTAL_PRODUCT_UPDATES_JWT_TOKEN: ""
+  before_script:
+    - apk add --no-cache curl zip
   script:
-    - apt-get update
-    - apt-get install -y zip
-    - PACKAGE_VERSION=$(make version)
-    - PACKAGE_NAME=factry-historian-datasource-${PACKAGE_VERSION:1}.zip
-    - REPO_FILE=/var/opt/factry/download/packages.json
-    - mkdir -p factry-historian-datasource
-    - cp -r dist/* factry-historian-datasource
-    - zip $PACKAGE_NAME factry-historian-datasource -r
-    - scp $PACKAGE_NAME gitlab@$CLIENT_PORTAL_SERVER:/var/opt/factry/download/factry-historian-datasource
-    - ssh gitlab@$CLIENT_PORTAL_SERVER "/var/opt/factry/publish-package -repo=$REPO_FILE -product=factry-historian-datasource -version=$PACKAGE_VERSION -os=any -arch=any -type=zip -location=factry-historian-datasource/$PACKAGE_NAME"
-    - ssh gitlab@$CLIENT_PORTAL_SERVER 'cp -r /var/opt/factry/download '$CLIENT_PORTAL_DOWNLOAD_PATH''
-  artifacts:
-    expire_in: 1 day
-    paths:
-      - $CI_PROJECT_DIR/release
-      - $CI_PROJECT_DIR/dist
+    - |
+      product=factry-historian-datasource
+      productType=factry-historian-datasource
+      version=$(echo $CI_COMMIT_TAG | sed 's/^v//')
+      os=any-zip
+      arch=any
+      signature="none"
+      cp -r $CI_PROJECT_DIR/dist $CI_PROJECT_DIR/factry-historian-datasource
+      zip $CI_PROJECT_DIR/factry-historian-datasource-$(version).zip $CI_PROJECT_DIR/factry-historian-datasource -r
+      file=$(ls $CI_PROJECT_DIR/factry-historian-datasource-$(version).zip)
+      path=$(realpath $file)
+      echo "uploading $file ($version) to portal at ${PORTAL_URL}/api/product-updates"
+      curl -X POST -H "Authorization: Bearer $PORTAL_PRODUCT_UPDATES_JWT_TOKEN" -F "productType=${productType}" -F "product=${product}" -F "os=${os}" -F "arch=${arch}" -F "version=${version}" -F "signature=${signature}" -F "binary=@${path}" --url "${PORTAL_URL}/api/product-updates"
+
+"publish:prod":
+  variables:
+    PORTAL_URL: ${PORTAL_URL_PROD}
+    PORTAL_PRODUCT_UPDATES_JWT_TOKEN: ${PORTAL_PRODUCT_UPDATES_JWT_TOKEN_PROD}
+  extends: .publish
+
+"publish:qa":
+  allow_failure: true
+  variables:
+    PORTAL_URL: ${PORTAL_URL_QA}
+    PORTAL_PRODUCT_UPDATES_JWT_TOKEN: ${PORTAL_PRODUCT_UPDATES_JWT_TOKEN_QA}
+  extends: .publish
+
+"publish:staging":
+  allow_failure: true
+  variables:
+    PORTAL_URL: ${PORTAL_URL_STAGING}
+    PORTAL_PRODUCT_UPDATES_JWT_TOKEN: ${PORTAL_PRODUCT_UPDATES_JWT_TOKEN_STAGING}
+  extends: .publish
