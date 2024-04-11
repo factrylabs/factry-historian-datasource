@@ -3,7 +3,9 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
+	"github.com/go-playground/form"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -66,7 +68,12 @@ func (api *API) RawQuery(timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuer
 // EventQuery executes an event query
 func (api *API) EventQuery(filter schemas.EventFilter) ([]schemas.Event, error) {
 	queryResult := []schemas.Event{}
-	response, err := api.client.R().SetBody(filter).Post("/api/events/query")
+	eventFilterParams, err := getEventFilter(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := api.client.R().SetQueryParams(eventFilterParams).Get("/api/events")
 	if err != nil {
 		return nil, err
 	}
@@ -108,4 +115,23 @@ func (api *API) GetTagValues(measurementUUID, tagKey string) (data.Frames, error
 	}
 
 	return handleDataFramesResponse(response)
+}
+
+func getEventFilter(filter schemas.EventFilter) (map[string]string, error) {
+	encoder := form.NewEncoder()
+	values, err := encoder.Encode(&filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return urlValuesToMap(values), nil
+}
+
+func urlValuesToMap(values url.Values) map[string]string {
+	result := map[string]string{}
+	for key, value := range values {
+		result[key] = value[0]
+	}
+
+	return result
 }
