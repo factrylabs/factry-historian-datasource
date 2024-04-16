@@ -24,8 +24,8 @@ export function AssetFilterRow(props: {
     const filter: AssetFilter = {
       Keyword: query,
     }
-    const databases = await props.datasource.getAssets(filter)
-    const selectableValues = databases
+    const assets = await props.datasource.getAssets(filter)
+    const selectableValues = assets
       .map((e) => {
         return {
           label: e.Name,

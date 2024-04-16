@@ -208,6 +208,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       params = {
         ...filter,
       }
+      if (filter.ParentUUIDs) {
+        params.ParentUUIDs = filter.ParentUUIDs.flatMap((e) => this.multiSelectReplace(e))
+      }
     }
     return this.getResource('assets', params)
   }
@@ -217,6 +220,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     if (filter) {
       params = {
         ...filter,
+      }
+      if (filter.AssetUUIDs) {
+        params.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.multiSelectReplace(e))
       }
     }
     return this.getResource('asset-properties', params)

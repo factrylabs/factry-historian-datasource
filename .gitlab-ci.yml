@@ -40,7 +40,7 @@ build-frontend:
   stage: build
   image: node:18
   script:
-    - npm install -g pnpm@latest
+    - npm install -g pnpm@^8.x
     - pnpm config set store-dir .pnpm-store
     - make set_frontend_version
     - pnpm install
