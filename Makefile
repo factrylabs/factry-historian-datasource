@@ -71,7 +71,12 @@ build_web: ## Build the web application
 	pnpm install && pnpm run build
 
 build_debug: build_web ## Build the backend in debug mode
+## check architecure
+ifeq ($(shell uname -m),arm64)
+	mage -v buildDebugLinuxARM64
+else
 	mage -v buildDebugLinux
+endif
 
 gen_proto: ## Generates the go files from the .proto files
 	protoc --go_out=. --go_opt=paths=source_relative \--go-grpc_out=. --go-grpc_opt=paths=source_relative \$(PROTO_FILES)

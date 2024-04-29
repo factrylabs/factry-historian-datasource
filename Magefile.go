@@ -25,6 +25,13 @@ func BuildDebugLinux() error {
 	return b.Linux()
 }
 
+// Build_debug_linux_arm64 builds the debug version for linux/arm64.
+func BuildDebugLinuxArm64() error {
+	build.SetBeforeBuildCallback(EnableDebug)
+	b := build.Build{}
+	return b.LinuxARM64()
+}
+
 func EnableDebug(cfg build.Config) (build.Config, error) {
 	cfg.EnableDebug = true
 	return cfg, nil
