@@ -70,14 +70,6 @@ build_web: ## Build the web application
 	pnpm config set store-dir .pnpm-store
 	pnpm install && pnpm run build
 
-build_debug: build_web ## Build the backend in debug mode
-## check architecure
-ifeq ($(shell uname -m),arm64)
-	mage -v buildDebugLinuxARM64
-else
-	mage -v buildDebugLinux
-endif
-
 gen_proto: ## Generates the go files from the .proto files
 	protoc --go_out=. --go_opt=paths=source_relative \--go-grpc_out=. --go-grpc_opt=paths=source_relative \$(PROTO_FILES)
 
@@ -88,10 +80,10 @@ package: build_web build_all
 	export GRAFANA_API_KEY=$(key); npx @grafana/sign-plugin@latest --rootUrls $(rootUrls)
 
 run_server: # Runs the grafana datasource
-	docker compose up --build --force-recreate  
+	DEVELOPMENT=false docker compose up --build --force-recreate
 
 run_debug: # Runs the grafana datasource in debug mode
-	DEBUG=1 docker compose up --build --force-recreate 
+	docker compose up --build --force-recreate 
 
 clean: # Cleans build artifacts
 	mage clean

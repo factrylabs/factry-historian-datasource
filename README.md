@@ -9,7 +9,6 @@ A data source backend plugin consists of both frontend and backend components.
 
 ```bash
 make clean
-make build_debug
 make run_debug
 ```
 

@@ -3,30 +3,74 @@ ARG grafana_image=grafana-oss
 
 FROM --platform=$BUILDPLATFORM grafana/${grafana_image}:${grafana_version}
 
+ARG development=true
+ARG GO_VERSION=1.22.1
+
+RUN 
+
+ENV DEV "${development}"
+
 # Make it as simple as possible to access the grafana instance for development purposes
 # Do NOT enable these settings in a public facing / production grafana instance
 ENV GF_AUTH_ANONYMOUS_ORG_ROLE "Admin"
 ENV GF_AUTH_ANONYMOUS_ENABLED "true"
 ENV GF_AUTH_BASIC_ENABLED "false"
-ENV GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS "factry-historian-datasource"
 # Set development mode so plugins can be loaded without the need to sign
 ENV GF_DEFAULT_APP_MODE "development"
 
-# Inject livereload script into grafana index.html
+
+LABEL maintainer="Grafana Labs <hello@grafana.com>"
+
+ENV GF_PATHS_HOME="/usr/share/grafana"
+WORKDIR $GF_PATHS_HOME
+
 USER root
-RUN sed -i 's/<\/body><\/html>/<script src=\"http:\/\/localhost:35729\/livereload.js\"><\/script><\/body><\/html>/g' /usr/share/grafana/public/views/index.html
 
-ENV PATH=/usr/local/go/bin:~/go/bin:$PATH
-RUN ARCH=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/) \
-  && GO_LATEST=$(curl "https://go.dev/VERSION?m=text" 2>/dev/null | head -n 1) \
-  && curl -o _go.tar.gz "https://dl.google.com/go/${GO_LATEST}.linux-${ARCH}.tar.gz" \
-  && tar -C /usr/local -xzf _go.tar.gz \
-  && rm _go.tar.gz \
-  && go install github.com/go-delve/delve/cmd/dlv@latest
+# Installing supervisor and inotify-tools
+RUN if [ "${development}" = "true" ]; then \
+    if grep -i -q alpine /etc/issue; then \
+        apk add supervisor inotify-tools git; \
+    elif grep -i -q ubuntu /etc/issue; then \
+      DEBIAN_FRONTEND=noninteractive && \
+      apt-get update && \
+      apt-get install -y supervisor inotify-tools git && \
+      rm -rf /var/lib/apt/lists/*; \
+    else \
+      echo 'ERROR: Unsupported base image' && /bin/false; \
+    fi \
+    fi
 
-COPY ./scripts/*.sh /
+COPY supervisord/supervisord.conf /etc/supervisor.d/supervisord.ini
+COPY supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-EXPOSE 3000
-EXPOSE 2345
 
-ENTRYPOINT [ "/wrapper.sh" ]
+# Installing Go
+RUN if [ "${development}" = "true" ]; then \
+    GO_ARCH=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/); \
+    curl -O -L https://golang.org/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    rm -rf /usr/local/go && \
+    tar -C /usr/local -xzf go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    echo "export PATH=$PATH:/usr/local/go/bin:~/go/bin" >> ~/.bashrc && \
+    rm -f go${GO_VERSION}.linux-${GO_ARCH}.tar.gz; \
+    fi
+
+# Installing delve for debugging
+RUN if [ "${development}" = "true" ]; then \
+    /usr/local/go/bin/go install github.com/go-delve/delve/cmd/dlv@latest; \
+    fi
+
+# Installing mage for plugin (re)building
+RUN if [ "${development}" = "true" ]; then \
+    git clone https://github.com/magefile/mage; \
+    cd mage; \
+    export PATH=$PATH:/usr/local/go/bin; \
+    go run bootstrap.go; \
+    fi
+
+# Inject livereload script into grafana index.html
+RUN sed -i 's|</body>|<script src="http://localhost:35729/livereload.js"></script></body>|g' /usr/share/grafana/public/views/index.html
+
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
