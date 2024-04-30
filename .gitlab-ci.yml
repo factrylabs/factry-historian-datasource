@@ -119,8 +119,8 @@ deploy-tag:
       arch=any
       signature="none"
       cp -r $CI_PROJECT_DIR/dist $CI_PROJECT_DIR/factry-historian-datasource
-      zip $CI_PROJECT_DIR/factry-historian-datasource-$(version).zip $CI_PROJECT_DIR/factry-historian-datasource -r
-      file=$(ls $CI_PROJECT_DIR/factry-historian-datasource-$(version).zip)
+      zip $CI_PROJECT_DIR/factry-historian-datasource-${version}.zip $CI_PROJECT_DIR/factry-historian-datasource -r
+      file=$(ls $CI_PROJECT_DIR/factry-historian-datasource-${version}.zip)
       path=$(realpath $file)
       echo "uploading $file ($version) to portal at ${PORTAL_URL}/api/product-updates"
       curl -X POST -H "Authorization: Bearer $PORTAL_PRODUCT_UPDATES_JWT_TOKEN" -F "productType=${productType}" -F "product=${product}" -F "os=${os}" -F "arch=${arch}" -F "version=${version}" -F "signature=${signature}" -F "binary=@${path}" --url "${PORTAL_URL}/api/product-updates"
