@@ -139,6 +139,7 @@ export interface AssetFilter {
   Keyword?: string
   Path?: string
   ParentUUIDs?: string[]
+  UseAssetPath?: boolean
 }
 
 export interface AssetPropertyFilter {

@@ -24,6 +24,7 @@ export function AssetPropertyFilterRow(props: {
   const loadAssetOptions = async (query: string): Promise<Array<SelectableValue<string>>> => {
     const filter: AssetFilter = {
       Path: query,
+      UseAssetPath: true,
     }
     const assets = await props.datasource.getAssets(filter)
     const selectableValues = assets
