@@ -158,7 +158,11 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 		return nil, err
 	}
 
-	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
+	setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)
+	if measurementQuery.Options.MetadataAsLabels {
+		setFieldLabels(frames)
+	}
+	return sortByStatus(frames), nil
 }
 
 func getMeasurements(measurementQuery schemas.MeasurementQuery, seriesLimit int, api *api.API) ([]string, error) {
@@ -224,7 +228,11 @@ func handleMeasurementQuery(measurementQuery schemas.MeasurementQuery, backendQu
 		return nil, err
 	}
 
-	return sortByStatus(setMeasurementFrameNames(frames, measurementQuery.Options)), nil
+	setMeasurementFrameNames(frames, measurementQuery.Options)
+	if measurementQuery.Options.MetadataAsLabels {
+		setFieldLabels(frames)
+	}
+	return sortByStatus(frames), nil
 }
 
 func handleQuery(measurementQuery schemas.MeasurementQuery, query schemas.Query, api *api.API) (data.Frames, error) {
@@ -309,7 +317,8 @@ func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, a
 		return nil, err
 	}
 
-	return setRawFrameNames(result), nil
+	setRawFrameNames(result)
+	return result, nil
 }
 
 func fillQueryVariables(query string, databaseType string, backendQuery backend.DataQuery) string {

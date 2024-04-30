@@ -92,6 +92,7 @@ export interface MeasurementQueryOptions {
   UseEngineeringSpecs: boolean
   DisplayDatabaseName: boolean
   DisplayDescription: boolean
+  MetadataAsLabels: boolean
   Limit?: number
 }
 

@@ -126,6 +126,10 @@ export const QueryOptions = (props: Props): JSX.Element => {
     props.onChange({ ...props.state, DisplayDescription: e.target.checked }, props.tags)
   }
 
+  const onChangeMetadataAsLabels = (e: any): void => {
+    props.onChange({ ...props.state, MetadataAsLabels: e.target.checked }, props.tags)
+  }
+
   const onChangeSeriesLimit = (event: ChangeEvent<HTMLInputElement>): void => {
     setSeriesLimit(Number(event.target.value))
   }
@@ -232,6 +236,13 @@ export const QueryOptions = (props: Props): JSX.Element => {
           <InlineFieldRow>
             <InlineField label="Display description" labelWidth={labelWidth}>
               <InlineSwitch value={props.state.DisplayDescription} onChange={onChangeDisplayDescription} />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField label="Add meta data as labels" labelWidth={labelWidth}
+              tooltip="Adds meta data such as MeasurementUUID and DatabaseUUID as labels to the query result"
+            >
+              <InlineSwitch value={props.state.MetadataAsLabels} onChange={onChangeMetadataAsLabels} />
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>

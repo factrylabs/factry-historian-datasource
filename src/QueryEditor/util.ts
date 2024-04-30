@@ -274,6 +274,7 @@ export function defaultQueryOptions(appIsAlertingType: boolean): MeasurementQuer
     UseEngineeringSpecs: !appIsAlertingType,
     DisplayDatabaseName: false,
     DisplayDescription: false,
+    MetadataAsLabels: true,
   }
 }
 
