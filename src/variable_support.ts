@@ -83,9 +83,13 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case 'AssetQuery': {
-        return from(this.dataAPI.getAssets(request.targets[0].filter)).pipe(
+        const filter = {
+          ...request.targets[0].filter,
+        }
+        const useAssetPath = filter.UseAssetPath ?? false
+        return from(this.dataAPI.getAssets(filter)).pipe(
           map((values) => {
-            return { data: values.map<MetricFindValue>((v) => ({ text: v.AssetPath ?? v.Name, value: v.UUID })) }
+            return { data: values.map<MetricFindValue>((v) => ({ text: useAssetPath ? v.AssetPath ?? v.Name : v.Name, value: v.UUID })) }
           })
         )
       }

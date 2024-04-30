@@ -1,6 +1,6 @@
 import React, { ChangeEvent, FormEvent, useState } from 'react'
 
-import { AsyncMultiSelect, InlineField, InlineFieldRow, Input } from '@grafana/ui'
+import { AsyncMultiSelect, InlineField, InlineFieldRow, InlineSwitch, Input } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { AssetFilter } from 'types'
 import { SelectableValue } from '@grafana/data'
@@ -17,6 +17,13 @@ export function AssetFilterRow(props: {
     props.onChange({
       ...props.initialValue,
       Path: (event as ChangeEvent<HTMLInputElement>).target.value,
+    })
+  }
+
+  const onUseAssetPathChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    props.onChange({
+      ...props.initialValue,
+      UseAssetPath: event.target.checked,
     })
   }
 
@@ -73,6 +80,9 @@ export function AssetFilterRow(props: {
             loadOptions={loadAssetOptions}
             value={parentAssets}
           />
+        </InlineField>
+        <InlineField label={'Use asset path'} tooltip={'Use asset path as display value'} labelWidth={20}>
+          <InlineSwitch value={props.initialValue?.UseAssetPath} onChange={onUseAssetPathChange} />
         </InlineField>
       </InlineFieldRow>
     </>
