@@ -15,6 +15,7 @@ type MeasurementQueryOptions struct {
 	UseEngineeringSpecs    bool
 	DisplayDatabaseName    bool
 	DisplayDescription     bool
+	MetadataAsLabels       bool
 }
 
 // AssetMeasurementQuery is used to build the time series query to send to the historian

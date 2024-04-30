@@ -13,6 +13,9 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+// fieldLabelsFromMeta are the field labels that are extracted from the metadata
+var fieldLabelsFromMeta = []string{"MeasurementUUID", "MeasurementName", "DatabaseUUID", "DatabaseName", "AssetProperty", "AssetPropertyUUID", "AssetUUID", "AssetPath", "AssetName"}
+
 // getLabelsFromFrame returns the tag from a frame
 func getLabelsFromFrame(frame *data.Frame) map[string]interface{} {
 	if frame == nil || frame.Meta == nil {
@@ -117,48 +120,81 @@ func getFrameSuffix(frame *data.Frame, includeDatabaseName, includeDescription b
 
 // getMeasurementFrameName returns the frame name for a given frame based on the measurement
 func getMeasurementFrameName(frame *data.Frame, includeDatabaseName, includeDescription bool) string {
+	return getMetaValueFromFrame(frame, "MeasurementName") + getFrameSuffix(frame, includeDatabaseName, includeDescription)
+}
+
+// setFieldLabels sets the labels for a given field
+func setFieldLabels(frames data.Frames) {
+	for _, frame := range frames {
+		if frame == nil {
+			return
+		}
+
+		if frame.Meta == nil {
+			return
+		}
+
+		meta, ok := frame.Meta.Custom.(map[string]interface{})
+		if !ok {
+			return
+		}
+
+		metaLabels, ok := meta["Labels"].(map[string]interface{})
+		if !ok {
+			metaLabels = make(map[string]interface{})
+		}
+
+		labels := data.Labels{}
+		for key, value := range metaLabels {
+			labels[key] = fmt.Sprintf("%v", value)
+		}
+
+		for _, key := range fieldLabelsFromMeta {
+			if value, ok := meta[key].(string); ok {
+				labels[key] = value
+			}
+		}
+
+		for _, field := range frame.Fields {
+			if field.Name == "time" {
+				continue
+			}
+
+			if field.Labels == nil {
+				field.Labels = make(map[string]string)
+			}
+
+			maps.Copy(field.Labels, labels)
+		}
+	}
+}
+
+// getMetaValueFromFrame returns the value of a given meta key from a frame
+func getMetaValueFromFrame(frame *data.Frame, key string) string {
 	if frame == nil {
 		return ""
 	}
 
 	if frame.Meta == nil {
-		return frame.Name
+		return ""
 	}
 
 	meta, ok := frame.Meta.Custom.(map[string]interface{})
 	if !ok {
-		return frame.Name
+		return ""
 	}
 
-	measurementName, ok := meta["MeasurementName"].(string)
+	value, ok := meta[key].(string)
 	if !ok {
-		return frame.Name
+		return ""
 	}
 
-	return measurementName + getFrameSuffix(frame, includeDatabaseName, includeDescription)
+	return value
 }
 
 // getMeasurementUUIDFromFrame returns the measurement UUID for a given frame
 func getMeasurementUUIDFromFrame(frame *data.Frame) string {
-	if frame == nil {
-		return ""
-	}
-
-	if frame.Meta == nil {
-		return ""
-	}
-
-	meta, ok := frame.Meta.Custom.(map[string]interface{})
-	if !ok {
-		return ""
-	}
-
-	measurementUUID, ok := meta["MeasurementUUID"].(string)
-	if !ok {
-		return ""
-	}
-
-	return measurementUUID
+	return getMetaValueFromFrame(frame, "MeasurementUUID")
 }
 
 // getFrameID returns the frame ID for a given frame
@@ -188,7 +224,7 @@ func getAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUI
 }
 
 // setMeasurementFrameNames sets the name of each frame to the measurement name
-func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQueryOptions) data.Frames {
+func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQueryOptions) {
 	for _, frame := range frames {
 		if frame.Meta == nil {
 			continue
@@ -201,11 +237,10 @@ func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQue
 			field.Config.DisplayNameFromDS = getMeasurementFrameName(frame, options.DisplayDatabaseName, options.DisplayDescription)
 		}
 	}
-	return frames
 }
 
 // setMeasurementFrameNames sets the name of each frame to the measurement name
-func setRawFrameNames(frames data.Frames) data.Frames {
+func setRawFrameNames(frames data.Frames) {
 	for _, frame := range frames {
 		for _, field := range frame.Fields {
 			if field.Name == "time" {
@@ -229,7 +264,6 @@ func setRawFrameNames(frames data.Frames) data.Frames {
 			field.Config.DisplayNameFromDS = frame.Name + "." + field.Name + suffix
 		}
 	}
-	return frames
 }
 
 func copyFrame(frame *data.Frame) (*data.Frame, error) {
