@@ -22,12 +22,11 @@ export function EventTypePropertyFilterRow(props: {
   }
 
   const loadEventTypeOptions = async (query: string): Promise<Array<SelectableValue<string>>> => {
-    console.log(query)
     const filter: EventTypeFilter = {
       Keyword: query,
     }
-    const assets = await props.datasource.getEventTypes(filter)
-    const selectableValues = assets
+    const eventTypes = await props.datasource.getEventTypes(filter)
+    const selectableValues = eventTypes
       .map((e) => {
         return {
           label: e.Name,

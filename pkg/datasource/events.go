@@ -40,6 +40,9 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 			if _, ok := selectedProperties[eventTypeProperty.Name]; (len(selectedProperties) == 0 || ok) && eventTypeProperty.EventTypeUUID == eventType.UUID {
 				eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
 			}
+			if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok && eventTypeProperty.EventTypeUUID == eventType.UUID {
+				eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
+			}
 		}
 	}
 
@@ -79,6 +82,9 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 	for _, eventTypeProperty := range eventTypeProperties {
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			if _, ok := selectedProperties[eventTypeProperty.Name]; len(selectedProperties) == 0 || ok {
+				periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
+			}
+			if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok {
 				periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
 			}
 		} else {
