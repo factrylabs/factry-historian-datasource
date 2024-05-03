@@ -39,8 +39,7 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 		for _, eventTypeProperty := range eventTypeProperties {
 			if _, ok := selectedProperties[eventTypeProperty.Name]; (len(selectedProperties) == 0 || ok) && eventTypeProperty.EventTypeUUID == eventType.UUID {
 				eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
-			}
-			if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok && eventTypeProperty.EventTypeUUID == eventType.UUID {
+			} else if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; (len(selectedProperties) == 0 || ok) && eventTypeProperty.EventTypeUUID == eventType.UUID {
 				eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
 			}
 		}
@@ -83,8 +82,7 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			if _, ok := selectedProperties[eventTypeProperty.Name]; len(selectedProperties) == 0 || ok {
 				periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
-			}
-			if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok {
+			} else if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok {
 				periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
 			}
 		} else {
@@ -135,7 +133,7 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 
 			labels[PropertyColumnName] = periodicEventTypeProperties[j].Name
 
-			name := events[i].UUID.String()
+			name := fmt.Sprintf("%s (%s)", periodicEventTypeProperties[j].Name, events[i].UUID)
 
 			switch periodicEventTypeProperties[j].Datatype {
 			case schemas.EventTypePropertyDatatypeBool:
@@ -162,6 +160,9 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 
 		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]
 		for _, assetPropertyFrame := range assetPropertyFrames {
+			labels := data.Labels{}
+			maps.Copy(labels, eventLabels)
+
 			timeField, found := assetPropertyFrame.FieldByName("time")
 			if found == -1 {
 				break
@@ -171,17 +172,22 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 				break
 			}
 
+			propertyName := getMetaValueFromFrame(assetPropertyFrame, "AssetProperty")
+			labels[PropertyColumnName] = propertyName
+			name := fmt.Sprintf("%s (%s)", propertyName, events[i].UUID)
+			valueField.Name = name
+
 			identifier := eventFrameColumn{
 				Name:      valueField.Name,
 				EventUUID: events[i].UUID,
 			}
 			switch valueField.Type() {
 			case data.FieldTypeNullableFloat64:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, eventLabels, []*float64{})
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*float64{})
 			case data.FieldTypeNullableString:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, eventLabels, []*string{})
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*string{})
 			case data.FieldTypeNullableBool:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, eventLabels, []*bool{})
+				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*bool{})
 			}
 			columns = append(columns, identifier)
 
@@ -274,6 +280,10 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 
 	for _, eventTypeProperty := range eventTypeProperties {
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+			continue
+		}
+
+		if _, ok := fieldByColumn[eventTypeProperty.Name]; ok {
 			continue
 		}
 
