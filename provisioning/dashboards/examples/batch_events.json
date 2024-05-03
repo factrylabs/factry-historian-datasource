@@ -1,0 +1,305 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_FACTRY_HISTORIAN",
+      "label": "Factry Historian",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "factry-historian-datasource",
+      "pluginName": "Factry Historian Datasource"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "factry-historian-datasource",
+      "name": "Factry Historian Datasource",
+      "version": "2.0.0-alpha"
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.4.2"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "trend",
+      "name": "Trend",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "query": {
+            "Assets": [
+              "/MyFactory.*ProductionLine.*/"
+            ],
+            "EventTypes": [
+              "8ee49756-2db9-11ed-b42c-0242ac170006"
+            ],
+            "Properties": [],
+            "PropertyFilter": [],
+            "QueryAssetProperties": false,
+            "Statuses": [],
+            "Type": "simple"
+          },
+          "queryType": "EventQuery",
+          "refId": "A",
+          "seriesLimit": 50,
+          "tabIndex": 2
+        }
+      ],
+      "title": "Batch Events",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Asset",
+                "StartTime",
+                "StopTime",
+                "Duration",
+                "ProductID",
+                "TotalQuantity",
+                "BatchID",
+                "TotalEnergy",
+                "True"
+              ]
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "displayName": "${__field.labels[\"Asset\"]} -  ${__field.labels[\"Property\"]}",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "query": {
+            "Assets": [
+              "/MyFactory.*ProductionLine.*/"
+            ],
+            "EventTypes": [
+              "8ee49756-2db9-11ed-b42c-0242ac170006"
+            ],
+            "Properties": [
+              "Temperature"
+            ],
+            "PropertyFilter": [],
+            "QueryAssetProperties": false,
+            "Statuses": [],
+            "Type": "periodic"
+          },
+          "queryType": "EventQuery",
+          "refId": "A",
+          "seriesLimit": 50,
+          "tabIndex": 2
+        }
+      ],
+      "title": "Trends panel",
+      "type": "trend"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "Factry Historian",
+          "value": "P7D5EEA62BBEAE2D7"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "DS_FACTRY_HISTORIAN",
+        "options": [],
+        "query": "factry-historian-datasource",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Batch Events",
+  "uid": "adkax13ff33lsd",
+  "version": 3,
+  "weekStart": ""
+}

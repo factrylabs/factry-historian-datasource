@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: 'Factry Historian'
+    type: 'factry-historian-datasource'
+    access: proxy
+    isDefault: true
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      url: 'https://grafana.historian.factry.dev:8000'
+      organization: '02b2a43c-cfa1-11ed-9299-0242ac170006'
+    secureJsonData:
+      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3MTQ0ODEyMDYsImp0aSI6ImdyYWZhbmEtc2lnbmluZyIsInVzZXIiOnsidXVpZCI6ImE1YzJlNjI0LTA2ZWYtMTFlZi1iNTY0LTAyNDJhYzEzMDAwMiJ9fQ.q2O9AkJvPl0fr8VSUCn5sL64KnXNJmeIPKYPqVsLVOA'
+      
