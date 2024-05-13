@@ -239,8 +239,10 @@ export const QueryOptions = (props: Props): JSX.Element => {
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
-            <InlineField label="Add meta data as labels" labelWidth={labelWidth}
-              tooltip="Adds meta data such as MeasurementUUID and DatabaseUUID as labels to the query result"
+            <InlineField
+              label="Add metadata as labels"
+              labelWidth={labelWidth}
+              tooltip="Adds metadata such as MeasurementUUID and DatabaseUUID as labels to the query result"
             >
               <InlineSwitch value={props.state.MetadataAsLabels} onChange={onChangeMetadataAsLabels} />
             </InlineField>
