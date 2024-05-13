@@ -209,7 +209,15 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         ...filter,
       }
       if (filter.ParentUUIDs) {
-        params.ParentUUIDs = filter.ParentUUIDs.flatMap((e) => this.multiSelectReplace(e))
+        const parentUUIDs = filter.ParentUUIDs.flatMap((e) => this.multiSelectReplace(e))
+        if (parentUUIDs.some((e) => e === '')) { // empty string means there is no parent selected
+          return []
+        }
+        params.ParentUUIDs = parentUUIDs
+      }
+
+      if (filter.Keyword) {
+        params.Keyword = this.templateSrv.replace(filter.Keyword)
       }
     }
     return this.getResource('assets', params)

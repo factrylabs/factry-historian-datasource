@@ -43,7 +43,7 @@ export function AssetFilterRow(props: {
     if (!parentAssets) {
       setParentAssets(selectableValues.filter((e) => props.initialValue?.ParentUUIDs?.includes(e.value ?? '')))
     }
-    return [{ label: 'No parent', value: '' } as SelectableValue<string>].concat(selectableValues)
+    return [{ label: 'No parent', value: '00000000-0000-0000-0000-000000000000' } as SelectableValue<string>].concat(selectableValues)
   }
 
   const onParentAssetsChange = (values: Array<SelectableValue<string>>) => {
