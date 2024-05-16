@@ -3,10 +3,10 @@ package datasource
 import (
 	"context"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
 )
 
 // DataSource consts

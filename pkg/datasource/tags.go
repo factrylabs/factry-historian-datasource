@@ -3,8 +3,8 @@ package datasource
 import (
 	"fmt"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
 	"golang.org/x/exp/maps"
 )
 
