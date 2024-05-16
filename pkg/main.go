@@ -5,9 +5,9 @@ import (
 
 	"net/http"
 
+	historianDataSource "github.com/factrylabs/factry-historian-datasource.git/pkg/datasource"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
-	historianDataSource "gitlab.com/factry/historian/grafana-datasource.git/pkg/datasource"
 
 	_ "net/http/pprof"
 )

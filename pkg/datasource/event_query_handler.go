@@ -5,11 +5,11 @@ import (
 	"math"
 	"time"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/api"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 	"golang.org/x/exp/maps"
 )
 

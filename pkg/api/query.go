@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/url"
 
+	arrow_pb "github.com/factrylabs/factry-historian-datasource.git/pkg/proto"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/go-playground/form"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	arrow_pb "gitlab.com/factry/historian/grafana-datasource.git/pkg/proto"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
 	"google.golang.org/protobuf/proto"
 )
 

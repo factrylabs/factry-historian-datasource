@@ -5,10 +5,10 @@ import (
 	"sort"
 	"time"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/schemas"
-	"gitlab.com/factry/historian/grafana-datasource.git/pkg/util"
 	"golang.org/x/exp/maps"
 )
 

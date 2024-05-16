@@ -1,4 +1,4 @@
-module gitlab.com/factry/historian/grafana-datasource.git
+module github.com/factrylabs/factry-historian-datasource.git
 
 go 1.22.1
 
