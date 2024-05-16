@@ -10,10 +10,10 @@ services:
       - 'seccomp:unconfined'
     environment:
       NODE_ENV: development
-      GF_LOG_FILTERS: plugin.factry-awesomeo-datasource:debug
+      GF_LOG_FILTERS: plugin.factry-historian-datasource:debug
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: factry-awesomeo-datasource
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: factry-historian-datasource
     build:
       context: ./.config
       args:
