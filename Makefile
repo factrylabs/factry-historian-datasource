@@ -70,10 +70,14 @@ build_web: ## Build the web application
 	pnpm config set store-dir .pnpm-store
 	pnpm install && pnpm run build
 
+build_web_dev: ## Build the web application in development mode
+	pnpm config set store-dir .pnpm-store
+	pnpm install && pnpm run build:dev
+
 gen_proto: ## Generates the go files from the .proto files
 	protoc --go_out=. --go_opt=paths=source_relative \--go-grpc_out=. --go-grpc_opt=paths=source_relative \$(PROTO_FILES)
 
-package: build_web build_all
+package: build_all
 	mkdir -p factry-historian-datasource
 	cp -r dist/* factry-historian-datasource
 	zip factry-historian-datasource-$(shell make version).zip factry-historian-datasource -r
@@ -82,7 +86,7 @@ package: build_web build_all
 run_server: # Runs the grafana datasource
 	DEVELOPMENT=false docker compose up --build --force-recreate
 
-run_debug: # Runs the grafana datasource in debug mode
+run_debug: build_web_dev # Runs the grafana datasource in debug mode
 	docker compose up --build --force-recreate 
 
 clean: # Cleans build artifacts

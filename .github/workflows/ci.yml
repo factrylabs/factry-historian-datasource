@@ -77,6 +77,19 @@ jobs:
         with:
           go-version: '1.22.1'
 
+      - name: golangci-lint
+        if: steps.check-for-backend.outputs.has-backend == 'true'
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59
+          only-new-issues: true
+
+      - name: gosec
+        if: steps.check-for-backend.outputs.has-backend == 'true'
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
       - name: Test backend
         if: steps.check-for-backend.outputs.has-backend == 'true'
         uses: magefile/mage-action@v3
@@ -98,6 +111,9 @@ jobs:
           then
             echo "has-e2e=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Validate plugin
+        run: make validate
 
       - name: Sign plugin
         run: pnpm run sign
