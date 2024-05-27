@@ -15,7 +15,7 @@
       "type": "datasource",
       "id": "factry-historian-datasource",
       "name": "Factry Historian Datasource",
-      "version": "2.0.0-alpha"
+      "version": "2.0.0"
     },
     {
       "type": "grafana",
@@ -52,9 +52,7 @@
         "enable": true,
         "filter": {
           "exclude": false,
-          "ids": [
-            1
-          ]
+          "ids": [1]
         },
         "iconColor": "red",
         "mappings": {
@@ -74,13 +72,8 @@
         "name": "Events",
         "target": {
           "query": {
-            "Assets": [
-              "c0638bec-753b-11ed-87ee-0242ac170006",
-              "c5e241c6-753b-11ed-87ee-0242ac170006"
-            ],
-            "EventTypes": [
-              "8ee49756-2db9-11ed-b42c-0242ac170006"
-            ],
+            "Assets": ["c0638bec-753b-11ed-87ee-0242ac170006", "c5e241c6-753b-11ed-87ee-0242ac170006"],
+            "EventTypes": ["8ee49756-2db9-11ed-b42c-0242ac170006"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -89,9 +82,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {
@@ -220,12 +211,8 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "AssetProperties": [
-              "$Properties"
-            ],
-            "Assets": [
-              "$Line"
-            ],
+            "AssetProperties": ["$Properties"],
+            "Assets": ["$Line"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -234,9 +221,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {
@@ -341,15 +326,9 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "AssetProperties": [
-              "Price"
-            ],
-            "Assets": [
-              "$Line"
-            ],
-            "EventTypes": [
-              "$EventTypes"
-            ],
+            "AssetProperties": ["Price"],
+            "Assets": ["$Line"],
+            "EventTypes": ["$EventTypes"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -358,9 +337,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {
@@ -368,9 +345,7 @@
               },
               "UseEngineeringSpecs": true
             },
-            "Properties": [
-              "$PeriodicProperties"
-            ],
+            "Properties": ["$PeriodicProperties"],
             "PropertyFilter": [],
             "QueryAssetProperties": true,
             "Statuses": [],
@@ -428,9 +403,7 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": [
-            "sum"
-          ],
+          "reducer": ["sum"],
           "show": false
         },
         "showHeader": true
@@ -443,15 +416,9 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "Assets": [
-              "$Line"
-            ],
-            "EventTypes": [
-              "$EventTypes"
-            ],
-            "Properties": [
-              "$SimpleProperties"
-            ],
+            "Assets": ["$Line"],
+            "EventTypes": ["$EventTypes"],
+            "Properties": ["$SimpleProperties"],
             "PropertyFilter": [],
             "QueryAssetProperties": false,
             "Statuses": [],
@@ -534,9 +501,7 @@
         "options": [],
         "query": {
           "filter": {
-            "ParentUUIDs": [
-              ""
-            ],
+            "ParentUUIDs": [""],
             "UseAssetPath": false
           },
           "type": "AssetQuery"
@@ -561,9 +526,7 @@
         "options": [],
         "query": {
           "filter": {
-            "ParentUUIDs": [
-              "890ed7ba-2db9-11ed-a3bd-0242ac170006"
-            ],
+            "ParentUUIDs": ["890ed7ba-2db9-11ed-a3bd-0242ac170006"],
             "UseAssetPath": false
           },
           "type": "AssetQuery"
@@ -577,14 +540,8 @@
       {
         "current": {
           "selected": true,
-          "text": [
-            "Temperature",
-            "Price"
-          ],
-          "value": [
-            "Temperature",
-            "Price"
-          ]
+          "text": ["Temperature", "Price"],
+          "value": ["Temperature", "Price"]
         },
         "datasource": {
           "type": "factry-historian-datasource",
@@ -598,9 +555,7 @@
         "options": [],
         "query": {
           "filter": {
-            "AssetUUIDs": [
-              "$Line"
-            ]
+            "AssetUUIDs": ["$Line"]
           },
           "type": "AssetPropertyQuery"
         },
@@ -646,12 +601,8 @@
         "options": [],
         "query": {
           "filter": {
-            "EventTypeUUIDs": [
-              "$EventTypes"
-            ],
-            "Types": [
-              "simple"
-            ]
+            "EventTypeUUIDs": ["$EventTypes"],
+            "Types": ["simple"]
           },
           "type": "EventTypePropertyQuery"
         },
@@ -675,12 +626,8 @@
         "options": [],
         "query": {
           "filter": {
-            "EventTypeUUIDs": [
-              "$EventTypes"
-            ],
-            "Types": [
-              "periodic"
-            ]
+            "EventTypeUUIDs": ["$EventTypes"],
+            "Types": ["periodic"]
           },
           "type": "EventTypePropertyQuery"
         },
