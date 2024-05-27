@@ -34,3 +34,4 @@ grafana-plugins/*
 node-modules/
 factry-historian-datasource/
 *.zip
+*.sha1
