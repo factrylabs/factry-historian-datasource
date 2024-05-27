@@ -1,24 +1,33 @@
 package main
 
 import (
-	"os"
-
 	"net/http"
+	"os"
+	"time"
 
 	historianDataSource "github.com/factrylabs/factry-historian-datasource.git/pkg/datasource"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
 
-	_ "net/http/pprof"
+	_ "net/http/pprof" // #nosec G108 -- pprof is only enabled if env var PPROF_ENDPOINT is set
 )
 
-func init() {
+func startPprof(endpoint string) {
 	go func() {
-		http.ListenAndServe(":1234", nil)
+		server := &http.Server{
+			Addr:         endpoint,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+		_ = server.ListenAndServe()
 	}()
 }
 
 func main() {
+	if os.Getenv("PPROF_ENDPOINT") != "" {
+		startPprof(os.Getenv("PPROF_ENDPOINT"))
+	}
+
 	backend.SetupPluginEnvironment(historianDataSource.PluginID)
 	err := datasource.Serve(historianDataSource.NewDataSource())
 	if err != nil {
