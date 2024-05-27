@@ -97,12 +97,20 @@ jobs:
           version: latest
           args: coverage
 
-      - name: Build backend
+      - name: Install Mage
         if: steps.check-for-backend.outputs.has-backend == 'true'
         uses: magefile/mage-action@v3
         with:
           version: latest
-          args: buildAll
+          install-only: true
+
+      - name: Build backend
+        if: steps.check-for-backend.outputs.has-backend == 'true'
+        run: mage buildAll
+
+      - name: Validate plugin
+        run: |
+          make validate
 
       - name: Check for E2E
         id: check-for-e2e
@@ -111,9 +119,6 @@ jobs:
           then
             echo "has-e2e=true" >> $GITHUB_OUTPUT
           fi
-
-      - name: Validate plugin
-        run: make validate
 
       - name: Sign plugin
         run: pnpm run sign
