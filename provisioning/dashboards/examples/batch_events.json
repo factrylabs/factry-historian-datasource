@@ -15,7 +15,7 @@
       "type": "datasource",
       "id": "factry-historian-datasource",
       "name": "Factry Historian Datasource",
-      "version": "2.0.0-alpha"
+      "version": "2.0.0"
     },
     {
       "type": "grafana",
@@ -101,9 +101,7 @@
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": [
-            "sum"
-          ],
+          "reducer": ["sum"],
           "show": false
         },
         "showHeader": true
@@ -116,12 +114,8 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "Assets": [
-              "/MyFactory.*ProductionLine.*/"
-            ],
-            "EventTypes": [
-              "8ee49756-2db9-11ed-b42c-0242ac170006"
-            ],
+            "Assets": ["/MyFactory.*ProductionLine.*/"],
+            "EventTypes": ["8ee49756-2db9-11ed-b42c-0242ac170006"],
             "Properties": [],
             "PropertyFilter": [],
             "QueryAssetProperties": false,
@@ -243,15 +237,9 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "Assets": [
-              "/MyFactory.*ProductionLine.*/"
-            ],
-            "EventTypes": [
-              "8ee49756-2db9-11ed-b42c-0242ac170006"
-            ],
-            "Properties": [
-              "Temperature"
-            ],
+            "Assets": ["/MyFactory.*ProductionLine.*/"],
+            "EventTypes": ["8ee49756-2db9-11ed-b42c-0242ac170006"],
+            "Properties": ["Temperature"],
             "PropertyFilter": [],
             "QueryAssetProperties": false,
             "Statuses": [],
