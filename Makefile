@@ -9,7 +9,7 @@ PROTO_DIR= pkg/proto
 PROTO_FILES = $(PROTO_DIR)/*.proto
 
 .DEFAULT_GOAL := help
-.PHONY: outdated help version version_major_bump version_minor_bump version_patch_bump
+.PHONY: outdated help version all ver set_frontend_version version_major_bump version_minor_bump version_patch_bump version_bump_major version_bump_minor version_bump_patch tag_version build_all build_web build_web_dev gen_proto package run_server run_debug clean validate
 
 all: migrate_all
 version_bump_major: version_major_bump set_frontend_version tag_version  ## Bumps the current major version
@@ -77,9 +77,16 @@ build_web_dev: ## Build the web application in development mode
 gen_proto: ## Generates the go files from the .proto files
 	protoc --go_out=. --go_opt=paths=source_relative \--go-grpc_out=. --go-grpc_opt=paths=source_relative \$(PROTO_FILES)
 
-package: build_all
+dist: build_all
+
+factry-historian-datasource: dist
 	mkdir -p factry-historian-datasource
 	cp -r dist/* factry-historian-datasource
+
+factry-historian-datasource.zip: factry-historian-datasource
+	zip -qr factry-historian-datasource.zip factry-historian-datasource 
+
+package: factry-historian-datasource
 	zip factry-historian-datasource-$(shell make version).zip factry-historian-datasource -r
 	export GRAFANA_API_KEY=$(key); npx @grafana/sign-plugin@latest --rootUrls $(rootUrls)
 
@@ -92,3 +99,9 @@ run_debug: build_web_dev # Runs the grafana datasource in debug mode
 clean: # Cleans build artifacts
 	mage clean
 	docker compose down --rmi all -v
+	rm -rf factry-historian-datasource
+	rm factry-historian-datasource*.zip
+
+validate: factry-historian-datasource.zip ## Validates the code
+	npx @grafana/plugin-validator@latest -sourceCodeUri file://. factry-historian-datasource.zip
+	
