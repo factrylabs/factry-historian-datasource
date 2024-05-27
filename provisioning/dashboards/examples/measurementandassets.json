@@ -15,7 +15,7 @@
       "type": "datasource",
       "id": "factry-historian-datasource",
       "name": "Factry Historian Datasource",
-      "version": "2.0.0-alpha"
+      "version": "2.0.0"
     },
     {
       "type": "grafana",
@@ -143,12 +143,8 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "AssetProperties": [
-              "Temperature"
-            ],
-            "Assets": [
-              "/.*/"
-            ],
+            "AssetProperties": ["Temperature"],
+            "Assets": ["/.*/"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -157,9 +153,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {
@@ -258,13 +252,9 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "Databases": [
-              "568a43d2-1169-11ec-9be3-59e8def62e23"
-            ],
+            "Databases": ["568a43d2-1169-11ec-9be3-59e8def62e23"],
             "IsRegex": false,
-            "Measurements": [
-              "75e9aad0-06f1-11ef-be27-0242ac130002"
-            ],
+            "Measurements": ["75e9aad0-06f1-11ef-be27-0242ac130002"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -273,9 +263,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {
@@ -379,13 +367,9 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "Databases": [
-              "568a43d2-1169-11ec-9be3-59e8def62e23"
-            ],
+            "Databases": ["568a43d2-1169-11ec-9be3-59e8def62e23"],
             "IsRegex": false,
-            "Measurements": [
-              "75e9aad0-06f1-11ef-be27-0242ac130002"
-            ],
+            "Measurements": ["75e9aad0-06f1-11ef-be27-0242ac130002"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -394,9 +378,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {
@@ -455,9 +437,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -473,13 +453,9 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "Databases": [
-              "568a43d2-1169-11ec-9be3-59e8def62e23"
-            ],
+            "Databases": ["568a43d2-1169-11ec-9be3-59e8def62e23"],
             "IsRegex": false,
-            "Measurements": [
-              "d31ffe3c-0879-11ef-be27-0242ac130002"
-            ],
+            "Measurements": ["d31ffe3c-0879-11ef-be27-0242ac130002"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -488,9 +464,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": true,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": true,
               "MetadataAsLabels": true,
               "Tags": {
@@ -594,12 +568,8 @@
             "uid": "${DS_FACTRY_HISTORIAN}"
           },
           "query": {
-            "AssetProperties": [
-              "Temperature"
-            ],
-            "Assets": [
-              "c0638bec-753b-11ed-87ee-0242ac170006"
-            ],
+            "AssetProperties": ["Temperature"],
+            "Assets": ["c0638bec-753b-11ed-87ee-0242ac170006"],
             "Options": {
               "Aggregation": {
                 "Name": "mean",
@@ -608,9 +578,7 @@
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
               "FillInitialEmptyValues": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {
@@ -724,9 +692,7 @@
               },
               "DisplayDatabaseName": false,
               "DisplayDescription": false,
-              "GroupBy": [
-                "status"
-              ],
+              "GroupBy": ["status"],
               "IncludeLastKnownPoint": false,
               "MetadataAsLabels": true,
               "Tags": {

@@ -1,7 +1,7 @@
 major = 2
 minor = 0
 patch = 0
-prerelease = -alpha
+prerelease = 
 project_name=factry-historian-datasource
 
 COMMIT=$(shell git rev-parse --short HEAD)
