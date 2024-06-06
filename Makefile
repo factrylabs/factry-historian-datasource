@@ -50,7 +50,7 @@ version_minor_bump:
 	@sed 's/^minor = $(minor)$$/minor = $(shell expr $(minor) + 1)/' Makefile > tmp && mv tmp Makefile
 
 version_patch_bump:
-	@sed -i  's/^patch = $(patch)$$/patch = $(shell expr $(patch) + 1)/' Makefile
+	@sed 's/^patch = $(patch)$$/patch = $(shell expr $(patch) + 1)/' Makefile > tmp && mv tmp Makefile
 
 tag_version:
 ifdef message
