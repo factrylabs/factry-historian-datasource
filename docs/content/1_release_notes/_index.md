@@ -21,9 +21,17 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
+## v2.0.1
+
+### Changes
+
+- Pass datasource request context to the historian client
+- Automatic instance management for data source
+- Removed pprof code
+
 ## v2.0.0
 
-Released on IDK
+### Changes 
 
 - Enabled annotations for events
 - Added dashboard variable query editors for: measurement, databases, assets, asset properties, event types and event type properties
