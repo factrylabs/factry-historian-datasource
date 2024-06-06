@@ -4,15 +4,13 @@ import (
 	"os"
 
 	historianDataSource "github.com/factrylabs/factry-historian-datasource.git/pkg/datasource"
-	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 )
 
 func main() {
-	backend.SetupPluginEnvironment(historianDataSource.PluginID)
-	err := datasource.Serve(historianDataSource.NewDataSource())
-	if err != nil {
-		backend.Logger.Error("error loading plugin", "pluginId", historianDataSource.PluginID)
+	if err := datasource.Manage("factry-historian-datasource", historianDataSource.NewDataSource, datasource.ManageOpts{}); err != nil {
+		log.DefaultLogger.Error(err.Error())
 		os.Exit(1)
 	}
 }
