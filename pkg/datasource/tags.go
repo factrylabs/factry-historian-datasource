@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
@@ -8,7 +9,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func handleGetTagKeys(api *api.API, path []string, rawQuery string) ([]string, error) {
+func handleGetTagKeys(ctx context.Context, api *api.API, path []string, rawQuery string) ([]string, error) {
 	if len(path) < 1 {
 		return nil, fmt.Errorf("missing path parameter")
 	}
@@ -25,7 +26,7 @@ func handleGetTagKeys(api *api.API, path []string, rawQuery string) ([]string, e
 	}
 
 	// if no measurement in the path use the query parameters
-	measurements, err := api.GetMeasurements(rawQuery)
+	measurements, err := api.GetMeasurements(ctx, rawQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,7 @@ func handleGetTagKeys(api *api.API, path []string, rawQuery string) ([]string, e
 	return getStringSetFromFrames(frames, "tagKey"), nil
 }
 
-func handleGetTagValues(api *api.API, path []string, rawQuery string) ([]string, error) {
+func handleGetTagValues(ctx context.Context, api *api.API, path []string, rawQuery string) ([]string, error) {
 	if len(path) < 2 {
 		return nil, fmt.Errorf("missing path parameter")
 	}
@@ -60,7 +61,7 @@ func handleGetTagValues(api *api.API, path []string, rawQuery string) ([]string,
 	}
 
 	// if no measurement in the path use the query parameters to get the measurements
-	measurements, err := api.GetMeasurements(rawQuery)
+	measurements, err := api.GetMeasurements(ctx, rawQuery)
 	if err != nil {
 		return nil, err
 	}

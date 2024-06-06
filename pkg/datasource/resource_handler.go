@@ -46,11 +46,6 @@ func GetResourceQuery(body []byte) (*HistorianResourceQuery, error) {
 
 // CallResource maps a resource call to the corresponding historian API call
 func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
-	dsi, err := ds.getDatasourceInstance(ctx, req.PluginContext)
-	if err != nil {
-		return err
-	}
-
 	url, err := url.Parse(req.URL)
 	if err != nil {
 		return err
@@ -64,14 +59,14 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 	switch resourcePath[0] {
 	case ResourceTypeMeasurements:
 		if len(resourcePath) == 2 {
-			o, err := dsi.API.GetMeasurement(resourcePath[1])
+			o, err := ds.API.GetMeasurement(ctx, resourcePath[1])
 			if err != nil {
 				return err
 			}
 
 			return resource.SendJSON(sender, o)
 		} else {
-			o, err := dsi.API.GetMeasurements(url.RawQuery)
+			o, err := ds.API.GetMeasurements(ctx, url.RawQuery)
 			if err != nil {
 				return err
 			}
@@ -79,63 +74,63 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 			return resource.SendJSON(sender, o)
 		}
 	case ResourceTypeCollectors:
-		o, err := dsi.API.GetCollectors()
+		o, err := ds.API.GetCollectors(ctx)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeDatabases:
-		o, err := dsi.API.GetTimeseriesDatabases(url.RawQuery)
+		o, err := ds.API.GetTimeseriesDatabases(ctx, url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeAssets:
-		o, err := dsi.API.GetAssets(url.RawQuery)
+		o, err := ds.API.GetAssets(ctx, url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeAssetProperties:
-		o, err := dsi.API.GetAssetProperties(url.RawQuery)
+		o, err := ds.API.GetAssetProperties(ctx, url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeEventTypes:
-		o, err := dsi.API.GetEventTypes(url.RawQuery)
+		o, err := ds.API.GetEventTypes(ctx, url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeEventTypeProperties:
-		o, err := dsi.API.GetEventTypeProperties(url.RawQuery)
+		o, err := ds.API.GetEventTypeProperties(ctx, url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeEventConfigurations:
-		o, err := dsi.API.GetEventConfigurations()
+		o, err := ds.API.GetEventConfigurations(ctx)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, o)
 	case ResourceTypeTagKeys:
-		keys, err := handleGetTagKeys(dsi.API, resourcePath, url.RawQuery)
+		keys, err := handleGetTagKeys(ctx, ds.API, resourcePath, url.RawQuery)
 		if err != nil {
 			return err
 		}
 
 		return resource.SendJSON(sender, keys)
 	case ResourceTypeTagValues:
-		values, err := handleGetTagValues(dsi.API, resourcePath, url.RawQuery)
+		values, err := handleGetTagValues(ctx, ds.API, resourcePath, url.RawQuery)
 		if err != nil {
 			return err
 		}

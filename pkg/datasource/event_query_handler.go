@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"time"
@@ -13,13 +14,13 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets("")
+func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
+	assets, err := api.GetAssets(ctx, "")
 	if err != nil {
 		return nil, err
 	}
 
-	eventTypes, err := api.GetEventTypes("")
+	eventTypes, err := api.GetEventTypes(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 		return nil, err
 	}
 
-	allEventTypeProperties, err := api.GetEventTypeProperties("")
+	allEventTypeProperties, err := api.GetEventTypeProperties(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,7 @@ func handleEventQuery(eventQuery schemas.EventQuery, backendQuery backend.DataQu
 			AssetProperties: eventQuery.AssetProperties,
 			Options:         *eventQuery.Options,
 		}
-		assetProperties, err := api.GetAssetProperties("")
+		assetProperties, err := api.GetAssetProperties(ctx, "")
 		if err != nil {
 			return nil, err
 		}

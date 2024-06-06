@@ -13,16 +13,8 @@ const (
 )
 
 // CheckHealth checks the health by fetching the time series databases
-func (d *HistorianDataSource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	dsi, err := d.getDatasourceInstance(ctx, req.PluginContext)
-	if err != nil {
-		return &backend.CheckHealthResult{
-			Status:  backend.HealthStatusError,
-			Message: "",
-		}, err
-	}
-
-	databases, err := dsi.API.GetTimeseriesDatabases("")
+func (d *HistorianDataSource) CheckHealth(ctx context.Context, _ *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+	databases, err := d.API.GetTimeseriesDatabases(ctx, "")
 	if err != nil {
 		return &backend.CheckHealthResult{
 			Status:  backend.HealthStatusError,
