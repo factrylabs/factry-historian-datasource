@@ -34,20 +34,14 @@ type Query struct {
 // QueryData handles incoming backend queries
 func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	response := backend.NewQueryDataResponse()
-	dsi, err := ds.getDatasourceInstance(ctx, req.PluginContext)
-	if err != nil {
-		response.Responses["error"] = backend.DataResponse{Error: err}
-		return response, nil
-	}
-
 	for _, q := range req.Queries {
-		res := queryData(q, dsi.API)
+		res := queryData(ctx, q, ds.API)
 		response.Responses[q.RefID] = res
 	}
 	return response, nil
 }
 
-func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataResponse {
+func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API) backend.DataResponse {
 	response := backend.DataResponse{}
 	query := Query{}
 	if err := json.Unmarshal(backendQuery.JSON, &query); err != nil {
@@ -64,7 +58,7 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 			}
 		}
 
-		response.Frames, response.Error = handleAssetMeasurementQuery(assetMeasurementQuery, backendQuery, query.SeriesLimit, api)
+		response.Frames, response.Error = handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery, query.SeriesLimit, api)
 		return response
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
@@ -74,7 +68,7 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 			}
 		}
 
-		measurements, err := getMeasurements(measurementQuery, query.SeriesLimit, api)
+		measurements, err := getMeasurements(ctx, measurementQuery, query.SeriesLimit, api)
 		if err != nil {
 			return backend.DataResponse{
 				Error: err,
@@ -102,7 +96,7 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 			}
 		}
 
-		response.Frames, response.Error = handleEventQuery(eventQuery, backendQuery, query.SeriesLimit, api)
+		response.Frames, response.Error = handleEventQuery(ctx, eventQuery, backendQuery, query.SeriesLimit, api)
 		return response
 	}
 
@@ -110,13 +104,13 @@ func queryData(backendQuery backend.DataQuery, api *api.API) backend.DataRespons
 	return response
 }
 
-func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets("")
+func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
+	assets, err := api.GetAssets(ctx, "")
 	if err != nil {
 		return nil, err
 	}
 
-	assetProperties, err := api.GetAssetProperties("")
+	assetProperties, err := api.GetAssetProperties(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +159,7 @@ func handleAssetMeasurementQuery(assetMeasurementQuery schemas.AssetMeasurementQ
 	return sortByStatus(frames), nil
 }
 
-func getMeasurements(measurementQuery schemas.MeasurementQuery, seriesLimit int, api *api.API) ([]string, error) {
+func getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQuery, seriesLimit int, api *api.API) ([]string, error) {
 	parsedMeasurements := []string{}
 	var measurements []string
 	if measurementQuery.IsRegex {
@@ -176,7 +170,7 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, seriesLimit int,
 			measurements = append(measurements, measurementQuery.Measurement)
 		}
 	}
-	databases, err := api.GetTimeseriesDatabases("")
+	databases, err := api.GetTimeseriesDatabases(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +199,7 @@ func getMeasurements(measurementQuery schemas.MeasurementQuery, seriesLimit int,
 			databasesQuery += fmt.Sprintf("&DatabaseUUIDs[%v]=%s", i, databaseUUID)
 		}
 		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&limit=%v%v", measurement, seriesLimit, databasesQuery))
-		res, err := api.GetMeasurements(values.Encode())
+		res, err := api.GetMeasurements(ctx, values.Encode())
 		if err != nil {
 			return nil, err
 		}
