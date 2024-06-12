@@ -62,7 +62,7 @@ export function EventTypePropertyFilterRow(props: {
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
-        <InlineField label={'Property types'} aria-label={'Property types'} labelWidth={labelWidth}>
+        <InlineField label={'Property type'} aria-label={'Property type'} labelWidth={labelWidth}>
           <Select
             placeholder="Select property type"
             width={25}
@@ -71,7 +71,11 @@ export function EventTypePropertyFilterRow(props: {
               return { label: key, value: value as string }
             })}
             isClearable
-            value={props.initialValue?.Types}
+            value={
+              props.initialValue?.Types && props.initialValue.Types.length > 0
+                ? { label: props.initialValue.Types[0], value: props.initialValue.Types[0] }
+                : undefined
+            }
           />
         </InlineField>
       </InlineFieldRow>

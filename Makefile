@@ -1,7 +1,7 @@
 major = 2
 minor = 0
 patch = 1
-prerelease = 
+prerelease = -beta
 project_name=factry-historian-datasource
 
 COMMIT=$(shell git rev-parse --short HEAD)
@@ -84,7 +84,7 @@ factry-historian-datasource: dist
 	cp -r dist/* factry-historian-datasource
 
 factry-historian-datasource.zip: factry-historian-datasource
-	zip -qr factry-historian-datasource.zip factry-historian-datasource 
+	zip -qr factry-historian-datasource.zip factry-historian-datasource
 
 package: factry-historian-datasource
 	zip factry-historian-datasource-$(shell make version).zip factry-historian-datasource -r
@@ -94,7 +94,7 @@ run_server: # Runs the grafana datasource
 	DEVELOPMENT=false docker compose up --build --force-recreate
 
 run_debug: build_web_dev # Runs the grafana datasource in debug mode
-	docker compose up --build --force-recreate 
+	docker compose up --build --force-recreate
 
 clean: # Cleans build artifacts
 	mage clean
@@ -104,4 +104,3 @@ clean: # Cleans build artifacts
 
 validate: factry-historian-datasource.zip ## Validates the code
 	npx @grafana/plugin-validator@latest -sourceCodeUri file://. factry-historian-datasource.zip
-	
