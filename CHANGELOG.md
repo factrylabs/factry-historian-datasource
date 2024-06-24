@@ -1,8 +1,12 @@
 # Changelog
 
-## vIDK
+## v2.0.1
 
-Released on IDK
+- Pass datasource request context to the historian client
+- Automatic instance management for data source
+- Removed pprof code
+
+## v2.0.0
 
 - Enabled annotations for events
 - Added dashboard variable query editors for: measurement, databases, assets, asset properties, event types and event type properties
