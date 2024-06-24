@@ -1,4 +1,4 @@
-# <img src="https://github.com/factrylabs/factry-historian-datasource/blob/0fd287221ba1e57c87fbdfd5d570e6537296c8c6/src/img/logo.svg" alt="Factry Historian Logo" height="30"> Factry Historian Datasource
+# <img src="https://raw.githubusercontent.com/factrylabs/factry-historian-datasource/main/src/img/logo.svg" alt="Factry Historian Logo" height="30"> Factry Historian Datasource
 
 [Grafana](https://grafana.com) datasource for [Factry Historian](https://factry.io).
 
@@ -28,7 +28,7 @@ grafana-cli plugins install factry-historian-datasource
 
 Create a new instance of the data source from the Grafana Data Sources administration page. And configure the necessary settings.
 
-![Datasource_configuration](https://github.com/factrylabs/factry-historian-datasource/blob/9d0467d5232e70957e01b265941a8c3ea2723958/src/img/datasource_configuration.png)
+![Datasource_configuration](https://raw.githubusercontent.com/factrylabs/factry-historian-datasource/main/src/img/datasource_configuration.png)
 
 - URL: The URL of the Factry Historian API.
 - Token: The API token to authenticate with the Factry Historian API.
@@ -37,7 +37,7 @@ Create a new instance of the data source from the Grafana Data Sources administr
 
 ## Documentation
 
-Full documentation can be found at the Factry documentation site: [https://docs.factry.cloud/docs/grafana-datasource](https://docs.factry.cloud/docs/grafana-datasource)
+Full documentation can be found at the Factry documentation site: [https://docs.factry.cloud/docs/grafana-datasource](https://docs.factry.cloud/docs/grafana-datasource/latest)
 
 ## Development
 
