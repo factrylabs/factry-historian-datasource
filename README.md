@@ -4,14 +4,22 @@
 
 ## Introduction
 
-Empower any employee to analyze process data in a user-friendly way. The Grafana data source on top of Factry Historian allows business users to trend time-series data and analyze events, such as batches or shifts – with zero technical skills required.
+Empower anyone to analyze industrial process and event data with Grafana. The Grafana Data Source for Factry Historian makes it easy for users to browse assets, trend time-series and event data such as batches or shifts – with zero technical skills required.
+
+## Typical use cases
+
+- Browsing your asset structure (e.g. ISA88/ISA95 equipment model)
+- Trending time-series data, while auto-configuring units of measurement
+- Overlaying of events (e.g. golden batch analysis)
+- Ad-hoc overlaying of time-series data on top of events
 
 ## Features
 
 - Query historical data using the asset tree defined in Factry Historian
 - Query historical data using measurements from Factry Historian
-- Query events from Factry Historian
-- Annotate graphs with event data from Factry Historian
+- Autoload Units of Measurement, Y-axis scaling and HI/LO boundaries
+- Query Events from Factry Historian (e.g. batches, CIP cycles)
+- Annotate trends with Event data from Factry Historian
 - Use assets, measurements and events from Factry Historian as variables to build dynamic dashboards
 
 ## Installation
