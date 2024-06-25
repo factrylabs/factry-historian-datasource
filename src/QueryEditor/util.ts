@@ -65,11 +65,12 @@ function getMostRestrictiveDatatype(datatypes: string[]): string {
   return 'number'
 }
 
-function isValidAggregationForDatatypes(aggregation: string, datatype: string): boolean {
-  const validAggregationsForNumber: string[] = Object.values(AggregationName) // all aggregations are valid for numbers
-  const validAggregationsForString: string[] = ['count', 'first', 'last', 'mode']
-  const validAggregationsForBoolean: string[] = ['count', 'first', 'last', 'mode', 'min', 'max']
+const validAggregationsForNumber: string[] = Object.values(AggregationName) // all aggregations are valid for numbers
+const validAggregationsForString: string[] = ['count', 'first', 'last', 'mode']
+const validAggregationsForBoolean: string[] = ['count', 'first', 'last', 'mode', 'min', 'max']
+const validAggregationsForArray: string[] = ['count', 'first', 'last']
 
+function isValidAggregationForDatatypes(aggregation: string, datatype: string): boolean {
   if (datatype === 'number') {
     return validAggregationsForNumber.includes(aggregation)
   } else if (datatype === 'string') {
@@ -77,7 +78,7 @@ function isValidAggregationForDatatypes(aggregation: string, datatype: string): 
   } else if (datatype === 'boolean') {
     return validAggregationsForBoolean.includes(aggregation)
   } else if (datatype.startsWith('[]')) {
-    return false // no aggregations are valid for arrays
+    return validAggregationsForArray.includes(aggregation)
   }
 
   return false
