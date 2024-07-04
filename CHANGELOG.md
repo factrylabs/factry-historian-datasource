@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.0.2
+
+### Changes
+
+- Added 'first', 'last' and 'count' as aggregation options for array datatypes
+- Fixed event property type selection
+- Fixed broken link in the README
+- Reworked introduction in the README
+
 ## v2.0.1
 
 - Pass datasource request context to the historian client
