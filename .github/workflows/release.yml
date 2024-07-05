@@ -20,3 +20,24 @@ jobs:
       - uses: grafana/plugin-actions/build-plugin@release
         with:
           policy_token: ${{ secrets.GRAFANA_POLICY_TOKEN }}
+      - name: Get plugin metadata
+        id: metadata
+        run: |
+          sudo apt-get install jq
+
+          export GRAFANA_PLUGIN_ID=$(cat dist/plugin.json | jq -r .id)
+          export GRAFANA_PLUGIN_VERSION=$(cat dist/plugin.json | jq -r .info.version)
+          export GRAFANA_PLUGIN_ARTIFACT=${GRAFANA_PLUGIN_ID}-${GRAFANA_PLUGIN_VERSION}.zip
+
+          echo "plugin-id=${GRAFANA_PLUGIN_ID}" >> $GITHUB_OUTPUT
+          echo "plugin-version=${GRAFANA_PLUGIN_VERSION}" >> $GITHUB_OUTPUT
+          echo "archive=${GRAFANA_PLUGIN_ARTIFACT}" >> $GITHUB_OUTPUT
+      - name: Upload to Factry Portal
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN }}" \
+            -F "productType=${{steps.metadata.outputs.plugin-id }}" \
+            -F "product=grafana-datasource" \
+            -F "version=${{steps.metadata.outputs.plugin-version }}" \
+            -F "binary=@${{ steps.metadata.outputs.archive }}" \
+            --url "${{vars.FACTRY_PORTAL_PRODUCT_UPDATES_URL }}"
