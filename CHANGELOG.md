@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.3-beta
+
+- Added automatic publishing to Factry Portal
+
 ## v2.0.2
 
 ### Changes

@@ -17,6 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/pnpm
-      - uses: grafana/plugin-actions/build-plugin@release
+      - uses: ./.github/actions/grafana
         with:
           policy_token: ${{ secrets.GRAFANA_POLICY_TOKEN }}
+        id: build
+      - name: Upload to Factry Portal
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN }}" \
+            -F "productType=${{steps.build.outputs.plugin-id}}" \
+            -F "product=grafana-datasource" \
+            -F "os=any" \
+            -F "arch=any" \
+            -F "version=${{steps.build.outputs.plugin-version}}" \
+            -F "binary=@${{ steps.build.outputs.archive }}" \
+            -F "signature=$(cat ${{ steps.build.outputs.archive-sha1sum }})" \
+            --url "${{vars.FACTRY_PORTAL_PRODUCT_UPDATES_URL }}"
