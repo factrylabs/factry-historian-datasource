@@ -20,3 +20,12 @@ jobs:
       - uses: grafana/plugin-actions/build-plugin@release
         with:
           policy_token: ${{ secrets.GRAFANA_POLICY_TOKEN }}
+      - name: Upload to Factry Portal
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN }}" \
+            -F "productType=${{steps.metadata.outputs.plugin-id }}" \
+            -F "product=grafana-datasource" \
+            -F "version=${{steps.metadata.outputs.plugin-version }}" \
+            -F "binary=${{ steps.metadata.outputs.archive }}" \
+            --url "${PORTAL_URL}/api/product-updates"
