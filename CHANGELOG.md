@@ -1,8 +1,11 @@
 # Changelog
 
-## v2.0.3-beta
+## v2.0.3
 
-- Added automatic publishing to Factry Portal
+### Changes
+
+- Fixed filtering of event types in the event query when using a regular expression for the assets
+- Fixed event queries when filtering on multiple statuses
 
 ## v2.0.2
 
@@ -15,11 +18,15 @@
 
 ## v2.0.1
 
+### Changes
+
 - Pass datasource request context to the historian client
 - Automatic instance management for data source
 - Removed pprof code
 
 ## v2.0.0
+
+### Changes
 
 - Enabled annotations for events
 - Added dashboard variable query editors for: measurement, databases, assets, asset properties, event types and event type properties
