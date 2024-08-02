@@ -73,7 +73,7 @@ func (api *API) EventQuery(filter schemas.EventFilter) ([]schemas.Event, error) 
 		return nil, err
 	}
 
-	response, err := api.client.R().SetQueryParams(eventFilterParams).Get("/api/events")
+	response, err := api.client.R().SetQueryParamsFromValues(eventFilterParams).Get("/api/events")
 	if err != nil {
 		return nil, err
 	}
@@ -117,21 +117,12 @@ func (api *API) GetTagValues(measurementUUID, tagKey string) (data.Frames, error
 	return handleDataFramesResponse(response)
 }
 
-func getEventFilter(filter schemas.EventFilter) (map[string]string, error) {
+func getEventFilter(filter schemas.EventFilter) (url.Values, error) {
 	encoder := form.NewEncoder()
 	values, err := encoder.Encode(&filter)
 	if err != nil {
 		return nil, err
 	}
 
-	return urlValuesToMap(values), nil
-}
-
-func urlValuesToMap(values url.Values) map[string]string {
-	result := map[string]string{}
-	for key, value := range values {
-		result[key] = value[0]
-	}
-
-	return result
+	return values, nil
 }
