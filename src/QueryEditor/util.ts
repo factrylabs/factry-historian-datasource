@@ -227,7 +227,7 @@ export function matchedAssets(selectedAssets: string[], assets: Asset[]): Asset[
     let re: RegExp | undefined = undefined
     if (selectedAsset.length >= 2 && selectedAsset.startsWith('/') && selectedAsset.endsWith('/')) {
       try {
-        re = new RegExp(`^${selectedAsset.substring(1, selectedAsset.length - 1)}$`)
+        re = new RegExp(`${selectedAsset.substring(1, selectedAsset.length - 1)}`)
       } catch (e) {
         void e
       }
