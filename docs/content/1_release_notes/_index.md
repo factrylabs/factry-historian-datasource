@@ -21,6 +21,13 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
+## v2.0.3
+
+### Changes
+
+- Fixed filtering of event types in the event query when using a regular expression for the assets
+- Fixed event queries when filtering on multiple statuses
+
 ## v2.0.2
 
 ### Changes
