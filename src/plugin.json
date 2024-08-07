@@ -15,15 +15,16 @@
       "name": "Factry",
       "url": "https://www.factry.io"
     },
-    "keywords": [
-      "historian",
-      "factry"
-    ],
+    "keywords": ["historian", "factry"],
     "logos": {
       "small": "img/logo.svg",
       "large": "img/logo.svg"
     },
     "links": [
+      {
+        "name": "GitHub",
+        "url": "https://github.com/factrylabs/factry-historian-datasource"
+      },
       {
         "name": "Website",
         "url": "https://factry.io"
