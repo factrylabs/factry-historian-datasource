@@ -1,4 +1,4 @@
-# <img src="https://raw.githubusercontent.com/factrylabs/factry-historian-datasource/main/src/img/logo.svg" alt="Factry Historian Logo" height="30"> Factry Historian Datasource
+# Factry Historian Datasource
 
 [Grafana](https://grafana.com) datasource for [Factry Historian](https://factry.io).
 
