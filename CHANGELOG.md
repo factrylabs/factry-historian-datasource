@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.0.4
+
+### Changes
+
+- Fixed logo in the README
+
 ## v2.0.3
 
 ### Changes
