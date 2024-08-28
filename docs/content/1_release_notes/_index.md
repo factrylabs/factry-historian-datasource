@@ -21,6 +21,12 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
+## v2.0.4
+
+### Changes
+
+- Fixed logo in the README
+
 ## v2.0.3
 
 ### Changes
