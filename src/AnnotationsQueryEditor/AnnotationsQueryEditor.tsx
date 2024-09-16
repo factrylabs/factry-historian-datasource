@@ -3,7 +3,7 @@ import { QueryEditorProps } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Events } from 'QueryEditor/Events'
 import { DataSource } from 'datasource'
-import { HistorianDataSourceOptions, Query, EventQuery, PropertyType } from 'types'
+import { HistorianDataSourceOptions, Query, EventQuery, PropertyType, HistorianInfo } from 'types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -14,6 +14,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     this.onChangeSeriesLimit = this.onChangeSeriesLimit.bind(this)
   }
 
+  historianInfo: HistorianInfo | undefined
   templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
@@ -23,6 +24,9 @@ export class AnnotationsQueryEditor extends Component<Props> {
   async componentDidMount(): Promise<void> {
     const { query } = this.props
 
+    try {
+      this.historianInfo = await this.props.datasource.getInfo()
+    } catch (_) {}
     if (!query.query) {
       this.onChangeEventQuery({
         Type: PropertyType.Simple,
@@ -40,6 +44,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     const { onChange, query } = this.props
     query.queryType = 'EventQuery'
     query.query = eventQuery
+    query.historianInfo = this.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
   }
@@ -47,6 +52,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
   onChangeSeriesLimit(value: number): void {
     const { onChange, query } = this.props
     query.seriesLimit = value
+    query.historianInfo = this.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
   }

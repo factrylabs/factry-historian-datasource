@@ -27,6 +27,7 @@ export interface Query extends DataQuery {
   tabIndex: number
   selectedAssetPath?: string
   selectedAssetProperties?: string[]
+  historianInfo?: HistorianInfo
 }
 
 export const defaultQuery: Partial<Query> = {}
@@ -302,3 +303,8 @@ export type VariableQuery =
   | DatabaseVariableQuery
   | EventTypePropertyVariableQuery
   | AssetPropertyVariableQuery
+
+export interface HistorianInfo {
+  Version: string
+  APIVersion: string
+}

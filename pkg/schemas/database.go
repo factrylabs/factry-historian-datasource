@@ -102,3 +102,9 @@ type EventConfiguration struct {
 	AssetUUID     uuid.UUID
 	EventTypeUUID uuid.UUID
 }
+
+// HistorianInfo has the fields of the historian info that are used by the data source
+type HistorianInfo struct {
+	Version    string
+	APIVersion string
+}

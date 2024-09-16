@@ -179,3 +179,22 @@ func (api *API) GetEventConfigurations(ctx context.Context) ([]schemas.EventConf
 
 	return eventConfigurations, nil
 }
+
+// GetInfo calls get info in the historian API
+func (api *API) GetInfo(ctx context.Context) (schemas.HistorianInfo, error) {
+	info := schemas.HistorianInfo{}
+	response, err := api.client.R().SetContext(ctx).Get("/api/info")
+	if err != nil {
+		return info, err
+	}
+
+	if response.StatusCode() >= 300 {
+		return info, handleHistorianError(response)
+	}
+
+	if err := json.Unmarshal(response.Body(), &info); err != nil {
+		return info, err
+	}
+
+	return info, nil
+}
