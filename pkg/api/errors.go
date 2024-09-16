@@ -19,5 +19,9 @@ func handleHistorianError(response *resty.Response) error {
 		return fmt.Errorf(string(response.Body()))
 	}
 
-	return fmt.Errorf(httpErr.Info)
+	if httpErr.Info == "" {
+		return fmt.Errorf("StatusCode: %v, Error: %v", response.StatusCode(), httpErr.Error)
+	}
+
+	return fmt.Errorf("StatusCode: %v, Info: %v, Error: %v", response.StatusCode(), httpErr.Info, httpErr.Error)
 }
