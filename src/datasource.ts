@@ -17,6 +17,7 @@ import {
   EventTypePropertiesFilter,
   EventTypeProperty,
   HistorianDataSourceOptions,
+  HistorianInfo,
   Measurement,
   MeasurementFilter,
   MeasurementQuery,
@@ -171,6 +172,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return filter
   }
 
+  async getInfo(): Promise<HistorianInfo> {
+    return this.getResource('info')
+  }
+
   async getMeasurement(uuid: string): Promise<Measurement> {
     return this.getResource(`measurements/${uuid}`)
   }
@@ -210,7 +215,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       }
       if (filter.ParentUUIDs) {
         const parentUUIDs = filter.ParentUUIDs.flatMap((e) => this.multiSelectReplace(e))
-        if (parentUUIDs.some((e) => e === '')) { // empty string means there is no parent selected
+        if (parentUUIDs.some((e) => e === '')) {
+          // empty string means there is no parent selected
           return []
         }
         params.ParentUUIDs = parentUUIDs

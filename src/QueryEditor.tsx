@@ -19,6 +19,7 @@ import {
   TabIndex,
   PropertyType,
   EventPropertyFilter,
+  HistorianInfo,
 } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -34,6 +35,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   }
 
   mountFinished = false
+  historianInfo: HistorianInfo | undefined
   appIsAlertingType = this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting
   state = {
     tabIndex: this.props.datasource.defaultTab,
@@ -69,10 +71,13 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       return { label: `$${e.name}`, value: `$${e.name}` }
     })
 
-  componentDidMount(): void {
+  async componentDidMount(): Promise<void> {
     const { query } = this.props
     const tabIndex = query.tabIndex ?? this.state.tabIndex
     this.setTabIndex(tabIndex)
+    try {
+      this.historianInfo = await this.props.datasource.getInfo()
+    } catch (_) {}
     this.mountFinished = true
   }
 
@@ -120,6 +125,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     query.queryType = 'AssetMeasurementQuery'
     query.query = assetMeasurementQuery
     query.tabIndex = TabIndex.Assets
+    query.historianInfo = this.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
     this.setState({
@@ -133,6 +139,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     query.queryType = 'MeasurementQuery'
     query.query = measurementQuery
     query.tabIndex = TabIndex.Measurements
+    query.historianInfo = this.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
     this.setState({
@@ -146,6 +153,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     query.queryType = 'RawQuery'
     query.query = rawQuery
     query.tabIndex = TabIndex.RawQuery
+    query.historianInfo = this.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
     this.setState({
@@ -159,6 +167,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     query.queryType = 'EventQuery'
     query.query = eventQuery
     query.tabIndex = TabIndex.Events
+    query.historianInfo = this.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
     this.setState({
@@ -170,6 +179,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   onChangeSeriesLimit(value: number): void {
     const { onChange, query } = this.props
     query.seriesLimit = value
+    query.historianInfo = this.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
   }
