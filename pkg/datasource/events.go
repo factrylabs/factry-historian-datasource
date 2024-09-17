@@ -211,7 +211,7 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 	}
 
 	fields[0].Config = &data.FieldConfig{
-		Unit: "s",
+		Unit: "dtdhms",
 	}
 
 	offsets := maps.Keys(periodicPropertyData)
