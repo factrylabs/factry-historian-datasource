@@ -281,12 +281,7 @@ func copyFrame(frame *data.Frame) (*data.Frame, error) {
 }
 
 // setAssetFrameNames sets the name of each frame to the asset path
-func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetProperties []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
-	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
-	for _, asset := range assets {
-		UUIDToAssetMap[asset.UUID] = asset
-	}
-
+func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
 	measurementUUIDToPropertyMap := make(map[uuid.UUID][]schemas.AssetProperty)
 	for _, property := range assetProperties {
 		measurementUUIDToPropertyMap[property.MeasurementUUID] = append(measurementUUIDToPropertyMap[property.MeasurementUUID], property)
@@ -317,8 +312,8 @@ func setAssetFrameNames(frames data.Frames, assets []schemas.Asset, assetPropert
 				additionalFrames = append(additionalFrames, frame)
 			}
 
-			assetPath := getAssetPath(UUIDToAssetMap, property.AssetUUID)
-			asstName := getAssetName(UUIDToAssetMap, property.AssetUUID)
+			assetPath := getAssetPath(assets, property.AssetUUID)
+			asstName := getAssetName(assets, property.AssetUUID)
 			custom := frame.Meta.Custom.(map[string]interface{})
 			custom["AssetProperty"] = property.Name
 			custom["AssetPropertyUUID"] = property.UUID
