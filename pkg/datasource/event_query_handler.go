@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/url"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
@@ -14,38 +15,26 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets(ctx, "")
+func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backendQuery backend.DataQuery, seriesLimit int, historianInfo *schemas.HistorianInfo, api *api.API) (data.Frames, error) {
+	assets, err := getFilteredAssets(ctx, api, eventQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	eventTypes, err := api.GetEventTypes(ctx, "")
+	eventTypes, err := getFilteredEventTypes(ctx, api, eventQuery.EventTypes, historianInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	assetUUIDs := []uuid.UUID{}
-	eventTypeUUIDs := []uuid.UUID{}
-	for _, assetString := range eventQuery.Assets {
-		if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
-			assetUUIDs = append(assetUUIDs, filteredAssetUUIDs...)
-		}
-	}
-	for _, eventTypeString := range eventQuery.EventTypes {
-		if filteredEventTypeUUIDs := filterEventTypeUUIDs(eventTypes, eventTypeString); len(filteredEventTypeUUIDs) > 0 {
-			eventTypeUUIDs = append(eventTypeUUIDs, filteredEventTypeUUIDs...)
-		}
-	}
-	if len(assetUUIDs) == 0 || len(eventTypeUUIDs) == 0 {
+	if len(assets) == 0 || len(eventTypes) == 0 {
 		return data.Frames{}, nil
 	}
 
 	filter := schemas.EventFilter{
 		StartTime:         backendQuery.TimeRange.From,
 		StopTime:          backendQuery.TimeRange.To,
-		AssetUUIDs:        assetUUIDs,
-		EventTypeUUIDs:    eventTypeUUIDs,
+		AssetUUIDs:        maps.Keys(assets),
+		EventTypeUUIDs:    maps.Keys(eventTypes),
 		PreloadProperties: true,
 		Limit:             math.MaxInt32,
 		PropertyFilter:    eventQuery.PropertyFilter,
@@ -57,20 +46,27 @@ func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backen
 		return nil, err
 	}
 
-	allEventTypeProperties, err := api.GetEventTypeProperties(ctx, "")
-	if err != nil {
-		return nil, err
-	}
-
-	eventTypeSet := map[uuid.UUID]struct{}{}
-	for _, eventTypeUUID := range eventTypeUUIDs {
-		eventTypeSet[eventTypeUUID] = struct{}{}
-	}
-
 	eventTypeProperties := []schemas.EventTypeProperty{}
-	for _, eventTypeProperty := range allEventTypeProperties {
-		if _, ok := eventTypeSet[eventTypeProperty.EventTypeUUID]; ok {
-			eventTypeProperties = append(eventTypeProperties, eventTypeProperty)
+	if checkMinimumVersion(historianInfo, "6.4.0") {
+		eventTypeQuery := url.Values{}
+		for i, eventTypeUUID := range maps.Keys(eventTypes) {
+			eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
+		}
+		eventTypeQuery.Add("Types[0]", eventQuery.Type)
+		eventTypeProperties, err = api.GetEventTypeProperties(ctx, eventTypeQuery.Encode())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		allEventTypeProperties, err := api.GetEventTypeProperties(ctx, "")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, eventTypeProperty := range allEventTypeProperties {
+			if _, ok := eventTypes[eventTypeProperty.EventTypeUUID]; ok {
+				eventTypeProperties = append(eventTypeProperties, eventTypeProperty)
+			}
 		}
 	}
 
@@ -104,16 +100,15 @@ func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backen
 	switch eventQuery.Type {
 	case string(schemas.EventTypePropertyTypeSimple):
 		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames)
-		return EventQueryResultToDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
+		return EventQueryResultToDataFrame(maps.Values(assets), events, maps.Values(eventTypes), eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(assets, events, eventTypes, eventTypeProperties, selectedPropertiesSet, eventAssetPropertyFrames)
+		return EventQueryResultToTrendDataFrame(maps.Values(assets), events, maps.Values(eventTypes), eventTypeProperties, selectedPropertiesSet, eventAssetPropertyFrames)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
-
 	}
 }
 
-func handleEventAssetMeasurementQuery(queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets []schemas.Asset, assetProperties []schemas.AssetProperty, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
+func handleEventAssetMeasurementQuery(queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
 	measurementUUIDs := map[string]struct{}{}
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 
@@ -186,4 +181,39 @@ func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Fram
 		}
 	}
 	return assetPropertyFieldTypes
+}
+
+func getFilteredEventTypes(ctx context.Context, api *api.API, eventTypeStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.EventType, error) {
+	eventTypeUUIDSet := map[uuid.UUID]schemas.EventType{}
+
+	if checkMinimumVersion(historianInfo, "6.4.0") {
+		for _, eventTypeString := range eventTypeStrings {
+			eventTypeQuery := url.Values{}
+			eventTypeQuery.Add("Keyword", eventTypeString)
+			eventTypes, err := api.GetEventTypes(ctx, eventTypeQuery.Encode())
+			if err != nil {
+				return nil, err
+			}
+
+			for _, eventType := range eventTypes {
+				eventTypeUUIDSet[eventType.UUID] = eventType
+			}
+		}
+	} else {
+		// Deprecated
+		eventTypes, err := api.GetEventTypes(ctx, "")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, eventTypeString := range eventTypeStrings {
+			if filteredEventTypeUUIDs := filterEventTypeUUIDs(eventTypes, eventTypeString); len(filteredEventTypeUUIDs) > 0 {
+				for eventTypeUUID, eventType := range filteredEventTypeUUIDs {
+					eventTypeUUIDSet[eventTypeUUID] = eventType
+				}
+			}
+		}
+	}
+
+	return eventTypeUUIDSet, nil
 }

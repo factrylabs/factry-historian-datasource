@@ -27,8 +27,9 @@ const (
 
 // Query is a struct which holds the query
 type Query struct {
-	Query       json.RawMessage `json:"query"`
-	SeriesLimit int             `json:"seriesLimit"`
+	Query         json.RawMessage        `json:"query"`
+	SeriesLimit   int                    `json:"seriesLimit"`
+	HistorianInfo *schemas.HistorianInfo `json:"historianInfo,omitempty"`
 }
 
 // QueryData handles incoming backend queries
@@ -58,7 +59,7 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 			}
 		}
 
-		response.Frames, response.Error = handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery, query.SeriesLimit, api)
+		response.Frames, response.Error = handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery, query.SeriesLimit, query.HistorianInfo, api)
 		return response
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
@@ -96,7 +97,7 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 			}
 		}
 
-		response.Frames, response.Error = handleEventQuery(ctx, eventQuery, backendQuery, query.SeriesLimit, api)
+		response.Frames, response.Error = handleEventQuery(ctx, eventQuery, backendQuery, query.SeriesLimit, query.HistorianInfo, api)
 		return response
 	}
 
@@ -104,30 +105,37 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 	return response
 }
 
-func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
-	assets, err := api.GetAssets(ctx, "")
+func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, seriesLimit int, historianInfo *schemas.HistorianInfo, api *api.API) (data.Frames, error) {
+	assets, err := getFilteredAssets(ctx, api, assetMeasurementQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	assetProperties, err := api.GetAssetProperties(ctx, "")
-	if err != nil {
-		return nil, err
-	}
+	var assetProperties []schemas.AssetProperty
+	canFilterAssetProperties := checkMinimumVersion(historianInfo, "6.3.0")
+	if canFilterAssetProperties {
+		assetPropertyQuery := url.Values{}
+		for i, assetUUID := range maps.Keys(assets) {
+			assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID.String())
+		}
 
-	measurementUUIDs := map[string]struct{}{}
-	assetUUIDs := []uuid.UUID{}
-	for _, assetString := range assetMeasurementQuery.Assets {
-		if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
-			assetUUIDs = append(assetUUIDs, filteredAssetUUIDs...)
+		assetProperties, err = api.GetAssetProperties(ctx, assetPropertyQuery.Encode())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		assetProperties, err = api.GetAssetProperties(ctx, "")
+		if err != nil {
+			return nil, err
 		}
 	}
 
+	measurementUUIDs := map[string]struct{}{}
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
-	for _, assetUUID := range assetUUIDs {
+	if canFilterAssetProperties {
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			for _, assetProperty := range assetProperties {
-				if (assetProperty.Name == property && assetProperty.AssetUUID == assetUUID) || assetProperty.UUID.String() == property {
+				if (assetProperty.Name == property) || assetProperty.UUID.String() == property {
 					if len(measurementUUIDs) >= seriesLimit {
 						if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
 							break
@@ -136,6 +144,23 @@ func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery sche
 					measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
 					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 					break
+				}
+			}
+		}
+	} else {
+		for _, assetUUID := range maps.Keys(assets) {
+			for _, property := range assetMeasurementQuery.AssetProperties {
+				for _, assetProperty := range assetProperties {
+					if (assetProperty.Name == property && assetProperty.AssetUUID == assetUUID) || assetProperty.UUID.String() == property {
+						if len(measurementUUIDs) >= seriesLimit {
+							if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
+								break
+							}
+						}
+						measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
+						measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
+						break
+					}
 				}
 			}
 		}
@@ -354,54 +379,89 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 	return historianQuery
 }
 
-func filterAssetUUIDs(assets []schemas.Asset, searchValue string) []uuid.UUID {
-	if strings.HasPrefix(searchValue, "/") && strings.HasSuffix(searchValue, "/") {
-		pattern := searchValue[1 : len(searchValue)-1]
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			return []uuid.UUID{}
-		}
+func getFilteredAssets(ctx context.Context, api *api.API, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
+	assetUUIDSet := map[uuid.UUID]schemas.Asset{}
 
-		assetUUIDs := []uuid.UUID{}
-		for _, asset := range assets {
-			if re.MatchString(asset.AssetPath) || re.MatchString(asset.UUID.String()) {
-				assetUUIDs = append(assetUUIDs, asset.UUID)
+	if checkMinimumVersion(historianInfo, "6.4.0") {
+		for _, assetString := range assetStrings {
+			assetQuery := url.Values{}
+			assetQuery.Add("Keyword", assetString)
+			assets, err := api.GetAssets(ctx, assetQuery.Encode())
+			if err != nil {
+				return nil, err
+			}
+
+			for _, asset := range assets {
+				assetUUIDSet[asset.UUID] = asset
 			}
 		}
-		return assetUUIDs
 	} else {
-		for _, asset := range assets {
-			if asset.UUID.String() == searchValue || asset.AssetPath == searchValue {
-				return []uuid.UUID{asset.UUID}
+		// Deprecated
+		assets, err := api.GetAssets(ctx, "")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, assetString := range assetStrings {
+			if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
+				for assetUUID, asset := range filteredAssetUUIDs {
+					assetUUIDSet[assetUUID] = asset
+				}
 			}
 		}
 	}
 
-	return []uuid.UUID{}
+	return assetUUIDSet, nil
 }
 
-func filterEventTypeUUIDs(eventTypes []schemas.EventType, searchValue string) []uuid.UUID {
+func filterAssetUUIDs(assets []schemas.Asset, searchValue string) map[uuid.UUID]schemas.Asset {
+	filteredAssets := map[uuid.UUID]schemas.Asset{}
 	if strings.HasPrefix(searchValue, "/") && strings.HasSuffix(searchValue, "/") {
 		pattern := searchValue[1 : len(searchValue)-1]
 		re, err := regexp.Compile(pattern)
 		if err != nil {
-			return []uuid.UUID{}
+			return filteredAssets
 		}
 
-		assetUUIDs := []uuid.UUID{}
-		for _, eventType := range eventTypes {
-			if re.MatchString(eventType.Name) || re.MatchString(eventType.UUID.String()) {
-				assetUUIDs = append(assetUUIDs, eventType.UUID)
+		for _, asset := range assets {
+			if re.MatchString(asset.AssetPath) || re.MatchString(asset.UUID.String()) {
+				filteredAssets[asset.UUID] = asset
 			}
 		}
-		return assetUUIDs
-	} else {
-		for _, eventType := range eventTypes {
-			if eventType.UUID.String() == searchValue || eventType.Name == searchValue {
-				return []uuid.UUID{eventType.UUID}
-			}
+		return filteredAssets
+	}
+
+	for _, asset := range assets {
+		if asset.UUID.String() == searchValue || asset.AssetPath == searchValue {
+			return map[uuid.UUID]schemas.Asset{asset.UUID: asset}
 		}
 	}
 
-	return []uuid.UUID{}
+	return filteredAssets
+}
+
+func filterEventTypeUUIDs(eventTypes []schemas.EventType, searchValue string) map[uuid.UUID]schemas.EventType {
+	filteredEventTypes := map[uuid.UUID]schemas.EventType{}
+	if strings.HasPrefix(searchValue, "/") && strings.HasSuffix(searchValue, "/") {
+		pattern := searchValue[1 : len(searchValue)-1]
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return filteredEventTypes
+		}
+
+		for _, eventType := range eventTypes {
+			if re.MatchString(eventType.Name) || re.MatchString(eventType.UUID.String()) {
+				filteredEventTypes[eventType.UUID] = eventType
+			}
+		}
+		return filteredEventTypes
+	}
+
+	for _, eventType := range eventTypes {
+		if eventType.UUID.String() == searchValue || eventType.Name == searchValue {
+			return map[uuid.UUID]schemas.EventType{eventType.UUID: eventType}
+		}
+	}
+
+	return filteredEventTypes
 }

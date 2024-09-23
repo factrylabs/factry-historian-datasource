@@ -2,8 +2,11 @@ package datasource
 
 import (
 	"context"
+	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 )
@@ -45,3 +48,13 @@ func NewDataSource(_ context.Context, s backend.DataSourceInstanceSettings) (ins
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance is created.
 func (*HistorianDataSource) Dispose() {}
+
+func checkMinimumVersion(info *schemas.HistorianInfo, minVersion string) bool {
+	if info == nil {
+		return false
+	}
+
+	historianVersion, _ := strings.CutPrefix(info.Version, "v")
+	// check if historian version is not less than minVersion
+	return !util.SemverCompare(historianVersion, minVersion)
+}
