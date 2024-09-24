@@ -75,7 +75,7 @@ export const Events = (props: Props): JSX.Element => {
   }
 
   const getSelectedAssets = (selected: string | undefined, assets: Asset[]): Asset[] => {
-    const replacedAssets = props.datasource.multiSelectReplace(selected)
+    const replacedAssets = props.datasource.multiSelectReplace(selected, {})
     return matchedAssets(replacedAssets, assets)
   }
 
@@ -133,6 +133,7 @@ export const Events = (props: Props): JSX.Element => {
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
         Value: tag.value,
+        ScopedVars: {},
       }
       filter.push(eventPropertyFilter)
     })

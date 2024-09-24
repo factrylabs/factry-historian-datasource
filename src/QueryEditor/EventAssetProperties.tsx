@@ -63,7 +63,9 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
 
   const getSelectedAssetProperties = (): AssetProperty[] => {
     const assetPropertiesSet = new Set<AssetProperty>()
-    const selectedAssetProperties = props.selectedAssetProperties.flatMap((e) => props.datasource.multiSelectReplace(e))
+    const selectedAssetProperties = props.selectedAssetProperties.flatMap((e) =>
+      props.datasource.multiSelectReplace(e, {})
+    )
 
     for (const assetProperty of assetProperties) {
       const propertySelected =

@@ -1,4 +1,4 @@
-import { CoreApp, DataQueryRequest, DataSourceInstanceSettings } from '@grafana/data'
+import { CoreApp, DataQueryRequest, DataSourceInstanceSettings, ScopedVars } from '@grafana/data'
 import { DataSourceWithBackend, TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { VariableSupport } from 'variable_support'
 import { AnnotationsQueryEditor } from 'AnnotationsQueryEditor/AnnotationsQueryEditor'
@@ -71,53 +71,67 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         if (!target.seriesLimit) {
           target.seriesLimit = 50
         }
+
         switch (target.queryType) {
           case 'AssetMeasurementQuery': {
             const assetMeasurementQuery = target.query as AssetMeasurementQuery
-            assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.flatMap((e) => this.multiSelectReplace(e))
+            assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.flatMap((e) =>
+              this.multiSelectReplace(e, request.scopedVars)
+            )
             assetMeasurementQuery.AssetProperties = assetMeasurementQuery.AssetProperties.flatMap((e) => {
-              return this.multiSelectReplace(e)
+              return this.multiSelectReplace(e, request.scopedVars)
             })
-            assetMeasurementQuery.Options = this.templateReplaceQueryOptions(assetMeasurementQuery.Options)
+            assetMeasurementQuery.Options = this.templateReplaceQueryOptions(
+              assetMeasurementQuery.Options,
+              request.scopedVars
+            )
             target.query = assetMeasurementQuery
             break
           }
           case 'MeasurementQuery': {
             const measurementQuery = target.query as MeasurementQuery
-            measurementQuery.Databases = measurementQuery.Databases?.flatMap((e) => this.multiSelectReplace(e))
-            measurementQuery.Measurements = measurementQuery.Measurements?.flatMap((m) => this.multiSelectReplace(m))
-            measurementQuery.Options = this.templateReplaceQueryOptions(measurementQuery.Options)
+            measurementQuery.Databases = measurementQuery.Databases?.flatMap((e) =>
+              this.multiSelectReplace(e, request.scopedVars)
+            )
+            measurementQuery.Measurements = measurementQuery.Measurements?.flatMap((m) =>
+              this.multiSelectReplace(m, request.scopedVars)
+            )
+            measurementQuery.Options = this.templateReplaceQueryOptions(measurementQuery.Options, request.scopedVars)
             target.query = measurementQuery
             break
           }
           case 'RawQuery': {
             const rawQuery = target.query as RawQuery
-            rawQuery.TimeseriesDatabase = this.templateSrv.replace(rawQuery.TimeseriesDatabase)
-            rawQuery.Query = this.templateSrv.replace(rawQuery.Query)
+            rawQuery.TimeseriesDatabase = this.templateSrv.replace(rawQuery.TimeseriesDatabase, request.scopedVars)
+            rawQuery.Query = this.templateSrv.replace(rawQuery.Query, request.scopedVars)
             target.query = rawQuery
             break
           }
           case 'EventQuery': {
             const eventQuery = target.query as EventQuery
-            eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e))
-            eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) => this.multiSelectReplace(e))
-            eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e))
-            eventQuery.Properties = eventQuery.Properties?.flatMap((e) => this.multiSelectReplace(e))
+            eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e, request.scopedVars))
+            eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) =>
+              this.multiSelectReplace(e, request.scopedVars)
+            )
+            eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e, request.scopedVars))
+            eventQuery.Properties = eventQuery.Properties?.flatMap((e) =>
+              this.multiSelectReplace(e, request.scopedVars)
+            )
             eventQuery.PropertyFilter = eventQuery.PropertyFilter?.map((e) => {
-              e.Property = this.templateSrv.replace(e.Property)
+              e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
               if (e.Value === 'select tag value') {
                 return e
               }
 
               switch (e.Datatype) {
                 case PropertyDatatype.Number:
-                  e.Value = parseFloat(this.templateSrv.replace(String(e.Value)))
+                  e.Value = parseFloat(this.templateSrv.replace(String(e.Value), request.scopedVars))
                   break
                 case PropertyDatatype.Bool:
-                  e.Value = this.templateSrv.replace(String(e.Value)) === 'true'
+                  e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars) === 'true'
                   break
                 case PropertyDatatype.String:
-                  e.Value = this.templateSrv.replace(String(e.Value))
+                  e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars)
                   break
               }
               return e
@@ -134,18 +148,18 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   // https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
-  multiSelectReplace(value: string | undefined): string[] {
-    return this.templateSrv.replace(value, undefined, 'csv').split(',')
+  multiSelectReplace(value: string | undefined, scopedVars?: ScopedVars): string[] {
+    return this.templateSrv.replace(value, scopedVars, 'csv').split(',')
   }
 
-  templateReplaceQueryOptions(options: MeasurementQueryOptions): MeasurementQueryOptions {
+  templateReplaceQueryOptions(options: MeasurementQueryOptions, scopedVars: ScopedVars): MeasurementQueryOptions {
     if (options.GroupBy) {
-      options.GroupBy = options.GroupBy?.flatMap((e) => this.multiSelectReplace(e))
+      options.GroupBy = options.GroupBy?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
     }
     if (options.Tags) {
       const tags: Attributes = {}
       for (const [key, value] of Object.entries(options.Tags)) {
-        tags[this.templateSrv.replace(key)] = this.templateSrv.replace(value)
+        tags[this.templateSrv.replace(key, scopedVars)] = this.templateSrv.replace(value, scopedVars)
       }
       options.Tags = tags
     }
@@ -153,12 +167,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       const aggregationArguments = options.Aggregation.Arguments
       if (aggregationArguments) {
         for (let i = 0; i < aggregationArguments.length; i++) {
-          aggregationArguments[i] = this.templateSrv.replace(aggregationArguments[i])
+          aggregationArguments[i] = this.templateSrv.replace(aggregationArguments[i], scopedVars)
         }
       }
       options.Aggregation = {
-        Name: this.templateSrv.replace(options.Aggregation?.Name),
-        Period: this.templateSrv.replace(options.Aggregation?.Period),
+        Name: this.templateSrv.replace(options.Aggregation?.Name, scopedVars),
+        Period: this.templateSrv.replace(options.Aggregation?.Period, scopedVars),
         Fill: options.Aggregation.Fill,
         Arguments: aggregationArguments,
       }
@@ -167,8 +181,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   templateReplaceMeasurementFilter(filter: MeasurementFilter): MeasurementFilter {
-    filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.multiSelectReplace(e))
-    filter.Keyword = this.templateSrv.replace(filter.Keyword)
+    filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.multiSelectReplace(e, filter.ScopedVars))
+    filter.Keyword = this.templateSrv.replace(filter.Keyword, filter.ScopedVars)
     return filter
   }
 
@@ -214,7 +228,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         ...filter,
       }
       if (filter.ParentUUIDs) {
-        const parentUUIDs = filter.ParentUUIDs.flatMap((e) => this.multiSelectReplace(e))
+        const parentUUIDs = filter.ParentUUIDs.flatMap((e) => this.multiSelectReplace(e, filter.ScopedVars))
         if (parentUUIDs.some((e) => e === '')) {
           // empty string means there is no parent selected
           return []
@@ -223,7 +237,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       }
 
       if (filter.Keyword) {
-        params.Keyword = this.templateSrv.replace(filter.Keyword)
+        params.Keyword = this.templateSrv.replace(filter.Keyword, filter.ScopedVars)
       }
     }
     return this.getResource('assets', params)
@@ -236,7 +250,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         ...filter,
       }
       if (filter.AssetUUIDs) {
-        params.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.multiSelectReplace(e))
+        params.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.multiSelectReplace(e, filter.ScopedVars))
       }
     }
     return this.getResource('asset-properties', params)
@@ -260,7 +274,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       }
       if (eventTypePropertiesFilter.EventTypeUUIDs) {
         eventTypePropertiesFilter.EventTypeUUIDs = eventTypePropertiesFilter.EventTypeUUIDs.flatMap((e) =>
-          this.multiSelectReplace(e)
+          this.multiSelectReplace(e, filter.ScopedVars)
         )
       }
       params = {
