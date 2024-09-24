@@ -114,6 +114,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
       const filter: MeasurementFilter = {
         Keyword: props.query.Regex,
         DatabaseUUIDs: props.query.Databases,
+        ScopedVars: {},
       }
       const measurementKeys = await props.datasource.getTagKeysForMeasurements(filter)
       measurementKeys.forEach((e) => options.add(e))
@@ -134,6 +135,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
       const filter: MeasurementFilter = {
         Keyword: props.query.Regex,
         DatabaseUUIDs: props.query.Databases,
+        ScopedVars: {},
       }
       const tagValues = await props.datasource.getTagValuesForMeasurements(filter, key)
       tagValues.forEach((e) => options.add(e))

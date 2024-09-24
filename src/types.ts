@@ -1,4 +1,4 @@
-import { DataSourceJsonData } from '@grafana/data'
+import { DataSourceJsonData, ScopedVars } from '@grafana/data'
 import { DataQuery } from '@grafana/schema'
 
 export const labelWidth = 25
@@ -128,7 +128,11 @@ export enum EventTypePropertyType {
   Periodic = 'periodic',
 }
 
-export interface MeasurementFilter {
+export interface ResourceFilter {
+  ScopedVars?: ScopedVars
+}
+
+export interface MeasurementFilter extends ResourceFilter {
   Keyword?: string
   DatabaseUUIDs?: string[]
   CollectorUUID?: string
@@ -136,32 +140,32 @@ export interface MeasurementFilter {
   Statuses?: string[]
 }
 
-export interface AssetFilter {
+export interface AssetFilter extends ResourceFilter {
   Keyword?: string
   Path?: string
   ParentUUIDs?: string[]
   UseAssetPath?: boolean
 }
 
-export interface AssetPropertyFilter {
+export interface AssetPropertyFilter extends ResourceFilter {
   AssetUUIDs?: string[]
   Recursive?: boolean
 }
 
-export interface TimeseriesDatabaseFilter {
+export interface TimeseriesDatabaseFilter extends ResourceFilter {
   Keyword?: string
 }
 
-export interface EventTypeFilter {
+export interface EventTypeFilter extends ResourceFilter {
   Keyword?: string
 }
 
-export interface EventTypePropertiesFilter {
+export interface EventTypePropertiesFilter extends ResourceFilter {
   EventTypeUUIDs?: string[]
   Types?: string[]
 }
 
-export interface EventPropertyFilter {
+export interface EventPropertyFilter extends ResourceFilter {
   Property: string
   Datatype: string
   Value?: string | number | boolean

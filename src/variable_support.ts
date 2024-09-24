@@ -1,6 +1,6 @@
 import { forkJoin, from, map, of, Observable } from 'rxjs'
 
-import { CustomVariableSupport, DataQueryRequest, DataQueryResponse, MetricFindValue } from '@grafana/data'
+import { CustomVariableSupport, DataQueryRequest, DataQueryResponse, MetricFindValue, ScopedVars } from '@grafana/data'
 import { DataSource } from 'datasource'
 import { VariableQueryEditor } from 'CustomVariableEditor/VariableEditor'
 import {
@@ -33,7 +33,7 @@ export interface DataAPI {
   getEventTypes(filter?: EventTypeFilter): Promise<EventType[]>
   getEventTypeProperties(filter?: EventTypePropertiesFilter): Promise<EventTypeProperty[]>
   getEventConfigurations(): Promise<EventConfiguration[]>
-  multiSelectReplace(value: string | undefined): string[]
+  multiSelectReplace(value: string | undefined, scopedVars: ScopedVars): string[]
 }
 
 export class VariableSupport extends CustomVariableSupport<DataSource> {
@@ -50,6 +50,7 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
       case 'MeasurementQuery': {
         const filter = {
           ...request.targets[0].filter,
+          ScopedVars: request.scopedVars,
         }
         if (!filter) {
           return of({ data: [] })
@@ -61,7 +62,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         }
 
         if (filter.DatabaseUUIDs) {
-          filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.dataAPI.multiSelectReplace(e))
+          filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) =>
+            this.dataAPI.multiSelectReplace(e, request.scopedVars)
+          )
         }
 
         return forkJoin({
@@ -85,32 +88,53 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
       case 'AssetQuery': {
         const filter = {
           ...request.targets[0].filter,
+          ScopedVars: request.scopedVars,
         }
         const useAssetPath = filter.UseAssetPath ?? false
         return from(this.dataAPI.getAssets(filter)).pipe(
           map((values) => {
-            return { data: values.map<MetricFindValue>((v) => ({ text: useAssetPath ? v.AssetPath ?? v.Name : v.Name, value: v.UUID })) }
+            return {
+              data: values.map<MetricFindValue>((v) => ({
+                text: useAssetPath ? v.AssetPath ?? v.Name : v.Name,
+                value: v.UUID,
+              })),
+            }
           })
         )
       }
       case 'EventTypeQuery': {
-        return from(this.dataAPI.getEventTypes(request.targets[0].filter)).pipe(
+        const filter = {
+          ...request.targets[0].filter,
+          ScopedVars: request.scopedVars,
+        }
+
+        return from(this.dataAPI.getEventTypes(filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
           })
         )
       }
       case 'DatabaseQuery': {
-        return from(this.dataAPI.getTimeseriesDatabases(request.targets[0].filter)).pipe(
+        const filter = {
+          ...request.targets[0].filter,
+          ScopedVars: request.scopedVars,
+        }
+
+        return from(this.dataAPI.getTimeseriesDatabases(filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
           })
         )
       }
       case 'EventTypePropertyQuery': {
+        const filter = {
+          ...request.targets[0].filter,
+          ScopedVars: request.scopedVars,
+        }
+
         return forkJoin({
           eventTypes: this.dataAPI.getEventTypes(),
-          eventTypeProperties: this.dataAPI.getEventTypeProperties(request.targets[0].filter),
+          eventTypeProperties: this.dataAPI.getEventTypeProperties(filter),
         }).pipe(
           map((values) => {
             return {
@@ -129,9 +153,10 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
       case 'AssetPropertyQuery': {
         const filter = {
           ...request.targets[0].filter,
+          ScopedVars: request.scopedVars,
         }
         if (filter.AssetUUIDs) {
-          filter.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.dataAPI.multiSelectReplace(e))
+          filter.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.dataAPI.multiSelectReplace(e, request.scopedVars))
         }
         return from(this.dataAPI.getAssetProperties(filter)).pipe(
           map((values) => {
