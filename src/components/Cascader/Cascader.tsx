@@ -5,13 +5,15 @@ import React, { PureComponent } from 'react'
 
 import { SelectableValue } from '@grafana/data'
 
-import { Icon, Input } from '@grafana/ui'
+import { Icon, Input, Themeable2, withTheme2 } from '@grafana/ui'
 
 import { onChangeCascader } from './optionMappings'
 import { Autocomplete } from '../Autocomplete/Autocomplete'
 import { findOption } from 'QueryEditor/util'
 
-export interface CascaderProps {
+import { getCascaderStyles } from './styles'
+
+export interface CascaderProps extends Themeable2 {
   /** The separator between levels in the search */
   separator?: string
   placeholder?: string
@@ -261,6 +263,8 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   render() {
     const { placeholder, width, changeOnSelect, options } = this.props
     const { focusCascade, rcValue, activeLabel, activeSuggestion, filteredSuggestions, showSuggestions } = this.state
+    const { theme } = this.props;
+    const styles = getCascaderStyles(theme)
 
     this.getSearchableOptions(options)
 
@@ -274,6 +278,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
           fieldNames={{ label: 'label', value: 'value', children: 'items' }}
           expandIcon={null}
           open={focusCascade}
+          dropdownClassName={styles.dropdown}
         >
           <div className={disableDivFocus}>
             <Input
@@ -307,3 +312,4 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     )
   }
 }
+export default withTheme2(Cascader);
