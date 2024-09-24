@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { CascaderOption, InlineField, InlineFieldRow } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
-import { Cascader } from 'components/Cascader/Cascader'
+import { default as Cascader } from 'components/Cascader/Cascader'
 import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { QueryTag } from 'components/TagsSection/types'
 import { DataSource } from 'datasource'
