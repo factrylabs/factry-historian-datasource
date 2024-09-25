@@ -25,7 +25,15 @@ This is the compatibility matrix for version listed on this page. If you have do
 
 ### Changes
 
-- Fixed logo in the README
+- Fixed logo in the README.
+- The datasource now detects the running version of the historian and adapts to the available features.
+- Error messages are now more descriptive.
+- Enhanced units for event duration.
+
+### Bug Fixes
+
+- Resolved styling issue with the dropdown cascader in the asset property query editor.
+- Resolved an issue where the repeat by variable feature was malfunctioning.
 
 ## v2.0.3
 
