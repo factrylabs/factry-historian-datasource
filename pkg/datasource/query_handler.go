@@ -132,35 +132,24 @@ func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery sche
 
 	measurementUUIDs := map[string]struct{}{}
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
-	if canFilterAssetProperties {
-		for _, property := range assetMeasurementQuery.AssetProperties {
-			for _, assetProperty := range assetProperties {
-				if (assetProperty.Name == property) || assetProperty.UUID.String() == property {
-					if len(measurementUUIDs) >= seriesLimit {
-						if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
-							break
-						}
-					}
-					measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
-					measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
-					break
-				}
-			}
+
+	propertiesByAssetUUIDAndID := map[uuid.UUID]map[string]schemas.AssetProperty{}
+	for _, assetProperty := range assetProperties {
+		if _, ok := propertiesByAssetUUIDAndID[assetProperty.AssetUUID]; !ok {
+			propertiesByAssetUUIDAndID[assetProperty.AssetUUID] = map[string]schemas.AssetProperty{}
 		}
-	} else {
-		for _, assetUUID := range maps.Keys(assets) {
-			for _, property := range assetMeasurementQuery.AssetProperties {
-				for _, assetProperty := range assetProperties {
-					if (assetProperty.Name == property && assetProperty.AssetUUID == assetUUID) || assetProperty.UUID.String() == property {
-						if len(measurementUUIDs) >= seriesLimit {
-							if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
-								break
-							}
-						}
-						measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
-						measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
-						break
-					}
+		propertiesByAssetUUIDAndID[assetProperty.AssetUUID][assetProperty.Name] = assetProperty
+		propertiesByAssetUUIDAndID[assetProperty.AssetUUID][assetProperty.UUID.String()] = assetProperty
+	}
+
+assetLoop:
+	for _, assetUUID := range maps.Keys(assets) {
+		for _, property := range assetMeasurementQuery.AssetProperties {
+			if assetProperty, ok := propertiesByAssetUUIDAndID[assetUUID][property]; ok {
+				measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
+				measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
+				if len(measurementUUIDs) >= seriesLimit {
+					break assetLoop
 				}
 			}
 		}
