@@ -8,7 +8,7 @@ A data source backend plugin consists of both frontend and backend components, f
 
 ### Prerequisites
 
-- [Go 1.22.1 or later](https://golang.org/dl/)
+- [Go 1.23.2 or later](https://golang.org/dl/)
   - [Mage](https://magefile.org/)
 - [Node.js 20 LTS](https://nodejs.org/en/download/) with [pnpm 8](https://pnpm.io/installation)
 - [Docker](https://docs.docker.com/get-docker/)
