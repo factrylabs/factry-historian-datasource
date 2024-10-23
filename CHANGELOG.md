@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.0.5
+
+### Bug
+
+- Only a single result was returned when multiple assets were queried in the asset property query.
+
 ## v2.0.4
 
 ### Changes
