@@ -21,6 +21,12 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
+## v2.0.5
+
+### Bug
+
+- Only one result was while multiple assets where queried in the asset property query.
+
 ## v2.0.4
 
 ### Changes
