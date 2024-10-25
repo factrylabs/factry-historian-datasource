@@ -74,7 +74,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
 
         switch (target.queryType) {
           case 'AssetMeasurementQuery': {
-            const assetMeasurementQuery = target.query as AssetMeasurementQuery
+            const assetMeasurementQuery = { ...target.query } as AssetMeasurementQuery
             assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
             )
@@ -89,7 +89,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             break
           }
           case 'MeasurementQuery': {
-            const measurementQuery = target.query as MeasurementQuery
+            const measurementQuery = { ...target.query } as MeasurementQuery
             measurementQuery.Databases = measurementQuery.Databases?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
             )
@@ -101,14 +101,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             break
           }
           case 'RawQuery': {
-            const rawQuery = target.query as RawQuery
+            const rawQuery = { ...target.query } as RawQuery
             rawQuery.TimeseriesDatabase = this.templateSrv.replace(rawQuery.TimeseriesDatabase, request.scopedVars)
             rawQuery.Query = this.templateSrv.replace(rawQuery.Query, request.scopedVars)
             target.query = rawQuery
             break
           }
           case 'EventQuery': {
-            const eventQuery = target.query as EventQuery
+            const eventQuery = { ...target.query } as EventQuery
             eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e, request.scopedVars))
             eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
