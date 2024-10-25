@@ -79,6 +79,8 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       this.historianInfo = await this.props.datasource.getInfo()
     } catch (_) {}
     this.mountFinished = true
+    // force re-render
+    this.setState({ ...this.state })
   }
 
   setTabIndex(index: number): void {
