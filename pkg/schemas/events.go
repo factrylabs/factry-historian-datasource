@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
 // EventSource enum for the source of an event
@@ -68,3 +69,13 @@ type EventPropertyValueFilter struct {
 	Operator  string
 	Condition string
 }
+
+// EventPropertyValuesRequest is a request for event property values
+type EventPropertyValuesRequest struct {
+	EventQuery
+	HistorianInfo
+	backend.TimeRange
+}
+
+// EventPropertyValues is a list of event property values
+type EventPropertyValues []interface{}

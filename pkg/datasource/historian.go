@@ -2,11 +2,9 @@ package datasource
 
 import (
 	"context"
-	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
-	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
-	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
+	"github.com/go-playground/form"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 )
@@ -27,7 +25,8 @@ const (
 
 // HistorianDataSource ...
 type HistorianDataSource struct {
-	API *api.API
+	API     *api.API
+	Decoder *form.Decoder
 }
 
 // NewDataSource creates a new data source instance
@@ -37,7 +36,9 @@ func NewDataSource(_ context.Context, s backend.DataSourceInstanceSettings) (ins
 		return nil, err
 	}
 
-	historianDataSource := &HistorianDataSource{}
+	historianDataSource := &HistorianDataSource{
+		Decoder: form.NewDecoder(),
+	}
 	historianDataSource.API, err = api.NewAPIWithToken(settings.URL, settings.Token, settings.Organization)
 	if err != nil {
 		return nil, err
@@ -48,13 +49,3 @@ func NewDataSource(_ context.Context, s backend.DataSourceInstanceSettings) (ins
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance is created.
 func (*HistorianDataSource) Dispose() {}
-
-func checkMinimumVersion(info *schemas.HistorianInfo, minVersion string) bool {
-	if info == nil {
-		return false
-	}
-
-	historianVersion, _ := strings.CutPrefix(info.Version, "v")
-	// check if historian version is not less than minVersion
-	return !util.SemverCompare(historianVersion, minVersion)
-}

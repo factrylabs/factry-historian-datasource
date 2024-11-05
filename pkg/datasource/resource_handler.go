@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource"
 )
@@ -23,6 +24,7 @@ const (
 	ResourceTypeTagKeys             = "tag-keys"
 	ResourceTypeTagValues           = "tag-values"
 	ResourceTypeHistorianInfo       = "info"
+	ResourceTypeEventPropertyValues = "event-property-values"
 )
 
 // HistorianResourceQuery is a struct for a resource query
@@ -144,6 +146,23 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 		}
 
 		return resource.SendJSON(sender, info)
+	case ResourceTypeEventPropertyValues:
+		if len(resourcePath) != 2 {
+			return ErrorInvalidResourceCallQuery
+		}
+
+		eventTypePropertyUUID := resourcePath[1]
+		request := schemas.EventPropertyValuesRequest{}
+		if err := ds.Decoder.Decode(&request, url.Query()); err != nil {
+			return err
+		}
+
+		o, err := ds.API.GetDistinctEventPropertyValues(ctx, eventTypePropertyUUID, request)
+		if err != nil {
+			return err
+		}
+
+		return resource.SendJSON(sender, o)
 	}
 
 	return ErrorInvalidResourceCallQuery

@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/go-playground/form"
+	"golang.org/x/exp/maps"
 )
 
 // GetMeasurements calls get measurements in the historian API
@@ -197,4 +199,51 @@ func (api *API) GetInfo(ctx context.Context) (schemas.HistorianInfo, error) {
 	}
 
 	return info, nil
+}
+
+// GetDistinctEventPropertyValues calls get distinct event property values in the historian API
+func (api *API) GetDistinctEventPropertyValues(ctx context.Context, eventTypePropertyUUID string, request schemas.EventPropertyValuesRequest) ([]interface{}, error) {
+	assets, err := api.GetFilteredAssets(ctx, request.Assets, &request.HistorianInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	eventTypes, err := api.GetFilteredEventTypes(ctx, request.EventTypes, &request.HistorianInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(assets) == 0 || len(eventTypes) == 0 {
+		return []interface{}{}, nil
+	}
+
+	filter := schemas.EventFilter{
+		AssetUUIDs:     maps.Keys(assets),
+		EventTypeUUIDs: maps.Keys(eventTypes),
+		Limit:          0,
+		Status:         request.Statuses,
+		StartTime:      request.From,
+		StopTime:       request.To,
+	}
+	encoder := form.NewEncoder()
+	urlValues, err := encoder.Encode(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	eventTypePropertyValues := schemas.EventPropertyValues{}
+	response, err := api.client.R().SetContext(ctx).SetQueryParamsFromValues(urlValues).Get("/api/event-type-properties/" + eventTypePropertyUUID + "/values")
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode() >= 300 {
+		return nil, handleHistorianError(response)
+	}
+
+	if err := json.Unmarshal(response.Body(), &eventTypePropertyValues); err != nil {
+		return nil, err
+	}
+
+	return eventTypePropertyValues, nil
 }

@@ -5,7 +5,14 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { default as Cascader } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { toSelectableValue } from 'components/TagsSection/util'
-import { defaultQueryOptions, getChildAssets, matchedAssets, propertyFilterToQueryTags, tagsToQueryTags } from './util'
+import {
+  defaultQueryOptions,
+  getChildAssets,
+  matchedAssets,
+  propertyFilterToQueryTags,
+  semverCompare,
+  tagsToQueryTags,
+} from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
 import {
@@ -21,12 +28,13 @@ import {
   PropertyDatatype,
   PropertyType,
 } from 'types'
+import { KnownOperator } from 'components/TagsSection/types'
 
 export interface Props {
   query: EventQuery
-  historianInfo: HistorianInfo | undefined
   seriesLimit: number
   datasource: DataSource
+  historianInfo: HistorianInfo | undefined
   appIsAlertingType?: boolean
   isAnnotationQuery?: boolean
   onChangeEventQuery: (query: EventQuery) => void
@@ -256,6 +264,16 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const getValueFilterOperators = (): KnownOperator[] => {
+    const basicOperators: KnownOperator[] = ['=', '!=', '<', '<=', '>', '>=']
+    const v72Operators: KnownOperator[] = ['~', '!~', 'IN', 'NOT IN']
+
+    if (props.historianInfo && semverCompare(props.historianInfo.Version, 'v7.2.0') >= 0) {
+      return basicOperators.concat(v72Operators)
+    }
+    return basicOperators
+  }
+
   return (
     <>
       {!loading && (
@@ -327,7 +345,7 @@ export const Events = (props: Props): JSX.Element => {
               <InlineField label="WHERE" labelWidth={labelWidth}>
                 <TagsSection
                   tags={propertyFilterToQueryTags(props.query.PropertyFilter ?? [])}
-                  operators={['=', '!=', '<', '<=', '>', '>=']}
+                  operators={getValueFilterOperators()}
                   getTagKeyOptions={() => Promise.resolve(availableSimpleProperties(props.query.EventTypes ?? []))}
                   getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
                   onChange={handleTagsSectionChange}

@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -106,13 +106,13 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 }
 
 func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, seriesLimit int, historianInfo *schemas.HistorianInfo, api *api.API) (data.Frames, error) {
-	assets, err := getFilteredAssets(ctx, api, assetMeasurementQuery.Assets, historianInfo)
+	assets, err := api.GetFilteredAssets(ctx, assetMeasurementQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
 	}
 
 	var assetProperties []schemas.AssetProperty
-	canFilterAssetProperties := checkMinimumVersion(historianInfo, "6.3.0")
+	canFilterAssetProperties := util.CheckMinimumVersion(historianInfo, "6.3.0")
 	if canFilterAssetProperties {
 		assetPropertyQuery := url.Values{}
 		for i, assetUUID := range maps.Keys(assets) {
@@ -367,91 +367,4 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 	}
 
 	return historianQuery
-}
-
-func getFilteredAssets(ctx context.Context, api *api.API, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
-	assetUUIDSet := map[uuid.UUID]schemas.Asset{}
-
-	if checkMinimumVersion(historianInfo, "6.4.0") {
-		for _, assetString := range assetStrings {
-			assetQuery := url.Values{}
-			assetQuery.Add("Keyword", assetString)
-			assets, err := api.GetAssets(ctx, assetQuery.Encode())
-			if err != nil {
-				return nil, err
-			}
-
-			for _, asset := range assets {
-				assetUUIDSet[asset.UUID] = asset
-			}
-		}
-	} else {
-		// Deprecated
-		assets, err := api.GetAssets(ctx, "")
-		if err != nil {
-			return nil, err
-		}
-
-		for _, assetString := range assetStrings {
-			if filteredAssetUUIDs := filterAssetUUIDs(assets, assetString); len(filteredAssetUUIDs) > 0 {
-				for assetUUID, asset := range filteredAssetUUIDs {
-					assetUUIDSet[assetUUID] = asset
-				}
-			}
-		}
-	}
-
-	return assetUUIDSet, nil
-}
-
-func filterAssetUUIDs(assets []schemas.Asset, searchValue string) map[uuid.UUID]schemas.Asset {
-	filteredAssets := map[uuid.UUID]schemas.Asset{}
-	if strings.HasPrefix(searchValue, "/") && strings.HasSuffix(searchValue, "/") {
-		pattern := searchValue[1 : len(searchValue)-1]
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			return filteredAssets
-		}
-
-		for _, asset := range assets {
-			if re.MatchString(asset.AssetPath) || re.MatchString(asset.UUID.String()) {
-				filteredAssets[asset.UUID] = asset
-			}
-		}
-		return filteredAssets
-	}
-
-	for _, asset := range assets {
-		if asset.UUID.String() == searchValue || asset.AssetPath == searchValue {
-			return map[uuid.UUID]schemas.Asset{asset.UUID: asset}
-		}
-	}
-
-	return filteredAssets
-}
-
-func filterEventTypeUUIDs(eventTypes []schemas.EventType, searchValue string) map[uuid.UUID]schemas.EventType {
-	filteredEventTypes := map[uuid.UUID]schemas.EventType{}
-	if strings.HasPrefix(searchValue, "/") && strings.HasSuffix(searchValue, "/") {
-		pattern := searchValue[1 : len(searchValue)-1]
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			return filteredEventTypes
-		}
-
-		for _, eventType := range eventTypes {
-			if re.MatchString(eventType.Name) || re.MatchString(eventType.UUID.String()) {
-				filteredEventTypes[eventType.UUID] = eventType
-			}
-		}
-		return filteredEventTypes
-	}
-
-	for _, eventType := range eventTypes {
-		if eventType.UUID.String() == searchValue || eventType.Name == searchValue {
-			return map[uuid.UUID]schemas.EventType{eventType.UUID: eventType}
-		}
-	}
-
-	return filteredEventTypes
 }

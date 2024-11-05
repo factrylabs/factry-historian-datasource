@@ -5,5 +5,5 @@ export interface QueryTag {
   value: string
 }
 
-export type KnownOperator = '=' | '<' | '>' | '<=' | '>=' | '!='
+export type KnownOperator = '=' | '<' | '>' | '<=' | '>=' | '!=' | 'IN' | 'NOT IN' | '~' | '!~'
 export type KnownCondition = 'AND' | 'OR'

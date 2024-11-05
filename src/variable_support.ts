@@ -13,13 +13,16 @@ import {
   EventType,
   EventTypeFilter,
   EventTypePropertiesFilter,
+  EventTypePropertiesValuesFilter,
   EventTypeProperty,
   Measurement,
   MeasurementFilter,
   Pagination,
+  PropertyDatatype,
   TimeseriesDatabase,
   TimeseriesDatabaseFilter,
   VariableQuery,
+  VariableQueryType,
 } from 'types'
 
 // https://github.com/storpool/grafana/blob/1f9efade078316fe502c72dba6156860d69928d4/public/app/plugins/datasource/grafana-pyroscope-datasource/VariableSupport.ts
@@ -33,7 +36,9 @@ export interface DataAPI {
   getEventTypes(filter?: EventTypeFilter): Promise<EventType[]>
   getEventTypeProperties(filter?: EventTypePropertiesFilter): Promise<EventTypeProperty[]>
   getEventConfigurations(): Promise<EventConfiguration[]>
+  getDistinctEventPropertyValues(filter: EventTypePropertiesValuesFilter): Promise<string[]>
   multiSelectReplace(value: string | undefined, scopedVars: ScopedVars): string[]
+  replace(value: string | undefined, scopedVars: ScopedVars): string
 }
 
 export class VariableSupport extends CustomVariableSupport<DataSource> {
@@ -47,9 +52,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
   query(request: DataQueryRequest<VariableQuery>): Observable<DataQueryResponse> {
     const queryType = request.targets[0].type
     switch (queryType) {
-      case 'MeasurementQuery': {
+      case VariableQueryType.MeasurementQuery: {
         const filter = {
-          ...request.targets[0].filter,
+          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as MeasurementFilter | undefined),
           ScopedVars: request.scopedVars,
         }
         if (!filter) {
@@ -85,9 +90,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         )
       }
-      case 'AssetQuery': {
+      case VariableQueryType.AssetQuery: {
         const filter = {
-          ...request.targets[0].filter,
+          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as AssetFilter | undefined),
           ScopedVars: request.scopedVars,
         }
         const useAssetPath = filter.UseAssetPath ?? false
@@ -102,9 +107,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         )
       }
-      case 'EventTypeQuery': {
+      case VariableQueryType.EventTypeQuery: {
         const filter = {
-          ...request.targets[0].filter,
+          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypeFilter | undefined),
           ScopedVars: request.scopedVars,
         }
 
@@ -114,9 +119,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         )
       }
-      case 'DatabaseQuery': {
+      case VariableQueryType.DatabaseQuery: {
         const filter = {
-          ...request.targets[0].filter,
+          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as TimeseriesDatabaseFilter | undefined),
           ScopedVars: request.scopedVars,
         }
 
@@ -126,9 +131,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         )
       }
-      case 'EventTypePropertyQuery': {
+      case VariableQueryType.EventTypePropertyQuery: {
         const filter = {
-          ...request.targets[0].filter,
+          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypePropertiesFilter | undefined),
           ScopedVars: request.scopedVars,
         }
 
@@ -150,9 +155,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         )
       }
-      case 'AssetPropertyQuery': {
+      case VariableQueryType.AssetPropertyQuery: {
         const filter = {
-          ...request.targets[0].filter,
+          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as AssetPropertyFilter | undefined),
           ScopedVars: request.scopedVars,
         }
         if (filter.AssetUUIDs) {
@@ -161,6 +166,80 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         return from(this.dataAPI.getAssetProperties(filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.Name })) }
+          })
+        )
+      }
+      case VariableQueryType.PropertyValuesQuery: {
+        const filter = {
+          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypePropertiesValuesFilter | undefined),
+          ScopedVars: request.scopedVars,
+        }
+        if (filter.EventTypePropertyUUID) {
+          filter.EventTypePropertyUUID = this.dataAPI.multiSelectReplace(
+            filter.EventTypePropertyUUID,
+            request.scopedVars
+          )[0]
+        }
+        if (filter.EventFilter?.Assets) {
+          filter.EventFilter.Assets = filter.EventFilter.Assets.flatMap((e) =>
+            this.dataAPI.multiSelectReplace(e, request.scopedVars)
+          )
+        }
+        if (filter.EventFilter?.EventTypes) {
+          filter.EventFilter.EventTypes = filter.EventFilter.EventTypes.flatMap((e) =>
+            this.dataAPI.multiSelectReplace(e, request.scopedVars)
+          )
+        }
+        if (filter.EventFilter?.Properties) {
+          filter.EventFilter.Properties = filter.EventFilter.Properties.flatMap((e) =>
+            this.dataAPI.multiSelectReplace(e, request.scopedVars)
+          )
+        }
+        if ((filter.EventFilter?.PropertyFilter.length ?? 0) > 0) {
+          filter.EventFilter!.PropertyFilter = filter
+            .EventFilter!.PropertyFilter?.filter((e) => e.Value !== 'select tag value')
+            .map((e) => {
+              e.Property = this.dataAPI.replace(e.Property, request.scopedVars)
+              if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+                const replacedValue = this.dataAPI.multiSelectReplace(String(e.Value), request.scopedVars)
+                if (replacedValue.length === 0) {
+                  return e
+                }
+                e.Value = replacedValue
+              } else {
+                switch (e.Datatype) {
+                  case PropertyDatatype.Number:
+                    e.Value = parseFloat(this.dataAPI.replace(String(e.Value), request.scopedVars))
+                    break
+                  case PropertyDatatype.Bool:
+                    e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars) === 'true'
+                    break
+                  case PropertyDatatype.String:
+                    e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars)
+                    break
+                }
+              }
+
+              return e
+            })
+        }
+
+        if (!filter.EventTypePropertyUUID) {
+          return of({ data: [] })
+        }
+
+        return from(
+          this.dataAPI.getDistinctEventPropertyValues({
+            ScopedVars: request.scopedVars,
+            EventTypePropertyUUID: filter.EventTypePropertyUUID,
+            EventFilter: filter.EventFilter!,
+            HistorianInfo: filter.HistorianInfo,
+            From: request.range.from.format(),
+            To: request.range.to.format(),
+          })
+        ).pipe(
+          map((values) => {
+            return { data: values.map<MetricFindValue>((v) => ({ text: v, value: v })) }
           })
         )
       }
