@@ -3,6 +3,8 @@ package util
 import (
 	"strconv"
 	"strings"
+
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 )
 
 func min(a, b int) int {
@@ -28,4 +30,15 @@ func SemverCompare(a string, b string) bool {
 		}
 	}
 	return false
+}
+
+// CheckMinimumVersion checks if the historian version is not less than minVersion
+func CheckMinimumVersion(info *schemas.HistorianInfo, minVersion string) bool {
+	if info == nil {
+		return false
+	}
+
+	historianVersion, _ := strings.CutPrefix(info.Version, "v")
+	// check if historian version is not less than minVersion
+	return !SemverCompare(historianVersion, minVersion)
 }

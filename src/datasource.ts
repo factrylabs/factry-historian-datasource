@@ -15,6 +15,7 @@ import {
   EventType,
   EventTypeFilter,
   EventTypePropertiesFilter,
+  EventTypePropertiesValuesFilter,
   EventTypeProperty,
   HistorianDataSourceOptions,
   HistorianInfo,
@@ -43,17 +44,6 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     this.annotations = {
       QueryEditor: AnnotationsQueryEditor,
     }
-  }
-
-  filterQuery(query: Query): boolean {
-    switch (query.queryType) {
-      case 'EventQuery':
-        const eventQuery = query.query as EventQuery
-        if (eventQuery.PropertyFilter?.find((e) => e.Value === 'select tag value')) {
-          return false
-        }
-    }
-    return true
   }
 
   getDefaultQuery(app: CoreApp): Partial<Query> {
@@ -128,25 +118,32 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
                 (e) => e.Value !== 'enter a value'
               )
             }
-            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.map((e) => {
-              e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
-              if (e.Value === 'select tag value') {
+            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.filter((e) => e.Value !== 'select tag value').map(
+              (e) => {
+                e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
+                if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+                  const replacedValue = this.multiSelectReplace(String(e.Value), request.scopedVars)
+                  if (replacedValue.length === 0) {
+                    return e
+                  }
+                  e.Value = replacedValue
+                } else {
+                  switch (e.Datatype) {
+                    case PropertyDatatype.Number:
+                      e.Value = parseFloat(this.templateSrv.replace(String(e.Value), request.scopedVars))
+                      break
+                    case PropertyDatatype.Bool:
+                      e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars) === 'true'
+                      break
+                    case PropertyDatatype.String:
+                      e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars)
+                      break
+                  }
+                }
+
                 return e
               }
-
-              switch (e.Datatype) {
-                case PropertyDatatype.Number:
-                  e.Value = parseFloat(this.templateSrv.replace(String(e.Value), request.scopedVars))
-                  break
-                case PropertyDatatype.Bool:
-                  e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars) === 'true'
-                  break
-                case PropertyDatatype.String:
-                  e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars)
-                  break
-              }
-              return e
-            })
+            )
             target.query = eventQuery
             break
           }
@@ -161,6 +158,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   // https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
   multiSelectReplace(value: string | undefined, scopedVars?: ScopedVars): string[] {
     return this.templateSrv.replace(value, scopedVars, 'csv').split(',')
+  }
+
+  replace(value: string | undefined, scopedVars?: ScopedVars): string {
+    return this.templateSrv.replace(value, scopedVars)
   }
 
   templateReplaceQueryOptions(options: MeasurementQueryOptions, scopedVars: ScopedVars): MeasurementQueryOptions {
@@ -325,5 +326,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       ...this.templateReplaceMeasurementFilter(filter),
     }
     return this.getResource(`tag-values/${key}`, params)
+  }
+
+  async getDistinctEventPropertyValues(filter: EventTypePropertiesValuesFilter): Promise<string[]> {
+    return this.getResource(`event-property-values/${filter.EventTypePropertyUUID}`, {
+      ...filter.EventFilter,
+      ...filter.HistorianInfo,
+      From: filter.From,
+      To: filter.To,
+    })
   }
 }

@@ -172,10 +172,18 @@ export interface EventTypePropertiesFilter extends ResourceFilter {
   Types?: string[]
 }
 
+export interface EventTypePropertiesValuesFilter extends ResourceFilter {
+  EventFilter: EventQuery
+  EventTypePropertyUUID?: string
+  HistorianInfo?: HistorianInfo
+  From?: string
+  To?: string
+}
+
 export interface EventPropertyFilter extends ResourceFilter {
   Property: string
   Datatype: string
-  Value?: string | number | boolean
+  Value?: string | number | boolean | string[]
   Operator: string
   Condition: string
 }
@@ -270,41 +278,57 @@ export interface EventConfiguration {
   EventTypeUUID: string
 }
 
+export enum VariableQueryType {
+  MeasurementQuery = 'MeasurementQuery',
+  AssetQuery = 'AssetQuery',
+  EventTypeQuery = 'EventTypeQuery',
+  DatabaseQuery = 'DatabaseQuery',
+  EventTypePropertyQuery = 'EventTypePropertyQuery',
+  AssetPropertyQuery = 'AssetPropertyQuery',
+  PropertyValuesQuery = 'PropertyValuesQuery',
+}
+
 export type MeasurementVariableQuery = {
   refId: string
-  type: 'MeasurementQuery'
+  type: VariableQueryType.MeasurementQuery
   filter?: MeasurementFilter
   pagination?: Pagination
 }
 
 export type AssetVariableQuery = {
   refId: string
-  type: 'AssetQuery'
+  type: VariableQueryType.AssetQuery
   filter?: AssetFilter
 }
 
 export type EventTypeVariableQuery = {
   refId: string
-  type: 'EventTypeQuery'
+  type: VariableQueryType.EventTypeQuery
   filter?: EventTypeFilter
 }
 
 export type DatabaseVariableQuery = {
   refId: string
-  type: 'DatabaseQuery'
+  type: VariableQueryType.DatabaseQuery
   filter?: TimeseriesDatabaseFilter
 }
 
 export type EventTypePropertyVariableQuery = {
   refId: string
-  type: 'EventTypePropertyQuery'
+  type: VariableQueryType.EventTypePropertyQuery
   filter?: EventTypePropertiesFilter
 }
 
 export type AssetPropertyVariableQuery = {
   refId: string
-  type: 'AssetPropertyQuery'
+  type: VariableQueryType.AssetPropertyQuery
   filter?: AssetPropertyFilter
+}
+
+export type PropertyValuesVariableQuery = {
+  refId: string
+  type: VariableQueryType.PropertyValuesQuery
+  filter?: EventTypePropertiesValuesFilter
 }
 
 export type VariableQuery =
@@ -314,6 +338,7 @@ export type VariableQuery =
   | DatabaseVariableQuery
   | EventTypePropertyVariableQuery
   | AssetPropertyVariableQuery
+  | PropertyValuesVariableQuery
 
 export interface HistorianInfo {
   Version: string
