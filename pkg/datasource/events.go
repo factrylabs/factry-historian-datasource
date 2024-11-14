@@ -3,6 +3,7 @@ package datasource
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -325,26 +326,6 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 			fieldByColumn[DurationColumnName].Append(nil)
 		}
 
-		if events[i].Properties == nil {
-			for _, eventPropertyType := range eventTypeProperties {
-				if eventPropertyType.Type == schemas.EventTypePropertyTypePeriodic {
-					continue
-				}
-
-				fieldByColumn[eventPropertyType.Name].Append(nil)
-			}
-			continue
-		}
-
-		for _, eventTypeProperty := range eventTypeProperties {
-			if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
-				continue
-			}
-
-			setUOMFieldConfig(fieldByColumn[eventTypeProperty.Name], eventTypeProperty)
-			addValueToField(fieldByColumn[eventTypeProperty.Name], events[i].Properties.Properties[eventTypeProperty.Name])
-		}
-
 		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]
 		for assetProperty := range assetPropertyFieldTypes {
 			found := false
@@ -375,9 +356,9 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 					case data.FieldTypeNullableFloat64:
 						stringValue = fmt.Sprintf("%v", *value.(*float64))
 					case data.FieldTypeNullableBool:
-						stringValue = fmt.Sprintf("%v", *value.(*bool))
+						stringValue = strconv.FormatBool(*value.(*bool))
 					case data.FieldTypeNullableString:
-						stringValue = fmt.Sprintf("%v", *value.(*string))
+						stringValue = *value.(*string)
 					}
 					field.Append(&stringValue)
 				}
@@ -385,6 +366,26 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 			if !found {
 				field.Append(nil)
 			}
+		}
+
+		if events[i].Properties == nil {
+			for _, eventPropertyType := range eventTypeProperties {
+				if eventPropertyType.Type == schemas.EventTypePropertyTypePeriodic {
+					continue
+				}
+
+				fieldByColumn[eventPropertyType.Name].Append(nil)
+			}
+			continue
+		}
+
+		for _, eventTypeProperty := range eventTypeProperties {
+			if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+				continue
+			}
+
+			setUOMFieldConfig(fieldByColumn[eventTypeProperty.Name], eventTypeProperty)
+			addValueToField(fieldByColumn[eventTypeProperty.Name], events[i].Properties.Properties[eventTypeProperty.Name])
 		}
 	}
 
