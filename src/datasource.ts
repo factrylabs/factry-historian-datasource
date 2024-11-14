@@ -74,7 +74,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
 
         switch (target.queryType) {
           case 'AssetMeasurementQuery': {
-            const assetMeasurementQuery = { ...target.query } as AssetMeasurementQuery
+            const assetMeasurementQuery = JSON.parse(JSON.stringify(target.query)) as AssetMeasurementQuery
             assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
             )
@@ -85,11 +85,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
               assetMeasurementQuery.Options,
               request.scopedVars
             )
+            assetMeasurementQuery.Options.ValueFilters = assetMeasurementQuery.Options.ValueFilters?.filter(
+              (e) => e.Value !== 'enter a value'
+            )
             target.query = assetMeasurementQuery
             break
           }
           case 'MeasurementQuery': {
-            const measurementQuery = { ...target.query } as MeasurementQuery
+            const measurementQuery = JSON.parse(JSON.stringify(target.query)) as MeasurementQuery
             measurementQuery.Databases = measurementQuery.Databases?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
             )
@@ -97,18 +100,21 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
               this.multiSelectReplace(m, request.scopedVars)
             )
             measurementQuery.Options = this.templateReplaceQueryOptions(measurementQuery.Options, request.scopedVars)
+            measurementQuery.Options.ValueFilters = measurementQuery.Options.ValueFilters?.filter(
+              (e) => e.Value !== 'enter a value'
+            )
             target.query = measurementQuery
             break
           }
           case 'RawQuery': {
-            const rawQuery = { ...target.query } as RawQuery
+            const rawQuery = JSON.parse(JSON.stringify(target.query)) as RawQuery
             rawQuery.TimeseriesDatabase = this.templateSrv.replace(rawQuery.TimeseriesDatabase, request.scopedVars)
             rawQuery.Query = this.templateSrv.replace(rawQuery.Query, request.scopedVars)
             target.query = rawQuery
             break
           }
           case 'EventQuery': {
-            const eventQuery = { ...target.query } as EventQuery
+            const eventQuery = JSON.parse(JSON.stringify(target.query)) as EventQuery
             eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e, request.scopedVars))
             eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
@@ -117,6 +123,11 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             eventQuery.Properties = eventQuery.Properties?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
             )
+            if (eventQuery.QueryAssetProperties && eventQuery.Options?.ValueFilters) {
+              eventQuery.Options.ValueFilters = eventQuery.Options.ValueFilters.filter(
+                (e) => e.Value !== 'enter a value'
+              )
+            }
             eventQuery.PropertyFilter = eventQuery.PropertyFilter?.map((e) => {
               e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
               if (e.Value === 'select tag value') {
@@ -162,6 +173,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         tags[this.templateSrv.replace(key, scopedVars)] = this.templateSrv.replace(value, scopedVars)
       }
       options.Tags = tags
+    }
+    if (options.ValueFilters) {
+      options.ValueFilters = options.ValueFilters.map((e) => {
+        e.Value = this.templateSrv.replace(String(e.Value), scopedVars)
+        return e
+      })
     }
     if (options.Aggregation) {
       const aggregationArguments = options.Aggregation.Arguments

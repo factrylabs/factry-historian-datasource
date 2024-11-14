@@ -92,5 +92,6 @@ type Query struct {
 	// Join will join the results on time filling in null values so a data point will be available for every timestamp
 	Join bool
 	// Format
-	Format Format `json:",omitempty"`
+	Format       Format `json:",omitempty"`
+	ValueFilters []ValueFilter
 }

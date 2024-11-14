@@ -6,10 +6,12 @@ import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { QueryTag } from 'components/TagsSection/types'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
-import { Asset, AssetProperty, MeasurementQueryOptions, labelWidth } from 'types'
+import { Asset, AssetProperty, HistorianInfo, MeasurementQueryOptions, labelWidth } from 'types'
+import { semverCompare, valueFiltersToQueryTags } from './util'
 
 export interface Props {
   datasource: DataSource
+  historianInfo: HistorianInfo | undefined
   seriesLimit: number
   selectedAssets: Asset[]
   selectedAssetProperties: string[]
@@ -97,6 +99,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
         state={props.queryOptions}
         seriesLimit={props.seriesLimit}
         tags={props.tags}
+        valueFilters={valueFiltersToQueryTags(props.queryOptions.ValueFilters ?? [])}
         appIsAlertingType={props.appIsAlertingType}
         datatypes={[]}
         templateVariables={props.templateVariables}
@@ -104,8 +107,8 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
         hideFill={props.queryType === 'simple'}
         hideLimit={props.queryType === 'simple'}
         hideGroupBy={props.queryType === 'simple'}
-        hideTagFilter={props.queryType === 'simple'}
         hideAdvancedOptions={props.queryType === 'simple'}
+        hideValueFilter={props.historianInfo && semverCompare(props.historianInfo?.Version, 'v7.1.0') < 0}
         getTagKeyOptions={getTagKeyOptions}
         getTagValueOptions={getTagValueOptions}
         onChange={props.onChangeQueryOptions}

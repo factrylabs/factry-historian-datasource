@@ -85,6 +85,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
             query={this.props.query.query as EventQuery}
             seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
+            historianInfo={this.historianInfo}
             isAnnotationQuery
             onChangeEventQuery={this.onChangeEventQuery}
             onChangeSeriesLimit={this.onChangeSeriesLimit}

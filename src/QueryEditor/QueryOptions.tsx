@@ -4,12 +4,13 @@ import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwi
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
 import { getAggregationsForDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
-import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions } from 'types'
+import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions, ValueFilter } from 'types'
 
 export interface Props {
   state: MeasurementQueryOptions
   seriesLimit: number
   tags: QueryTag[]
+  valueFilters: QueryTag[]
   appIsAlertingType: boolean
   datatypes: string[]
   hideInterval?: boolean
@@ -17,11 +18,12 @@ export interface Props {
   hideLimit?: boolean
   hideGroupBy?: boolean
   hideTagFilter?: boolean
+  hideValueFilter?: boolean
   hideAdvancedOptions?: boolean
   templateVariables: Array<SelectableValue<string>>
   getTagKeyOptions?: () => Promise<string[]>
   getTagValueOptions?: (key: string) => Promise<string[]>
-  onChange: (options: MeasurementQueryOptions, tags: QueryTag[]) => void
+  onChange: (options: MeasurementQueryOptions) => void
   onChangeSeriesLimit: (value: number) => void
 }
 
@@ -35,16 +37,13 @@ export const QueryOptions = (props: Props): JSX.Element => {
   ): Array<SelectableValue<string>> => {
     const validAggregations = getAggregationsForDatatypes(datatypes)
     if (options.Aggregation?.Name !== 'last' && !validAggregations.find((e) => options.Aggregation?.Name === e.value)) {
-      props.onChange(
-        {
-          ...props.state,
-          Aggregation: {
-            ...props.state.Aggregation,
-            Name: 'last',
-          },
+      props.onChange({
+        ...props.state,
+        Aggregation: {
+          ...props.state.Aggregation,
+          Name: 'last',
         },
-        props.tags
-      )
+      })
     }
     return validAggregations.concat(props.templateVariables)
   }
@@ -58,7 +57,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
         Period: props.state.Aggregation?.Period || '$__interval',
       } as Aggregation
     }
-    props.onChange({ ...props.state, Aggregation: aggregation }, props.tags)
+    props.onChange({ ...props.state, Aggregation: aggregation })
   }
 
   const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
@@ -66,15 +65,26 @@ export const QueryOptions = (props: Props): JSX.Element => {
     updatedTags.forEach((tag) => {
       tags[tag.key] = tag.value
     })
-    props.onChange({ ...props.state, Tags: tags }, updatedTags)
+    props.onChange({ ...props.state, Tags: tags })
+  }
+
+  const handleFilterByValueChange = (updatedValues: QueryTag[]): void => {
+    const valueFilters: ValueFilter[] = updatedValues.map((value) => {
+      return {
+        Value: value.value,
+        Operator: value.operator,
+        Condition: value.condition,
+      } as ValueFilter
+    })
+    props.onChange({ ...props.state, ValueFilters: valueFilters })
   }
 
   const onGroupByChange = (groups: string[]): void => {
-    props.onChange({ ...props.state, GroupBy: groups }, props.tags)
+    props.onChange({ ...props.state, GroupBy: groups })
   }
 
   const onLimitChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    props.onChange({ ...props.state, Limit: event.target.valueAsNumber }, props.tags)
+    props.onChange({ ...props.state, Limit: event.target.valueAsNumber })
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
@@ -83,7 +93,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
         ...props.state.Aggregation,
         Period: selected.value,
       } as Aggregation
-      props.onChange({ ...props.state, Aggregation: aggregation }, props.tags)
+      props.onChange({ ...props.state, Aggregation: aggregation })
     }
   }
 
@@ -103,31 +113,31 @@ export const QueryOptions = (props: Props): JSX.Element => {
       Fill: selected?.value,
     } as Aggregation
 
-    props.onChange({ ...props.state, Aggregation: aggregation }, props.tags)
+    props.onChange({ ...props.state, Aggregation: aggregation })
   }
 
   const onChangeIncludeLastKnownPoint = (e: any): void => {
-    props.onChange({ ...props.state, IncludeLastKnownPoint: e.target.checked }, props.tags)
+    props.onChange({ ...props.state, IncludeLastKnownPoint: e.target.checked })
   }
 
   const onChangeFillInitialEmptyValues = (e: any): void => {
-    props.onChange({ ...props.state, FillInitialEmptyValues: e.target.checked }, props.tags)
+    props.onChange({ ...props.state, FillInitialEmptyValues: e.target.checked })
   }
 
   const onChangeUseEngineeringSpecs = (e: any): void => {
-    props.onChange({ ...props.state, UseEngineeringSpecs: e.target.checked }, props.tags)
+    props.onChange({ ...props.state, UseEngineeringSpecs: e.target.checked })
   }
 
   const onChangeDisplayDatabaseName = (e: any): void => {
-    props.onChange({ ...props.state, DisplayDatabaseName: e.target.checked }, props.tags)
+    props.onChange({ ...props.state, DisplayDatabaseName: e.target.checked })
   }
 
   const onChangeDisplayDescription = (e: any): void => {
-    props.onChange({ ...props.state, DisplayDescription: e.target.checked }, props.tags)
+    props.onChange({ ...props.state, DisplayDescription: e.target.checked })
   }
 
   const onChangeMetadataAsLabels = (e: any): void => {
-    props.onChange({ ...props.state, MetadataAsLabels: e.target.checked }, props.tags)
+    props.onChange({ ...props.state, MetadataAsLabels: e.target.checked })
   }
 
   const onChangeSeriesLimit = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -194,6 +204,21 @@ export const QueryOptions = (props: Props): JSX.Element => {
               getTagKeyOptions={props.getTagKeyOptions}
               getTagValueOptions={props.getTagValueOptions}
               onChange={handleTagsSectionChange}
+            />
+          </InlineField>
+        </InlineFieldRow>
+      )}
+      {!props.hideValueFilter && (
+        <InlineFieldRow>
+          <InlineField label="Filter values" labelWidth={labelWidth}>
+            <TagsSection
+              tags={props.valueFilters}
+              conditions={['AND', 'OR']}
+              operators={['=', '!=', '>', '>=', '<', '<=']}
+              placeholder="enter a value"
+              getTagKeyOptions={() => Promise.resolve(['value'])}
+              getTagValueOptions={() => Promise.resolve([''])}
+              onChange={handleFilterByValueChange}
             />
           </InlineField>
         </InlineFieldRow>

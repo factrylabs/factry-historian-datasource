@@ -16,6 +16,14 @@ type MeasurementQueryOptions struct {
 	DisplayDatabaseName    bool
 	DisplayDescription     bool
 	MetadataAsLabels       bool
+	ValueFilters           []ValueFilter
+}
+
+// ValueFilter is used to filter the values returned by the historian
+type ValueFilter struct {
+	Value     interface{}
+	Operator  string
+	Condition string
 }
 
 // AssetMeasurementQuery is used to build the time series query to send to the historian

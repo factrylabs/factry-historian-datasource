@@ -3,14 +3,14 @@ import { CascaderOption, InlineField, InlineFieldRow } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { default as Cascader } from 'components/Cascader/Cascader'
 import { AssetProperties } from 'components/util/AssetPropertiesSelect'
-import { QueryTag } from 'components/TagsSection/types'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
-import { getChildAssets, matchedAssets, tagsToQueryTags } from './util'
-import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
+import { getChildAssets, matchedAssets, semverCompare, tagsToQueryTags, valueFiltersToQueryTags } from './util'
+import { Asset, AssetMeasurementQuery, AssetProperty, HistorianInfo, labelWidth, MeasurementQueryOptions } from 'types'
 
 export interface Props {
   query: AssetMeasurementQuery
+  historianInfo: HistorianInfo | undefined
   seriesLimit: number
   datasource: DataSource
   appIsAlertingType: boolean
@@ -68,7 +68,7 @@ export const Assets = (props: Props): JSX.Element => {
     props.onChangeAssetMeasurementQuery(updatedQuery)
   }
 
-  const handleChangeMeasurementQueryOptions = (options: MeasurementQueryOptions, tags: QueryTag[]): void => {
+  const handleChangeMeasurementQueryOptions = (options: MeasurementQueryOptions): void => {
     props.onChangeAssetMeasurementQuery({
       ...props.query,
       Options: options,
@@ -173,8 +173,10 @@ export const Assets = (props: Props): JSX.Element => {
             state={props.query.Options}
             seriesLimit={props.seriesLimit}
             tags={tagsToQueryTags(props.query.Options.Tags)}
+            valueFilters={valueFiltersToQueryTags(props.query.Options.ValueFilters ?? [])}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={[]}
+            hideValueFilter={props.historianInfo && semverCompare(props.historianInfo?.Version, 'v7.1.0') < 0}
             templateVariables={props.templateVariables}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}

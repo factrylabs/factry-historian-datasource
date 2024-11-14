@@ -350,6 +350,7 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 		Start:            start,
 		End:              &end,
 		Tags:             query.Options.Tags,
+		ValueFilters:     query.Options.ValueFilters,
 		GroupBy:          query.Options.GroupBy,
 		Format:           schemas.ArrowFormat,
 	}
