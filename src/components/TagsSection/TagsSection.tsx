@@ -17,24 +17,21 @@ type Props = {
   tags: QueryTag[]
   operators?: KnownOperator[]
   conditions?: KnownCondition[]
+  placeholder?: string
   onChange: (tags: QueryTag[]) => void
   getTagKeyOptions?: () => Promise<string[]>
   getTagValueOptions?: (key: string) => Promise<string[]>
 }
 
-const defaultKeys = () => Promise.resolve([
-  "status"
-])
+const defaultKeys = () => Promise.resolve(['status'])
 
-const defaultValues = () => Promise.resolve([
-  "Good"
-])
-
+const defaultValues = () => Promise.resolve(['Good'])
 
 export const TagsSection = ({
   tags,
   operators,
   conditions,
+  placeholder = 'select tag value',
   onChange,
   getTagKeyOptions = defaultKeys,
   getTagValueOptions = defaultValues,
@@ -78,7 +75,7 @@ export const TagsSection = ({
   const addNewTag = (tagKey: string, isFirst: boolean) => {
     const minimalTag: QueryTag = {
       key: tagKey,
-      value: 'select tag value',
+      value: placeholder,
     }
 
     const newTag: QueryTag = {

@@ -15,6 +15,7 @@ import {
   EventQuery,
   EventType,
   EventTypeProperty,
+  HistorianInfo,
   labelWidth,
   MeasurementQueryOptions,
   PropertyDatatype,
@@ -23,6 +24,7 @@ import {
 
 export interface Props {
   query: EventQuery
+  historianInfo: HistorianInfo | undefined
   seriesLimit: number
   datasource: DataSource
   appIsAlertingType?: boolean
@@ -343,6 +345,7 @@ export const Events = (props: Props): JSX.Element => {
               <EventAssetProperties
                 appIsAlertingType={props.appIsAlertingType ?? false}
                 datasource={props.datasource}
+                historianInfo={props.historianInfo}
                 seriesLimit={props.seriesLimit}
                 queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
                 selectedAssetProperties={props.query.AssetProperties ?? []}

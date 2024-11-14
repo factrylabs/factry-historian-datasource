@@ -4,10 +4,10 @@ import { InlineField, InlineFieldRow } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { DatabaseSelect } from 'components/util/DatabaseSelect'
 import { MeasurementSelect } from 'components/util/MeasurementSelect'
-import { QueryTag } from 'components/TagsSection/types'
 import { QueryOptions } from './QueryOptions'
-import { tagsToQueryTags } from './util'
+import { semverCompare, tagsToQueryTags, valueFiltersToQueryTags } from './util'
 import {
+  HistorianInfo,
   labelWidth,
   Measurement,
   MeasurementFilter,
@@ -18,6 +18,7 @@ import {
 
 export interface Props {
   query: MeasurementQuery
+  historianInfo: HistorianInfo | undefined
   seriesLimit: number
   appIsAlertingType: boolean
   datasource: DataSource
@@ -86,7 +87,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
     })
   }
 
-  const onChangeMeasurementQueryOptions = (options: MeasurementQueryOptions, tags: QueryTag[]): void => {
+  const onChangeMeasurementQueryOptions = (options: MeasurementQueryOptions): void => {
     props.onChangeMeasurementQuery({
       ...props.query,
       Options: options,
@@ -181,9 +182,11 @@ export const Measurements = (props: Props): React.JSX.Element => {
             state={props.query.Options}
             seriesLimit={props.seriesLimit}
             tags={tagsToQueryTags(props.query.Options?.Tags)}
+            valueFilters={valueFiltersToQueryTags(props.query.Options?.ValueFilters ?? [])}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={datatypes}
             templateVariables={props.templateVariables}
+            hideValueFilter={props.historianInfo && semverCompare(props.historianInfo?.Version, 'v7.1.0') < 0}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
             onChange={onChangeMeasurementQueryOptions}

@@ -237,6 +237,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Assets
             query={this.props.query.query as AssetMeasurementQuery}
+            historianInfo={this.historianInfo}
             seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
             appIsAlertingType={this.appIsAlertingType}
@@ -251,6 +252,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Measurements
             query={this.props.query.query as MeasurementQuery}
+            historianInfo={this.historianInfo}
             seriesLimit={this.props.query.seriesLimit}
             appIsAlertingType={this.appIsAlertingType}
             datasource={this.props.datasource}
@@ -267,6 +269,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             query={this.props.query.query as EventQuery}
             seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
+            historianInfo={this.historianInfo}
             appIsAlertingType={this.appIsAlertingType}
             onChangeEventQuery={this.onChangeEventQuery}
             onChangeSeriesLimit={this.onChangeSeriesLimit}

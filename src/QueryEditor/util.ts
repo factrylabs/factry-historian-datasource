@@ -12,6 +12,7 @@ import {
   Measurement,
   MeasurementQuery,
   MeasurementQueryOptions,
+  ValueFilter,
 } from 'types'
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
@@ -201,6 +202,21 @@ export function tagsToQueryTags(tags: Attributes | undefined): QueryTag[] {
   return queryTags
 }
 
+export function valueFiltersToQueryTags(valueFilters: ValueFilter[]): QueryTag[] {
+  let queryTags: QueryTag[] = []
+
+  valueFilters.forEach((f) => {
+    queryTags.push({
+      key: 'value',
+      value: f.Value.toString(),
+      condition: f.Condition,
+      operator: f.Operator,
+    })
+  })
+
+  return queryTags
+}
+
 export function propertyFilterToQueryTags(filter: EventPropertyFilter[]): QueryTag[] {
   let queryTags: QueryTag[] = []
 
@@ -281,6 +297,7 @@ export function defaultQueryOptions(appIsAlertingType: boolean): MeasurementQuer
     DisplayDatabaseName: false,
     DisplayDescription: false,
     MetadataAsLabels: true,
+    ValueFilters: [],
   }
 }
 
@@ -310,4 +327,42 @@ export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQue
   }
 
   return measurementQuery
+}
+
+// semverCompare compares two semver strings and returns greater than 0 if a > b, 0 if a == b, and less than 0 if a < b
+export function semverCompare(a: string, b: string): number {
+  // remove leading v
+  if (a.startsWith('v')) {
+    a = a.substring(1)
+  }
+  if (b.startsWith('v')) {
+    b = b.substring(1)
+  }
+  const aParts = a.split('.')
+  const bParts = b.split('.')
+
+  for (let i = 0; i < aParts.length; i++) {
+    if (i >= bParts.length) {
+      return 1
+    }
+
+    const aPart = parseInt(aParts[i], 10)
+    const bPart = parseInt(bParts[i], 10)
+
+    if (aPart < bPart) {
+      return -1
+    }
+
+    if (aPart > bPart) {
+      return 1
+    }
+  }
+
+  if (aParts.length < bParts.length) {
+    return -1
+  } else if (aParts.length > bParts.length) {
+    return 1
+  }
+
+  return 0
 }

@@ -95,6 +95,13 @@ export interface MeasurementQueryOptions {
   DisplayDescription: boolean
   MetadataAsLabels: boolean
   Limit?: number
+  ValueFilters?: ValueFilter[]
+}
+
+export interface ValueFilter {
+  Value: string | number | boolean
+  Operator: '=' | '!=' | '>' | '<' | '>=' | '<='
+  Condition: 'AND' | 'OR' | ''
 }
 
 export interface MeasurementQuery {
