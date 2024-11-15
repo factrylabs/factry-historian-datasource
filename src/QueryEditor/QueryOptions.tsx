@@ -36,7 +36,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
     options: MeasurementQueryOptions
   ): Array<SelectableValue<string>> => {
     const validAggregations = getAggregationsForDatatypes(datatypes)
-    if (options.Aggregation?.Name !== 'last' && !validAggregations.find((e) => options.Aggregation?.Name === e.value)) {
+    if (
+      options.Aggregation?.Name !== undefined &&
+      options.Aggregation?.Name !== 'last' &&
+      !validAggregations.find((e) => options.Aggregation?.Name === e.value)
+    ) {
       props.onChange({
         ...props.state,
         Aggregation: {
