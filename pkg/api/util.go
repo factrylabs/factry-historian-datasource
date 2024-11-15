@@ -14,17 +14,22 @@ import (
 // GetFilteredAssets returns a map of assets that match the given asset strings
 func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
 	assetUUIDSet := map[uuid.UUID]schemas.Asset{}
-
 	if util.CheckMinimumVersion(historianInfo, "6.4.0") {
 		for _, assetString := range assetStrings {
+			searchKey := "Path"
+			if _, err := uuid.Parse(assetString); err == nil {
+				searchKey = "Keyword"
+			}
 			assetQuery := url.Values{}
-			assetQuery.Add("Keyword", assetString)
+			assetQuery.Add(searchKey, assetString)
 			assets, err := api.GetAssets(ctx, assetQuery.Encode())
 			if err != nil {
 				return nil, err
 			}
 
-			assetUUIDSet = util.ByUUID(assets)
+			for _, asset := range assets {
+				assetUUIDSet[asset.UUID] = asset
+			}
 		}
 	} else {
 		// Deprecated
@@ -35,7 +40,9 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 
 		for _, assetString := range assetStrings {
 			if filteredAssets := filterAssetUUIDs(assets, assetString); len(filteredAssets) > 0 {
-				assetUUIDSet = util.ByUUID(filteredAssets)
+				for _, asset := range filteredAssets {
+					assetUUIDSet[asset.UUID] = asset
+				}
 			}
 		}
 	}
@@ -56,7 +63,9 @@ func (api *API) GetFilteredEventTypes(ctx context.Context, eventTypeStrings []st
 				return nil, err
 			}
 
-			eventTypeUUIDSet = util.ByUUID(eventTypes)
+			for _, eventType := range eventTypes {
+				eventTypeUUIDSet[eventType.UUID] = eventType
+			}
 		}
 	} else {
 		// Deprecated
@@ -67,7 +76,9 @@ func (api *API) GetFilteredEventTypes(ctx context.Context, eventTypeStrings []st
 
 		for _, eventTypeString := range eventTypeStrings {
 			if filteredEventTypes := filterEventTypeUUIDs(eventTypes, eventTypeString); len(filteredEventTypes) > 0 {
-				eventTypeUUIDSet = util.ByUUID(filteredEventTypes)
+				for _, eventType := range filteredEventTypes {
+					eventTypeUUIDSet[eventType.UUID] = eventType
+				}
 			}
 		}
 	}
