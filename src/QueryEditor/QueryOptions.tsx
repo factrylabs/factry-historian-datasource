@@ -92,13 +92,13 @@ export const QueryOptions = (props: Props): JSX.Element => {
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
-    if (selected.value) {
-      const aggregation = {
-        ...props.state.Aggregation,
-        Period: selected.value,
-      } as Aggregation
-      props.onChange({ ...props.state, Aggregation: aggregation })
+    let aggregation = { ...props.state.Aggregation } as Aggregation
+    if (selected?.value) {
+      aggregation.Period = selected.value
+    } else {
+      delete aggregation.Period
     }
+    props.onChange({ ...props.state, Aggregation: aggregation })
   }
 
   const onCreatePeriod = (value: string): void => {
@@ -172,6 +172,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
               allowCustomValue
               onChange={onPeriodChange}
               onCreateOption={onCreatePeriod}
+              isClearable
             />
           </InlineField>
         )}

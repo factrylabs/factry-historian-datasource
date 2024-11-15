@@ -357,9 +357,6 @@ func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQue
 
 	if query.Options.Aggregation != nil {
 		historianQuery.Aggregation = query.Options.Aggregation
-		if query.Options.Aggregation.Period == "" || query.Options.Aggregation.Period == "$__interval" {
-			historianQuery.Aggregation.Period = backendQuery.Interval.String()
-		}
 	}
 
 	if query.Options.Limit != nil {
