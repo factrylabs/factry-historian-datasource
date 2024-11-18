@@ -1,10 +1,20 @@
 # Changelog
 
-## v2.0.5
+## v2.1.0
 
-### Bug
+### Bug Fixes
 
-- Only a single result was returned when multiple assets were queried in the asset property query.
+- Resolved issue where only one result was returned when multiple assets were queried in the asset property query.
+- Corrected results for asset property queries using a regular expression.
+- Ensured re-rendering after mount completion in the query editor.
+- Fixed saving of Grafana variables in annotation queries.
+- Addressed issue where aggregation reset to 'last' instead of clearing.
+
+### Changes
+
+- Enabled aggregation over the entire time period of a dashboard.
+- Added variable query for distinct event property values (requires historian > v7.2.0).
+- Introduced support for value filters in time series queries (requires historian > v7.1.0).
 
 ## v2.0.4
 
