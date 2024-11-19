@@ -118,7 +118,7 @@ export const Tag = ({
       />
       <Seg
         allowCustomValue
-        value={tag.value}
+        value={(tag.value === '' ? 'select tag value' : tag.value)}
         loadOptions={getTagValueSegmentOptions}
         onChange={(v) => {
           const value = v.value ?? ''

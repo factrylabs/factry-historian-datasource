@@ -118,32 +118,30 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
                 (e) => e.Value !== 'enter a value'
               )
             }
-            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.filter((e) => e.Value !== 'select tag value').map(
-              (e) => {
-                e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
-                if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
-                  const replacedValue = this.multiSelectReplace(String(e.Value), request.scopedVars)
-                  if (replacedValue.length === 0) {
-                    return e
-                  }
-                  e.Value = replacedValue
-                } else {
-                  switch (e.Datatype) {
-                    case PropertyDatatype.Number:
-                      e.Value = parseFloat(this.templateSrv.replace(String(e.Value), request.scopedVars))
-                      break
-                    case PropertyDatatype.Bool:
-                      e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars) === 'true'
-                      break
-                    case PropertyDatatype.String:
-                      e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars)
-                      break
-                  }
+            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.map((e) => {
+              e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
+              if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+                const replacedValue = this.multiSelectReplace(String(e.Value), request.scopedVars)
+                if (replacedValue.length === 0) {
+                  return e
                 }
-
-                return e
+                e.Value = replacedValue
+              } else {
+                switch (e.Datatype) {
+                  case PropertyDatatype.Number:
+                    e.Value = parseFloat(this.templateSrv.replace(String(e.Value), request.scopedVars))
+                    break
+                  case PropertyDatatype.Bool:
+                    e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars) === 'true'
+                    break
+                  case PropertyDatatype.String:
+                    e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars)
+                    break
+                }
               }
-            )
+
+              return e
+            })
             target.query = eventQuery
             break
           }

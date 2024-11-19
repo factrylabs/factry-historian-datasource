@@ -31,7 +31,7 @@ export const TagsSection = ({
   tags,
   operators,
   conditions,
-  placeholder = 'select tag value',
+  placeholder = '',
   onChange,
   getTagKeyOptions = defaultKeys,
   getTagValueOptions = defaultValues,

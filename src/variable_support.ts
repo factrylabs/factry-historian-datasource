@@ -196,32 +196,30 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           )
         }
         if ((filter.EventFilter?.PropertyFilter.length ?? 0) > 0) {
-          filter.EventFilter!.PropertyFilter = filter
-            .EventFilter!.PropertyFilter?.filter((e) => e.Value !== 'select tag value')
-            .map((e) => {
-              e.Property = this.dataAPI.replace(e.Property, request.scopedVars)
-              if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
-                const replacedValue = this.dataAPI.multiSelectReplace(String(e.Value), request.scopedVars)
-                if (replacedValue.length === 0) {
-                  return e
-                }
-                e.Value = replacedValue
-              } else {
-                switch (e.Datatype) {
-                  case PropertyDatatype.Number:
-                    e.Value = parseFloat(this.dataAPI.replace(String(e.Value), request.scopedVars))
-                    break
-                  case PropertyDatatype.Bool:
-                    e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars) === 'true'
-                    break
-                  case PropertyDatatype.String:
-                    e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars)
-                    break
-                }
+          filter.EventFilter!.PropertyFilter = filter.EventFilter!.PropertyFilter?.map((e) => {
+            e.Property = this.dataAPI.replace(e.Property, request.scopedVars)
+            if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+              const replacedValue = this.dataAPI.multiSelectReplace(String(e.Value), request.scopedVars)
+              if (replacedValue.length === 0) {
+                return e
               }
+              e.Value = replacedValue
+            } else {
+              switch (e.Datatype) {
+                case PropertyDatatype.Number:
+                  e.Value = parseFloat(this.dataAPI.replace(String(e.Value), request.scopedVars))
+                  break
+                case PropertyDatatype.Bool:
+                  e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars) === 'true'
+                  break
+                case PropertyDatatype.String:
+                  e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars)
+                  break
+              }
+            }
 
-              return e
-            })
+            return e
+          })
         }
 
         if (!filter.EventTypePropertyUUID) {
@@ -244,6 +242,5 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
     }
-    return of({ data: [] })
   }
 }
