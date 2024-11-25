@@ -327,11 +327,23 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   async getDistinctEventPropertyValues(filter: EventTypePropertiesValuesFilter): Promise<string[]> {
-    return this.getResource(`event-property-values/${filter.EventTypePropertyUUID}`, {
+    let params: Record<string, unknown> = {
       ...filter.EventFilter,
       ...filter.HistorianInfo,
       From: filter.From,
       To: filter.To,
-    })
+    }
+
+    delete params.PropertyFilter
+    if (filter.EventFilter.PropertyFilter) {
+      for (let i = 0; i < filter.EventFilter.PropertyFilter.length; i++) {
+        params['PropertyFilter[' + i + '].Condition'] = filter.EventFilter.PropertyFilter[i].Condition
+        params['PropertyFilter[' + i + '].Datatype'] = filter.EventFilter.PropertyFilter[i].Datatype
+        params['PropertyFilter[' + i + '].Operator'] = filter.EventFilter.PropertyFilter[i].Operator
+        params['PropertyFilter[' + i + '].Property'] = filter.EventFilter.PropertyFilter[i].Property
+        params['PropertyFilter[' + i + '].Value'] = filter.EventFilter.PropertyFilter[i].Value
+      }
+    }
+    return this.getResource(`event-property-values/${filter.EventTypePropertyUUID}`, params)
   }
 }
