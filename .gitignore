@@ -35,3 +35,4 @@ node-modules/
 factry-historian-datasource/
 *.zip
 *.sha1
+.eslintcache

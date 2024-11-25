@@ -1,4 +1,4 @@
-import React, { ChangeEvent } from 'react'
+import React, { ChangeEvent, useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import {
   AsyncMultiSelect,
@@ -8,11 +8,13 @@ import {
   InlineField,
   InlineFieldRow,
   Input,
+  Tooltip,
   VerticalGroup,
 } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { measurementToSelectableValue, useDebounce } from 'QueryEditor/util'
 import { Measurement, MeasurementFilter, MeasurementQuery, TimeseriesDatabase, labelWidth } from 'types'
+import { isRegex, isValidRegex } from 'util/util'
 
 export interface Props {
   query: MeasurementQuery
@@ -28,6 +30,7 @@ export interface Props {
 
 export const MeasurementSelect = (props: Props): React.JSX.Element => {
   const [regex, setRegex] = useDebounce<string>(props.query.Regex ?? '', 500, props.onChangeRegex)
+  const [regexError, setRegexError] = useState<string | undefined>()
 
   const getSelectedMeasurements = (
     query: MeasurementQuery,
@@ -84,6 +87,17 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
 
   const onChangeRegex = (event: ChangeEvent<HTMLInputElement>) => {
     const regex = event.target.value
+    const keyword = '/' + regex + '/'
+    if (isRegex(keyword)) {
+      if (isValidRegex(keyword)) {
+        setRegexError(undefined)
+      } else {
+        setRegexError('Invalid regex')
+      }
+    } else {
+      setRegexError(undefined)
+    }
+
     setRegex(regex)
   }
 
@@ -124,7 +138,16 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
                 </HorizontalGroup>
               </>
             ) : (
-              <Input value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex} />
+              // Can't use MaybeRegexInput here because of the IsRegex toggle
+              <Tooltip
+                content={() => <>{regexError}</>}
+                theme="error"
+                placement="right"
+                show={regexError !== undefined}
+                interactive={false}
+              >
+                <Input value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex} />
+              </Tooltip>
             )}
             <Checkbox label="Use regular expression" value={props.query.IsRegex} onChange={onChangeIsRegex} />
           </VerticalGroup>
