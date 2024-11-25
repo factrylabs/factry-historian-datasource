@@ -31,6 +31,7 @@ import {
   TimeseriesDatabase,
   TimeseriesDatabaseFilter,
 } from './types'
+import { isRegex, isValidRegex } from 'util/util'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   defaultTab: TabIndex
@@ -211,8 +212,13 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {
+    const f = this.templateReplaceMeasurementFilter(filter)
+    if (f.Keyword && isRegex(f.Keyword) && !isValidRegex(f.Keyword)) {
+      return Promise.resolve([])
+    }
+
     const params: Record<string, unknown> = {
-      ...this.templateReplaceMeasurementFilter(filter),
+      ...f,
     }
     if (pagination.Limit) {
       params['limit'] = pagination.Limit
@@ -230,8 +236,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   async getTimeseriesDatabases(filter?: TimeseriesDatabaseFilter): Promise<TimeseriesDatabase[]> {
     let params: Record<string, unknown> = {}
     if (filter) {
-      params = {
-        ...filter,
+      if (filter.Keyword && isRegex(filter.Keyword) && !isValidRegex(filter.Keyword)) {
+        return []
       }
     }
     return this.getResource('databases', params)
@@ -255,6 +261,13 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       if (filter.Keyword) {
         params.Keyword = this.templateSrv.replace(filter.Keyword, filter.ScopedVars)
       }
+
+      if (filter.Keyword && isRegex(filter.Keyword) && !isValidRegex(filter.Keyword)) {
+        return []
+      }
+      if (filter.Path && isRegex(filter.Path) && !isValidRegex(filter.Path)) {
+        return []
+      }
     }
     return this.getResource('assets', params)
   }
@@ -275,6 +288,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   async getEventTypes(filter?: EventTypeFilter): Promise<EventType[]> {
     let params: Record<string, unknown> = {}
     if (filter) {
+      if (filter.Keyword && isRegex(filter.Keyword) && !isValidRegex(filter.Keyword)) {
+        return []
+      }
+
       params = {
         ...filter,
       }
@@ -309,8 +326,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   async getTagKeysForMeasurements(filter: MeasurementFilter): Promise<string[]> {
+    const f = this.templateReplaceMeasurementFilter(filter)
+    if (f.Keyword && isRegex(f.Keyword) && !isValidRegex(f.Keyword)) {
+      return Promise.resolve([])
+    }
     const params: Record<string, unknown> = {
-      ...this.templateReplaceMeasurementFilter(filter),
+      ...f,
     }
     return this.getResource(`tag-keys`, params)
   }
@@ -320,8 +341,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   async getTagValuesForMeasurements(filter: MeasurementFilter, key: string): Promise<string[]> {
+    const f = this.templateReplaceMeasurementFilter(filter)
+    if (f.Keyword && isRegex(f.Keyword) && !isValidRegex(f.Keyword)) {
+      return Promise.resolve([])
+    }
     const params: Record<string, unknown> = {
-      ...this.templateReplaceMeasurementFilter(filter),
+      ...f,
     }
     return this.getResource(`tag-values/${key}`, params)
   }

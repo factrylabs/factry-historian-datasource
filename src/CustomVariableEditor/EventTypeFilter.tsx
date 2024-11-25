@@ -1,19 +1,23 @@
-import React, { ChangeEvent, FormEvent } from 'react'
+import React from 'react'
 
-import { InlineField, InlineFieldRow, Input } from '@grafana/ui'
+import { InlineField, InlineFieldRow } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { EventTypeFilter } from 'types'
+import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 
 export function EventTypeFilterRow(props: {
   datasource: DataSource
-  onChange: (val: EventTypeFilter) => void
+  onChange: (val: EventTypeFilter, valid: boolean) => void
   initialValue?: EventTypeFilter
 }) {
-  const onKeywordChange = (event: FormEvent<HTMLInputElement>) => {
-    props.onChange({
-      ...props.initialValue,
-      Keyword: (event as ChangeEvent<HTMLInputElement>).target.value,
-    })
+  const onKeywordChange = (value: string, valid: boolean) => {
+    props.onChange(
+      {
+        ...props.initialValue,
+        Keyword: value,
+      },
+      valid
+    )
   }
   return (
     <>
@@ -24,7 +28,7 @@ export function EventTypeFilterRow(props: {
           labelWidth={20}
           tooltip={<div>Searches database by name, to use a regex surround pattern with /</div>}
         >
-          <Input value={props.initialValue?.Keyword} onChange={onKeywordChange} />
+          <MaybeRegexInput onChange={onKeywordChange} initialValue={props.initialValue?.Keyword} />
         </InlineField>
       </InlineFieldRow>
     </>

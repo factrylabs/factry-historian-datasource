@@ -79,6 +79,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  valid: false,
                   filter: {},
                 })
               }
@@ -86,6 +87,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  valid: false,
                   filter: {},
                 })
               }
@@ -93,6 +95,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  valid: false,
                   filter: {},
                 })
               }
@@ -100,6 +103,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  valid: false,
                   filter: {},
                 })
               }
@@ -144,9 +148,9 @@ export function VariableQueryEditor(
           datasource={props.datasource}
           initialValue={props.query.filter}
           templateVariables={templateVariables}
-          onChange={(val) => {
+          onChange={(val, valid) => {
             if (props.query.type === VariableQueryType.MeasurementQuery) {
-              props.onChange({ ...props.query, filter: val })
+              props.onChange({ ...props.query, filter: val, valid: valid })
             }
           }}
         />
@@ -156,9 +160,9 @@ export function VariableQueryEditor(
           datasource={props.datasource}
           initialValue={props.query.filter}
           templateVariables={templateVariables}
-          onChange={(val) => {
+          onChange={(val, valid) => {
             if (props.query.type === VariableQueryType.AssetQuery) {
-              props.onChange({ ...props.query, filter: val })
+              props.onChange({ ...props.query, filter: val, valid: valid })
             }
           }}
         />
@@ -179,9 +183,9 @@ export function VariableQueryEditor(
         <DatabaseFilterRow
           datasource={props.datasource}
           initialValue={props.query.filter}
-          onChange={(val) => {
+          onChange={(val, valid) => {
             if (props.query.type === VariableQueryType.DatabaseQuery) {
-              props.onChange({ ...props.query, filter: val })
+              props.onChange({ ...props.query, filter: val, valid: valid })
             }
           }}
         />
@@ -190,9 +194,9 @@ export function VariableQueryEditor(
         <EventTypeFilterRow
           datasource={props.datasource}
           initialValue={props.query.filter}
-          onChange={(val) => {
+          onChange={(val, valid) => {
             if (props.query.type === VariableQueryType.EventTypeQuery) {
-              props.onChange({ ...props.query, filter: val })
+              props.onChange({ ...props.query, filter: val, valid: valid })
             }
           }}
         />

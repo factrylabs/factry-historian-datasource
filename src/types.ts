@@ -292,6 +292,7 @@ export type MeasurementVariableQuery = {
   refId: string
   type: VariableQueryType.MeasurementQuery
   filter?: MeasurementFilter
+  valid: boolean
   pagination?: Pagination
 }
 
@@ -299,18 +300,21 @@ export type AssetVariableQuery = {
   refId: string
   type: VariableQueryType.AssetQuery
   filter?: AssetFilter
+  valid: boolean
 }
 
 export type EventTypeVariableQuery = {
   refId: string
   type: VariableQueryType.EventTypeQuery
   filter?: EventTypeFilter
+  valid: boolean
 }
 
 export type DatabaseVariableQuery = {
   refId: string
   type: VariableQueryType.DatabaseQuery
   filter?: TimeseriesDatabaseFilter
+  valid: boolean
 }
 
 export type EventTypePropertyVariableQuery = {

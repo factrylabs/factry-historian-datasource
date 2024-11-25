@@ -1,14 +1,15 @@
-import React, { ChangeEvent, FormEvent, useState } from 'react'
+import React, { useState } from 'react'
 
 import { SelectableValue } from '@grafana/data'
-import { InlineField, InlineFieldRow, Input } from '@grafana/ui'
+import { InlineField, InlineFieldRow } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { DatabaseSelect } from 'components/util/DatabaseSelect'
 import { MeasurementFilter } from 'types'
+import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 
 export interface MeasurementFilterProps {
   datasource: DataSource
-  onChange: (val: MeasurementFilter) => void
+  onChange: (val: MeasurementFilter, filterValid: boolean) => void
   initialValue?: MeasurementFilter
   templateVariables: Array<SelectableValue<string>>
 }
@@ -16,18 +17,24 @@ export interface MeasurementFilterProps {
 export function MeasurementFilterRow(props: MeasurementFilterProps) {
   const [selectedDatabases, setSelectedDatabases] = useState<Array<SelectableValue<string>>>()
 
-  const onKeywordChange = (event: FormEvent<HTMLInputElement>) => {
-    props.onChange({
-      ...props.initialValue,
-      Keyword: (event as ChangeEvent<HTMLInputElement>).target.value,
-    })
+  const onKeywordChange = (keyword: string, valid: boolean) => {
+    props.onChange(
+      {
+        ...props.initialValue,
+        Keyword: keyword,
+      },
+      valid
+    )
   }
 
   const onDatabaseChange = (values: string[]) => {
-    props.onChange({
-      ...props.initialValue,
-      DatabaseUUIDs: values,
-    })
+    props.onChange(
+      {
+        ...props.initialValue,
+        DatabaseUUIDs: values,
+      },
+      true
+    )
   }
 
   return (
@@ -37,9 +44,12 @@ export function MeasurementFilterRow(props: MeasurementFilterProps) {
           label={'Filter measurement'}
           aria-label={'Filter measurement'}
           labelWidth={20}
-          tooltip={<div>Searches measurement by name</div>}
+          tooltip={<div>Searches measurement by name, to use a regex surround pattern with /</div>}
         >
-          <Input value={props.initialValue?.Keyword} onChange={(e) => onKeywordChange(e)} />
+          <MaybeRegexInput
+            onChange={(value, ok) => onKeywordChange(value, ok)}
+            initialValue={props.initialValue?.Keyword}
+          />
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>

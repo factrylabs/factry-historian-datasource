@@ -51,13 +51,21 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
 
   query(request: DataQueryRequest<VariableQuery>): Observable<DataQueryResponse> {
     const queryType = request.targets[0].type
+
+    // If the query is not valid, return an empty array
+    if ('valid' in request.targets[0] && !request.targets[0].valid) {
+      return of({ data: [] })
+    }
+
     switch (queryType) {
       case VariableQueryType.MeasurementQuery: {
         const filter = {
           ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as MeasurementFilter | undefined),
           ScopedVars: request.scopedVars,
         }
-        if (!filter) {
+
+        // Don't allow empty filter to not query too much data
+        if (!filter || !filter.Keyword) {
           return of({ data: [] })
         }
 
@@ -95,6 +103,11 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as AssetFilter | undefined),
           ScopedVars: request.scopedVars,
         }
+
+        // Don't allow empty filter to not query too much data
+        if (!filter || (!filter.Keyword && !filter.Path)) {
+          return of({ data: [] })
+        }
         const useAssetPath = filter.UseAssetPath ?? false
         return from(this.dataAPI.getAssets(filter)).pipe(
           map((values) => {
@@ -112,7 +125,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypeFilter | undefined),
           ScopedVars: request.scopedVars,
         }
-
+        if (!filter) {
+          return of({ data: [] })
+        }
         return from(this.dataAPI.getEventTypes(filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
@@ -124,7 +139,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as TimeseriesDatabaseFilter | undefined),
           ScopedVars: request.scopedVars,
         }
-
+        if (!filter) {
+          return of({ data: [] })
+        }
         return from(this.dataAPI.getTimeseriesDatabases(filter)).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v.Name, value: v.UUID })) }
@@ -136,7 +153,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypePropertiesFilter | undefined),
           ScopedVars: request.scopedVars,
         }
-
+        if (!filter) {
+          return of({ data: [] })
+        }
         return forkJoin({
           eventTypes: this.dataAPI.getEventTypes(),
           eventTypeProperties: this.dataAPI.getEventTypeProperties(filter),
@@ -160,6 +179,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as AssetPropertyFilter | undefined),
           ScopedVars: request.scopedVars,
         }
+        if (!filter) {
+          return of({ data: [] })
+        }
         if (filter.AssetUUIDs) {
           filter.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.dataAPI.multiSelectReplace(e, request.scopedVars))
         }
@@ -174,6 +196,10 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypePropertiesValuesFilter | undefined),
           ScopedVars: request.scopedVars,
         }
+        if (!filter) {
+          return of({ data: [] })
+        }
+
         if (filter.EventTypePropertyUUID) {
           filter.EventTypePropertyUUID = this.dataAPI.multiSelectReplace(
             filter.EventTypePropertyUUID,

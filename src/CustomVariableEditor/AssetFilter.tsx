@@ -1,30 +1,39 @@
-import React, { ChangeEvent, FormEvent, useState } from 'react'
+import React, { ChangeEvent, useState } from 'react'
 
-import { AsyncMultiSelect, InlineField, InlineFieldRow, InlineSwitch, Input } from '@grafana/ui'
+import { AsyncMultiSelect, InlineField, InlineFieldRow, InlineSwitch } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { AssetFilter } from 'types'
 import { SelectableValue } from '@grafana/data'
+import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 
 export function AssetFilterRow(props: {
   datasource: DataSource
-  onChange: (val: AssetFilter) => void
+  onChange: (val: AssetFilter, valid: boolean) => void
   initialValue?: AssetFilter
   templateVariables: Array<SelectableValue<string>>
 }) {
   const [parentAssets, setParentAssets] = useState<Array<SelectableValue<string>>>()
+  const [pathValid, setPathValid] = useState<boolean>(false)
 
-  const onPathChange = (event: FormEvent<HTMLInputElement>) => {
-    props.onChange({
-      ...props.initialValue,
-      Path: (event as ChangeEvent<HTMLInputElement>).target.value,
-    })
+  const onPathChange = (value: string, valid: boolean) => {
+    setPathValid(valid)
+    props.onChange(
+      {
+        ...props.initialValue,
+        Path: value,
+      },
+      valid
+    )
   }
 
   const onUseAssetPathChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    props.onChange({
-      ...props.initialValue,
-      UseAssetPath: event.target.checked,
-    })
+    props.onChange(
+      {
+        ...props.initialValue,
+        UseAssetPath: event.target.checked,
+      },
+      pathValid
+    )
   }
 
   const loadAssetOptions = async (query: string): Promise<Array<SelectableValue<string>>> => {
@@ -43,14 +52,19 @@ export function AssetFilterRow(props: {
     if (!parentAssets) {
       setParentAssets(selectableValues.filter((e) => props.initialValue?.ParentUUIDs?.includes(e.value ?? '')))
     }
-    return [{ label: 'No parent', value: '00000000-0000-0000-0000-000000000000' } as SelectableValue<string>].concat(selectableValues)
+    return [{ label: 'No parent', value: '00000000-0000-0000-0000-000000000000' } as SelectableValue<string>].concat(
+      selectableValues
+    )
   }
 
   const onParentAssetsChange = (values: Array<SelectableValue<string>>) => {
-    props.onChange({
-      ...props.initialValue,
-      ParentUUIDs: values.map((e) => e.value ?? ''),
-    })
+    props.onChange(
+      {
+        ...props.initialValue,
+        ParentUUIDs: values.map((e) => e.value ?? ''),
+      },
+      pathValid
+    )
     setParentAssets(values)
   }
 
@@ -63,7 +77,7 @@ export function AssetFilterRow(props: {
           labelWidth={20}
           tooltip={<div>Searches asset by path, to use a regex surround pattern with /</div>}
         >
-          <Input value={props.initialValue?.Path} onChange={onPathChange} />
+          <MaybeRegexInput onChange={onPathChange} initialValue={props.initialValue?.Path} />
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
