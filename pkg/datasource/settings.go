@@ -13,9 +13,9 @@ type Settings struct {
 	URL                string `json:"url,omitempty"`
 	Token              string `json:"-,omitempty"`
 	Organization       string `json:"organization,omitempty"`
-	InsecureSkipVerify bool   `json:"tlsSkipVerify,omitempty"`
 	Timeout            string `json:"timeout,omitempty"`
 	QueryTimeout       string `json:"queryTimeout,omitempty"`
+	InsecureSkipVerify bool   `json:"tlsSkipVerify,omitempty"`
 }
 
 func (settings *Settings) isValid() (err error) {

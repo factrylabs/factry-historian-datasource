@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/go-playground/form"
-	"golang.org/x/exp/maps"
 )
 
 // GetMeasurements calls get measurements in the historian API
@@ -218,8 +219,8 @@ func (api *API) GetDistinctEventPropertyValues(ctx context.Context, eventTypePro
 	}
 
 	filter := schemas.EventFilter{
-		AssetUUIDs:     maps.Keys(assets),
-		EventTypeUUIDs: maps.Keys(eventTypes),
+		AssetUUIDs:     slices.Collect(maps.Keys(assets)),
+		EventTypeUUIDs: slices.Collect(maps.Keys(eventTypes)),
 		Limit:          0,
 		Status:         request.Statuses,
 		StartTime:      request.From,

@@ -2,7 +2,8 @@ package datasource
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 	"time"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"golang.org/x/exp/maps"
 )
 
 // Constants for the event frames
@@ -46,8 +46,8 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 		}
 	}
 
-	for _, event := range events {
-		groupedEvents[event.EventTypeUUID] = append(groupedEvents[event.EventTypeUUID], event)
+	for i := range events {
+		groupedEvents[events[i].EventTypeUUID] = append(groupedEvents[events[i].EventTypeUUID], events[i])
 	}
 
 	for eventTypeUUID, groupedEvents := range groupedEvents {
@@ -215,8 +215,7 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 		Unit: "dtdhms",
 	}
 
-	offsets := maps.Keys(periodicPropertyData)
-	sort.Float64s(offsets)
+	offsets := slices.Sorted(maps.Keys(periodicPropertyData))
 
 	for _, offset := range offsets {
 		fields[0].Append(offset)
@@ -228,7 +227,6 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 		for _, offset := range offsets {
 			addValueToField(columns[i].Field, periodicPropertyData[offset][columns[i]])
 		}
-
 	}
 
 	return data.Frames{
@@ -237,9 +235,9 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 }
 
 func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, events []schemas.Event, eventTypeProperties []schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
-	UUIDToAssetMap := make(map[uuid.UUID]schemas.Asset)
+	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
-		UUIDToAssetMap[asset.UUID] = asset
+		uuidToAssetMap[asset.UUID] = asset
 	}
 
 	fieldByColumn := map[string]*data.Field{}
@@ -313,8 +311,8 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 		fieldByColumn[ParentEventUUIDColumnName].Append(parentUUID)
 		fieldByColumn[AssetUUIDColumnName].Append(events[i].AssetUUID.String())
 		fieldByColumn[EventTypeUUIDColumnName].Append(events[i].EventTypeUUID.String())
-		fieldByColumn[AssetColumnName].Append(UUIDToAssetMap[events[i].AssetUUID].Name)
-		fieldByColumn[AssetPathColumnName].Append(getAssetPath(UUIDToAssetMap, events[i].AssetUUID))
+		fieldByColumn[AssetColumnName].Append(uuidToAssetMap[events[i].AssetUUID].Name)
+		fieldByColumn[AssetPathColumnName].Append(getAssetPath(uuidToAssetMap, events[i].AssetUUID))
 		fieldByColumn[EventTypeColumnName].Append(eventType.Name)
 		fieldByColumn[StartTimeColumnName].Append(&events[i].StartTime)
 		fieldByColumn[StopTimeColumnName].Append(events[i].StopTime)

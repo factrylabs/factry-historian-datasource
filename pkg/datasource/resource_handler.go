@@ -29,8 +29,8 @@ const (
 
 // HistorianResourceQuery is a struct for a resource query
 type HistorianResourceQuery struct {
-	Type        string      `json:"type"`
 	QueryParams interface{} `json:",omitempty"`
+	Type        string      `json:"type"`
 }
 
 // GetResourceQuery unmarshals a resource query

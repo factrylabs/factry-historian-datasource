@@ -1,8 +1,6 @@
 package util
 
-import (
-	"golang.org/x/exp/slices"
-)
+import "slices"
 
 // PeriodicPropertyValues is a map of offsets and values
 type PeriodicPropertyValues struct {

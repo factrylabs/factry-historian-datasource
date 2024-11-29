@@ -2,22 +2,25 @@ package datasource
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"maps"
+	"slices"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"golang.org/x/exp/maps"
 )
+
+var errMissingPathParameter = errors.New("missing path parameter")
 
 func handleGetTagKeys(ctx context.Context, api *api.API, path []string, rawQuery string) ([]string, error) {
 	if len(path) < 1 {
-		return nil, fmt.Errorf("missing path parameter")
+		return nil, errMissingPathParameter
 	}
 
 	// if the path contains a measurement uuid fetch keys by measurement uuid
 	if len(path) == 2 {
 		measurement := path[1]
-		frames, err := api.GetTagKeys(measurement)
+		frames, err := api.GetTagKeys(ctx, measurement)
 		if err != nil {
 			return nil, err
 		}
@@ -32,8 +35,8 @@ func handleGetTagKeys(ctx context.Context, api *api.API, path []string, rawQuery
 	}
 
 	frames := data.Frames{}
-	for _, measurement := range measurements {
-		result, err := api.GetTagKeys(measurement.UUID.String())
+	for i := range measurements {
+		result, err := api.GetTagKeys(ctx, measurements[i].UUID.String())
 		if err != nil {
 			return nil, err
 		}
@@ -45,14 +48,14 @@ func handleGetTagKeys(ctx context.Context, api *api.API, path []string, rawQuery
 
 func handleGetTagValues(ctx context.Context, api *api.API, path []string, rawQuery string) ([]string, error) {
 	if len(path) < 2 {
-		return nil, fmt.Errorf("missing path parameter")
+		return nil, errMissingPathParameter
 	}
 
 	// if the path contains a measurement uuid fetch values by measurement uuid and tag key
 	if len(path) == 3 {
 		measurement := path[1]
 		key := path[2]
-		frames, err := api.GetTagValues(measurement, key)
+		frames, err := api.GetTagValues(ctx, measurement, key)
 		if err != nil {
 			return nil, err
 		}
@@ -68,8 +71,8 @@ func handleGetTagValues(ctx context.Context, api *api.API, path []string, rawQue
 
 	frames := data.Frames{}
 	key := path[1]
-	for _, measurement := range measurements {
-		result, err := api.GetTagValues(measurement.UUID.String(), key)
+	for i := range measurements {
+		result, err := api.GetTagValues(ctx, measurements[i].UUID.String(), key)
 		if err != nil {
 			return nil, err
 		}
@@ -98,5 +101,5 @@ func getStringSetFromFrames(frames data.Frames, fieldName string) []string {
 		}
 	}
 
-	return maps.Keys(values)
+	return slices.Collect(maps.Keys(values))
 }

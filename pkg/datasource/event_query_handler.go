@@ -3,26 +3,27 @@ package datasource
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"net/url"
+	"slices"
 	"time"
 
-	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"golang.org/x/exp/maps"
+	"github.com/pkg/errors"
 )
 
-func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backendQuery backend.DataQuery, seriesLimit int, historianInfo *schemas.HistorianInfo, api *api.API) (data.Frames, error) {
-	assets, err := api.GetFilteredAssets(ctx, eventQuery.Assets, historianInfo)
+func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, timeRange backend.TimeRange, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
+	assets, err := ds.API.GetFilteredAssets(ctx, eventQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	eventTypes, err := api.GetFilteredEventTypes(ctx, eventQuery.EventTypes, historianInfo)
+	eventTypes, err := ds.API.GetFilteredEventTypes(ctx, eventQuery.EventTypes, historianInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -32,17 +33,17 @@ func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backen
 	}
 
 	filter := schemas.EventFilter{
-		StartTime:         backendQuery.TimeRange.From,
-		StopTime:          backendQuery.TimeRange.To,
-		AssetUUIDs:        maps.Keys(assets),
-		EventTypeUUIDs:    maps.Keys(eventTypes),
+		StartTime:         timeRange.From,
+		StopTime:          timeRange.To,
+		AssetUUIDs:        slices.Collect(maps.Keys(assets)),
+		EventTypeUUIDs:    slices.Collect(maps.Keys(eventTypes)),
 		PreloadProperties: true,
 		Limit:             math.MaxInt32,
 		PropertyFilter:    eventQuery.PropertyFilter,
 		Status:            eventQuery.Statuses,
 	}
 
-	events, err := api.EventQuery(filter)
+	events, err := ds.API.EventQuery(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -50,16 +51,16 @@ func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backen
 	eventTypeProperties := []schemas.EventTypeProperty{}
 	if util.CheckMinimumVersion(historianInfo, "6.4.0") {
 		eventTypeQuery := url.Values{}
-		for i, eventTypeUUID := range maps.Keys(eventTypes) {
+		for i, eventTypeUUID := range slices.Collect(maps.Keys(eventTypes)) {
 			eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
 		}
 		eventTypeQuery.Add("Types[0]", eventQuery.Type)
-		eventTypeProperties, err = api.GetEventTypeProperties(ctx, eventTypeQuery.Encode())
+		eventTypeProperties, err = ds.API.GetEventTypeProperties(ctx, eventTypeQuery.Encode())
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		allEventTypeProperties, err := api.GetEventTypeProperties(ctx, "")
+		allEventTypeProperties, err := ds.API.GetEventTypeProperties(ctx, "")
 		if err != nil {
 			return nil, err
 		}
@@ -82,34 +83,38 @@ func handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, backen
 			AssetProperties: eventQuery.AssetProperties,
 			Options:         *eventQuery.Options,
 		}
-		assetProperties, err := api.GetAssetProperties(ctx, "")
+		assetProperties, err := ds.API.GetAssetProperties(ctx, "")
 		if err != nil {
 			return nil, err
 		}
 
-		for _, event := range events {
+		for i := range events {
 			var err error
-			frames, err := handleEventAssetMeasurementQuery(eventQuery.Type, event, assetMeasurementQuery, assets, assetProperties, backendQuery, seriesLimit, api)
+			frames, err := ds.handleEventAssetMeasurementQuery(ctx, eventQuery.Type, events[i], assetMeasurementQuery, assets, assetProperties, timeRange, seriesLimit)
 			if err != nil {
 				return nil, err
 			}
 
-			eventAssetPropertyFrames[event.UUID] = frames
+			eventAssetPropertyFrames[events[i].UUID] = frames
 		}
 	}
 
 	switch eventQuery.Type {
 	case string(schemas.EventTypePropertyTypeSimple):
 		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames)
-		return EventQueryResultToDataFrame(maps.Values(assets), events, maps.Values(eventTypes), eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
+		return EventQueryResultToDataFrame(slices.Collect(maps.Values(assets)), events, slices.Collect(maps.Values(eventTypes)), eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(maps.Values(assets), events, maps.Values(eventTypes), eventTypeProperties, selectedPropertiesSet, eventAssetPropertyFrames)
+		return EventQueryResultToTrendDataFrame(slices.Collect(maps.Values(assets)), events, slices.Collect(maps.Values(eventTypes)), eventTypeProperties, selectedPropertiesSet, eventAssetPropertyFrames)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
 	}
 }
 
-func handleEventAssetMeasurementQuery(queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, backendQuery backend.DataQuery, seriesLimit int, api *api.API) (data.Frames, error) {
+func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Context, queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, timeRange backend.TimeRange, seriesLimit int) (data.Frames, error) {
+	if assetMeasurementQuery.Options.Aggregation == nil {
+		return nil, errors.New("no aggregation specified")
+	}
+
 	measurementUUIDs := map[string]struct{}{}
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 
@@ -130,28 +135,24 @@ func handleEventAssetMeasurementQuery(queryType string, event schemas.Event, ass
 	}
 
 	measurementQuery := schemas.MeasurementQuery{
-		Measurements: maps.Keys(measurementUUIDs),
+		Measurements: slices.Collect(maps.Keys(measurementUUIDs)),
 		Options:      assetMeasurementQuery.Options,
 	}
 
-	q := historianQuery(measurementQuery, backendQuery)
-	q.Start = event.StartTime
-	q.End = event.StopTime
-	now := time.Now()
-
-	if q.Aggregation == nil {
-		return nil, fmt.Errorf("no aggregation specified")
-	}
+	historianQuery := historianQuery(measurementQuery, timeRange)
+	historianQuery.Start = event.StartTime
+	historianQuery.End = event.StopTime
 
 	if queryType == "simple" {
-		stopTime := now
+		stopTime := time.Now()
 		if event.StopTime != nil {
 			stopTime = *event.StopTime
 		}
 		interval := stopTime.Sub(event.StartTime)
-		q.Aggregation.Period = interval.String()
+		historianQuery.Aggregation.Period = interval.String()
 	}
-	frames, err := handleQuery(measurementQuery, q, api)
+
+	frames, err := ds.handleQuery(ctx, historianQuery, measurementQuery.Options)
 	if err != nil {
 		return nil, err
 	}
