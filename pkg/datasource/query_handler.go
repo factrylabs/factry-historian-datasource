@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
 )
 
 // QueryTypes are a list of query types
@@ -27,22 +28,34 @@ const (
 
 // Query is a struct which holds the query
 type Query struct {
+	HistorianInfo *schemas.HistorianInfo `json:"historianInfo,omitempty"`
 	Query         json.RawMessage        `json:"query"`
 	SeriesLimit   int                    `json:"seriesLimit"`
-	HistorianInfo *schemas.HistorianInfo `json:"historianInfo,omitempty"`
 }
 
 // QueryData handles incoming backend queries
 func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	response := backend.NewQueryDataResponse()
+
+	// set context, so queries in process can be cancelled if the request/context is cancelled/done
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	// limit the number of concurrent queries
+	eg.SetLimit(10)
+
 	for _, q := range req.Queries {
-		res := queryData(ctx, q, ds.API)
-		response.Responses[q.RefID] = res
+		eg.Go(func() error {
+			res := ds.queryData(egCtx, q)
+			response.Responses[q.RefID] = res
+			return nil
+		})
 	}
-	return response, nil
+
+	err := eg.Wait()
+	return response, err
 }
 
-func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API) backend.DataResponse {
+func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backend.DataQuery) backend.DataResponse {
 	response := backend.DataResponse{}
 	query := Query{}
 	if err := json.Unmarshal(backendQuery.JSON, &query); err != nil {
@@ -59,7 +72,7 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 			}
 		}
 
-		response.Frames, response.Error = handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery, query.SeriesLimit, query.HistorianInfo, api)
+		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, query.SeriesLimit, query.HistorianInfo)
 		return response
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
@@ -69,7 +82,7 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 			}
 		}
 
-		measurements, err := getMeasurements(ctx, measurementQuery, query.SeriesLimit, api)
+		measurements, err := ds.getMeasurements(ctx, measurementQuery, query.SeriesLimit)
 		if err != nil {
 			return backend.DataResponse{
 				Error: err,
@@ -77,7 +90,7 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 		}
 
 		measurementQuery.Measurements = measurements
-		response.Frames, response.Error = handleMeasurementQuery(measurementQuery, backendQuery, api)
+		response.Frames, response.Error = ds.handleMeasurementQuery(ctx, measurementQuery, backendQuery.TimeRange)
 		return response
 	case QueryTypeRaw:
 		rawQuery := schemas.RawQuery{}
@@ -87,7 +100,7 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 			}
 		}
 
-		response.Frames, response.Error = handleRawQuery(rawQuery, backendQuery, api)
+		response.Frames, response.Error = ds.handleRawQuery(ctx, rawQuery, backendQuery.TimeRange, backendQuery.Interval)
 		return response
 	case QueryTypeEvent:
 		eventQuery := schemas.EventQuery{}
@@ -97,7 +110,7 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 			}
 		}
 
-		response.Frames, response.Error = handleEventQuery(ctx, eventQuery, backendQuery, query.SeriesLimit, query.HistorianInfo, api)
+		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, query.SeriesLimit, query.HistorianInfo)
 		return response
 	}
 
@@ -105,8 +118,8 @@ func queryData(ctx context.Context, backendQuery backend.DataQuery, api *api.API
 	return response
 }
 
-func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, backendQuery backend.DataQuery, seriesLimit int, historianInfo *schemas.HistorianInfo, api *api.API) (data.Frames, error) {
-	assets, err := api.GetFilteredAssets(ctx, assetMeasurementQuery.Assets, historianInfo)
+func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, timeRange backend.TimeRange, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
+	assets, err := ds.API.GetFilteredAssets(ctx, assetMeasurementQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -115,16 +128,17 @@ func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery sche
 	canFilterAssetProperties := util.CheckMinimumVersion(historianInfo, "6.3.0")
 	if canFilterAssetProperties {
 		assetPropertyQuery := url.Values{}
-		for i, assetUUID := range maps.Keys(assets) {
+
+		for i, assetUUID := range slices.Collect(maps.Keys(assets)) {
 			assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID.String())
 		}
 
-		assetProperties, err = api.GetAssetProperties(ctx, assetPropertyQuery.Encode())
+		assetProperties, err = ds.API.GetAssetProperties(ctx, assetPropertyQuery.Encode())
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		assetProperties, err = api.GetAssetProperties(ctx, "")
+		assetProperties, err = ds.API.GetAssetProperties(ctx, "")
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +157,7 @@ func handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery sche
 	}
 
 assetLoop:
-	for _, assetUUID := range maps.Keys(assets) {
+	for assetUUID := range maps.Keys(assets) {
 		for _, property := range assetMeasurementQuery.AssetProperties {
 			if assetProperty, ok := propertiesByAssetUUIDAndID[assetUUID][property]; ok {
 				measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
@@ -156,12 +170,11 @@ assetLoop:
 	}
 
 	measurementQuery := schemas.MeasurementQuery{
-		Measurements: maps.Keys(measurementUUIDs),
+		Measurements: slices.Collect(maps.Keys(measurementUUIDs)),
 		Options:      assetMeasurementQuery.Options,
 	}
 
-	q := historianQuery(measurementQuery, backendQuery)
-	frames, err := handleQuery(measurementQuery, q, api)
+	frames, err := ds.handleQuery(ctx, historianQuery(measurementQuery, timeRange), measurementQuery.Options)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +186,7 @@ assetLoop:
 	return sortByStatus(frames), nil
 }
 
-func getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQuery, seriesLimit int, api *api.API) ([]string, error) {
+func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQuery, seriesLimit int) ([]string, error) {
 	parsedMeasurements := []string{}
 	var measurements []string
 	if measurementQuery.IsRegex {
@@ -184,7 +197,7 @@ func getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQu
 			measurements = append(measurements, measurementQuery.Measurement)
 		}
 	}
-	databases, err := api.GetTimeseriesDatabases(ctx, "")
+	databases, err := ds.API.GetTimeseriesDatabases(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +226,7 @@ func getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQu
 			databasesQuery += fmt.Sprintf("&DatabaseUUIDs[%v]=%s", i, databaseUUID)
 		}
 		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&limit=%v%v", measurement, seriesLimit, databasesQuery))
-		res, err := api.GetMeasurements(ctx, values.Encode())
+		res, err := ds.API.GetMeasurements(ctx, values.Encode())
 		if err != nil {
 			return nil, err
 		}
@@ -222,16 +235,15 @@ func getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQu
 			return nil, fmt.Errorf("invalid measurement: %v", measurement)
 		}
 
-		for _, m := range res {
-			parsedMeasurements = append(parsedMeasurements, m.UUID.String())
+		for i := range res {
+			parsedMeasurements = append(parsedMeasurements, res[i].UUID.String())
 		}
 	}
 	return parsedMeasurements, nil
 }
 
-func handleMeasurementQuery(measurementQuery schemas.MeasurementQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	q := historianQuery(measurementQuery, backendQuery)
-	frames, err := handleQuery(measurementQuery, q, api)
+func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measurementQuery schemas.MeasurementQuery, timeRange backend.TimeRange) (data.Frames, error) {
+	frames, err := ds.handleQuery(ctx, historianQuery(measurementQuery, timeRange), measurementQuery.Options)
 	if err != nil {
 		return nil, err
 	}
@@ -243,13 +255,13 @@ func handleMeasurementQuery(measurementQuery schemas.MeasurementQuery, backendQu
 	return sortByStatus(frames), nil
 }
 
-func handleQuery(measurementQuery schemas.MeasurementQuery, query schemas.Query, api *api.API) (data.Frames, error) {
-	result, err := api.MeasurementQuery(query)
+func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Query, options schemas.MeasurementQueryOptions) (data.Frames, error) {
+	result, err := ds.API.MeasurementQuery(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
-	if measurementQuery.Options.IncludeLastKnownPoint || measurementQuery.Options.FillInitialEmptyValues {
+	if options.IncludeLastKnownPoint || options.FillInitialEmptyValues {
 		lastPointQuery := query
 		start := query.Start
 		lastPointQuery.End = &start
@@ -267,7 +279,7 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, query schemas.Query,
 			// If unfiltered query last point for each resulting data frame
 			for _, frame := range result {
 				getLastQueryForFrame := getLastQueryForFrame(frame, query)
-				lastResult, err := api.MeasurementQuery(getLastQueryForFrame)
+				lastResult, err := ds.API.MeasurementQuery(ctx, getLastQueryForFrame)
 				if err != nil {
 					return nil, err
 				}
@@ -277,23 +289,23 @@ func handleQuery(measurementQuery schemas.MeasurementQuery, query schemas.Query,
 		}
 
 		// OtherFrames
-		lastResult, err := api.MeasurementQuery(lastPointQuery)
+		lastResult, err := ds.API.MeasurementQuery(ctx, lastPointQuery)
 		if err != nil {
 			return nil, err
 		}
 		lastKnowPointResults = append(lastKnowPointResults, lastResult...)
 
 		result = mergeFrames(lastKnowPointResults, result)
-		if measurementQuery.Options.FillInitialEmptyValues {
+		if options.FillInitialEmptyValues {
 			result = fillInitialEmptyIntervals(result, query)
 		}
 
-		if !measurementQuery.Options.IncludeLastKnownPoint {
+		if !options.IncludeLastKnownPoint {
 			result = deleteFirstRow(result)
 		}
 	}
 
-	return addMetaData(result, measurementQuery.Options.UseEngineeringSpecs), nil
+	return addMetaData(result, options.UseEngineeringSpecs), nil
 }
 
 func getLastQueryForFrame(frame *data.Frame, q schemas.Query) schemas.Query {
@@ -317,10 +329,10 @@ func getLastQueryForFrame(frame *data.Frame, q schemas.Query) schemas.Query {
 	return lastQuery
 }
 
-func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, api *api.API) (data.Frames, error) {
-	rawQuery.Query = fillQueryVariables(rawQuery.Query, "Influx", backendQuery)
+func (ds *HistorianDataSource) handleRawQuery(ctx context.Context, rawQuery schemas.RawQuery, timeRange backend.TimeRange, interval time.Duration) (data.Frames, error) {
+	rawQuery.Query = fillQueryVariables(rawQuery.Query, "Influx", timeRange, interval)
 
-	result, err := api.RawQuery(rawQuery.TimeseriesDatabase, schemas.RawQuery{Query: rawQuery.Query, Format: schemas.ArrowFormat})
+	result, err := ds.API.RawQuery(ctx, rawQuery.TimeseriesDatabase, schemas.RawQuery{Query: rawQuery.Query, Format: schemas.ArrowFormat})
 	if err != nil {
 		return nil, err
 	}
@@ -329,22 +341,24 @@ func handleRawQuery(rawQuery schemas.RawQuery, backendQuery backend.DataQuery, a
 	return result, nil
 }
 
-func fillQueryVariables(query string, databaseType string, backendQuery backend.DataQuery) string {
+func fillQueryVariables(query string, databaseType string, timeRange backend.TimeRange, interval time.Duration) string {
 	timeFilter := ""
-	interval := ""
-	switch databaseType {
-	case "Influx":
-		timeFilter = fmt.Sprintf("time >= %vns AND time < %vns", backendQuery.TimeRange.From.UnixNano(), backendQuery.TimeRange.To.UnixNano())
-		interval = fmt.Sprintf("TIME(%vns, %vns)", backendQuery.Interval.Nanoseconds(), backendQuery.TimeRange.From.UnixNano()%backendQuery.Interval.Nanoseconds())
+	intervalStr := ""
+
+	if databaseType == "Influx" {
+		timeFilter = fmt.Sprintf("time >= %vns AND time < %vns", timeRange.From.UnixNano(), timeRange.To.UnixNano())
+		intervalNano := interval.Nanoseconds()
+		intervalStr = fmt.Sprintf("TIME(%vns, %vns)", intervalNano, timeRange.From.UnixNano()%intervalNano)
 	}
+
 	query = strings.ReplaceAll(query, "$timeFilter", timeFilter)
-	query = strings.ReplaceAll(query, "$__interval", interval)
+	query = strings.ReplaceAll(query, "$__interval", intervalStr)
 	return query
 }
 
-func historianQuery(query schemas.MeasurementQuery, backendQuery backend.DataQuery) schemas.Query {
-	start := backendQuery.TimeRange.From.Truncate(time.Second)
-	end := backendQuery.TimeRange.To.Truncate(time.Second)
+func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange) schemas.Query {
+	start := timeRange.From.Truncate(time.Second)
+	end := timeRange.To.Truncate(time.Second)
 	historianQuery := schemas.Query{
 		MeasurementUUIDs: query.Measurements,
 		Start:            start,

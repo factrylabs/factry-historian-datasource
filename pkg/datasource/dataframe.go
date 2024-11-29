@@ -2,7 +2,9 @@ package datasource
 
 import (
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -10,7 +12,6 @@ import (
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"golang.org/x/exp/maps"
 )
 
 // fieldLabelsFromMeta are the field labels that are extracted from the metadata
@@ -77,7 +78,7 @@ frameLoop:
 		}
 	}
 
-	return maps.Values(frameMap)
+	return slices.Collect(maps.Values(frameMap))
 }
 
 // getFrameSuffix returns the frame name for a given frame
@@ -103,7 +104,7 @@ func getFrameSuffix(frame *data.Frame, includeDatabaseName, includeDescription b
 
 	if includeDescription && meta["Description"] != nil {
 		if description, ok := meta["Description"].(string); ok && description != "" {
-			labelPairs = append(labelPairs, fmt.Sprintf("Description: %s", description))
+			labelPairs = append(labelPairs, "Description: "+description)
 		}
 	}
 
@@ -348,12 +349,10 @@ func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Fra
 		initialValue := valueField.At(0)
 		if valueField.Len() > 1 {
 			for i := 1; i < valueField.Len(); i++ {
-				_, ok := valueField.ConcreteAt(i)
-				if !ok {
-					valueField.Set(i, initialValue)
-				} else {
+				if _, ok := valueField.ConcreteAt(i); ok {
 					break
 				}
+				valueField.Set(i, initialValue)
 			}
 		} else {
 			timeField, _ := frame.FieldByName("time")
@@ -403,7 +402,6 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 		field.Config = &data.FieldConfig{
 			Unit: "none",
 		}
-
 	}
 
 	if frame.Meta == nil || frame.Meta.Custom == nil {
@@ -429,11 +427,11 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 	if uom := config.GetString("UoM"); uom != "" {
 		field.Config.Unit = uom
 	}
-	if min, err := config.GetFloat64("ValueMin"); err == nil {
-		field.Config.SetMin(min)
+	if valueMin, err := config.GetFloat64("ValueMin"); err == nil {
+		field.Config.SetMin(valueMin)
 	}
-	if max, err := config.GetFloat64("ValueMax"); err == nil {
-		field.Config.SetMax(max)
+	if valueMax, err := config.GetFloat64("ValueMax"); err == nil {
+		field.Config.SetMax(valueMax)
 	}
 
 	thresholdConfig := &data.ThresholdsConfig{
@@ -446,9 +444,9 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 		},
 	}
 
-	if LimitLo, err := config.GetFloat64("LimitLo"); err == nil {
+	if limitLo, err := config.GetFloat64("LimitLo"); err == nil {
 		threshold := data.Threshold{
-			Value: data.ConfFloat64(LimitLo),
+			Value: data.ConfFloat64(limitLo),
 			Color: "green",
 		}
 		thresholdConfig.Steps = append(thresholdConfig.Steps, threshold)
@@ -466,7 +464,7 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 }
 
 func sortByStatus(frames data.Frames) data.Frames {
-	sort.Slice(frames, func(i, j int) bool {
+	sort.Slice(frames, func(i, _ int) bool {
 		custom, ok := frames[i].Meta.Custom.(map[string]interface{})
 		if !ok {
 			return false

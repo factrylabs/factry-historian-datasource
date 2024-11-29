@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -42,8 +43,8 @@ func handleDataFramesResponse(response *resty.Response) (data.Frames, error) {
 }
 
 // MeasurementQuery queries data for a measurement
-func (api *API) MeasurementQuery(query schemas.Query) (data.Frames, error) {
-	request := api.client.R()
+func (api *API) MeasurementQuery(ctx context.Context, query schemas.Query) (data.Frames, error) {
+	request := api.client.R().SetContext(ctx)
 	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
 	response, err := request.SetBody(query).Post("/api/timeseries/query")
 	if err != nil {
@@ -54,8 +55,8 @@ func (api *API) MeasurementQuery(query schemas.Query) (data.Frames, error) {
 }
 
 // RawQuery executes a raw time series query
-func (api *API) RawQuery(timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuery) (data.Frames, error) {
-	request := api.client.R()
+func (api *API) RawQuery(ctx context.Context, timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuery) (data.Frames, error) {
+	request := api.client.R().SetContext(ctx)
 	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
 	response, err := request.SetBody(query).Post(fmt.Sprintf("/api/timeseries/%v/raw-query", timeseriesDatabaseUUID))
 	if err != nil {
@@ -66,14 +67,14 @@ func (api *API) RawQuery(timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuer
 }
 
 // EventQuery executes an event query
-func (api *API) EventQuery(filter schemas.EventFilter) ([]schemas.Event, error) {
+func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter) ([]schemas.Event, error) {
 	queryResult := []schemas.Event{}
 	eventFilterParams, err := getEventFilter(filter)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := api.client.R().SetQueryParamsFromValues(eventFilterParams).Get("/api/events")
+	response, err := api.client.R().SetContext(ctx).SetQueryParamsFromValues(eventFilterParams).Get("/api/events")
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +91,8 @@ func (api *API) EventQuery(filter schemas.EventFilter) ([]schemas.Event, error) 
 }
 
 // GetTagKeys queries the tag keys for a measurement
-func (api *API) GetTagKeys(measurementUUID string) (data.Frames, error) {
-	request := api.client.R()
+func (api *API) GetTagKeys(ctx context.Context, measurementUUID string) (data.Frames, error) {
+	request := api.client.R().SetContext(ctx)
 	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
 	response, err := request.SetPathParam("measurementUUID", measurementUUID).Get("/api/timeseries/measurements/{measurementUUID}/tags")
 	if err != nil {
@@ -102,8 +103,8 @@ func (api *API) GetTagKeys(measurementUUID string) (data.Frames, error) {
 }
 
 // GetTagValues queries the tag values for a measurement and a tag key
-func (api *API) GetTagValues(measurementUUID, tagKey string) (data.Frames, error) {
-	request := api.client.R()
+func (api *API) GetTagValues(ctx context.Context, measurementUUID, tagKey string) (data.Frames, error) {
+	request := api.client.R().SetContext(ctx)
 	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
 	pathParams := map[string]string{
 		"measurementUUID": measurementUUID,
