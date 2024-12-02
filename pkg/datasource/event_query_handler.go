@@ -28,6 +28,11 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		return nil, err
 	}
 
+	allEventTypes, err := ds.API.GetEventTypes(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
 	if len(assets) == 0 || len(eventTypes) == 0 {
 		return data.Frames{}, nil
 	}
@@ -48,10 +53,19 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		return nil, err
 	}
 
-	eventTypeProperties := []schemas.EventTypeProperty{}
+	// get all unique event types from the events
+	eventTypeUUIDs := map[uuid.UUID]struct{}{}
+	for i := range events {
+		eventTypeUUIDs[events[i].EventTypeUUID] = struct{}{}
+		if events[i].Parent != nil {
+			eventTypeUUIDs[events[i].Parent.EventTypeUUID] = struct{}{}
+		}
+	}
+
+	var eventTypeProperties []schemas.EventTypeProperty
 	if util.CheckMinimumVersion(historianInfo, "6.4.0") {
 		eventTypeQuery := url.Values{}
-		for i, eventTypeUUID := range slices.Collect(maps.Keys(eventTypes)) {
+		for i, eventTypeUUID := range slices.Collect(maps.Keys(eventTypeUUIDs)) {
 			eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
 		}
 		if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) {
@@ -62,15 +76,9 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 			return nil, err
 		}
 	} else {
-		allEventTypeProperties, err := ds.API.GetEventTypeProperties(ctx, "")
+		eventTypeProperties, err = ds.API.GetEventTypeProperties(ctx, "")
 		if err != nil {
 			return nil, err
-		}
-
-		for _, eventTypeProperty := range allEventTypeProperties {
-			if _, ok := eventTypes[eventTypeProperty.EventTypeUUID]; ok {
-				eventTypeProperties = append(eventTypeProperties, eventTypeProperty)
-			}
 		}
 	}
 
@@ -101,12 +109,20 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		}
 	}
 
+	eventTypePropertiesByEventType := map[uuid.UUID][]schemas.EventTypeProperty{}
+	for _, eventTypeProperty := range eventTypeProperties {
+		if _, ok := eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID]; !ok {
+			eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID] = []schemas.EventTypeProperty{}
+		}
+		eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID] = append(eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID], eventTypeProperty)
+	}
+
 	switch eventQuery.Type {
 	case string(schemas.EventTypePropertyTypeSimple):
 		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames)
-		return EventQueryResultToDataFrame(slices.Collect(maps.Values(assets)), events, slices.Collect(maps.Values(eventTypes)), eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
+		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(slices.Collect(maps.Values(assets)), events, slices.Collect(maps.Values(eventTypes)), eventTypeProperties, selectedPropertiesSet, eventAssetPropertyFrames)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
 	}

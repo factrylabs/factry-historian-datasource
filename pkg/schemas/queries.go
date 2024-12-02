@@ -58,6 +58,7 @@ type EventQuery struct {
 	Statuses             []string
 	Properties           []string
 	PropertyFilter       []EventPropertyValueFilter
+	IncludeParentInfo    bool
 	QueryAssetProperties bool
 	AssetProperties      []string
 	Options              *MeasurementQueryOptions

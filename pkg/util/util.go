@@ -90,3 +90,17 @@ func MarshalStructToMap(input interface{}) map[string]interface{} {
 
 	return result
 }
+
+// Ptr returns a pointer to the provided value
+func Ptr[T any](v T) *T {
+	return &v
+}
+
+// PtrSlice returns a slice of pointers to the provided values
+func PtrSlice[T any](v []T) []*T {
+	ptrs := make([]*T, len(v))
+	for i := range v {
+		ptrs[i] = &v[i]
+	}
+	return ptrs
+}
