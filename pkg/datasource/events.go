@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -29,7 +30,7 @@ const (
 )
 
 // EventQueryResultToDataFrame converts a event query result to data frames
-func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
+func EventQueryResultToDataFrame(includeParentInfo bool, assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
 	dataFrames := data.Frames{}
 	groupedEvents := map[uuid.UUID][]schemas.Event{}
 	eventTypePropertiesForEventType := map[uuid.UUID][]schemas.EventTypeProperty{}
@@ -38,11 +39,11 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 		eventTypesByUUID[eventType.UUID] = eventType
 		eventTypePropertiesForEventType[eventType.UUID] = []schemas.EventTypeProperty{}
 		for _, eventTypeProperty := range eventTypeProperties {
-			if _, ok := selectedProperties[eventTypeProperty.Name]; (len(selectedProperties) == 0 || ok) && eventTypeProperty.EventTypeUUID == eventType.UUID {
-				eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
-			} else if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; (len(selectedProperties) == 0 || ok) && eventTypeProperty.EventTypeUUID == eventType.UUID {
-				eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
+			if eventTypeProperty.EventTypeUUID != eventType.UUID {
+				continue
 			}
+
+			eventTypePropertiesForEventType[eventType.UUID] = append(eventTypePropertiesForEventType[eventType.UUID], eventTypeProperty)
 		}
 	}
 
@@ -51,7 +52,7 @@ func EventQueryResultToDataFrame(assets []schemas.Asset, events []schemas.Event,
 	}
 
 	for eventTypeUUID, groupedEvents := range groupedEvents {
-		dataFrames = append(dataFrames, dataFrameForEventType(assets, eventTypesByUUID[eventTypeUUID], groupedEvents, eventTypePropertiesForEventType[eventTypeUUID], assetPropertyFieldTypes, eventAssetPropertyFrames))
+		dataFrames = append(dataFrames, dataFrameForEventType(includeParentInfo, assets, eventTypesByUUID[eventTypeUUID], selectedProperties, eventTypesByUUID, groupedEvents, eventTypePropertiesForEventType, assetPropertyFieldTypes, eventAssetPropertyFrames))
 	}
 
 	return dataFrames, nil
@@ -65,29 +66,27 @@ type eventFrameColumn struct {
 }
 
 // EventQueryResultToTrendDataFrame converts a event query result to data frames
-func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
+func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.Asset, events []schemas.Event, eventTypes map[uuid.UUID]schemas.EventType, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, selectedProperties map[string]struct{}, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		uuidToAssetMap[asset.UUID] = asset
 	}
 
-	uuidToEventTypeMap := make(map[uuid.UUID]schemas.EventType)
-	for _, eventType := range eventTypes {
-		uuidToEventTypeMap[eventType.UUID] = eventType
-	}
-
 	simpleEventTypeProperties := []schemas.EventTypeProperty{}
 	periodicEventTypeProperties := []schemas.EventTypeProperty{}
 
-	for _, eventTypeProperty := range eventTypeProperties {
-		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
-			if _, ok := selectedProperties[eventTypeProperty.Name]; len(selectedProperties) == 0 || ok {
-				periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
-			} else if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok {
-				periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
+	for _, eventType := range eventTypes {
+		eventTypeProperties := eventTypePropertiesForEventType[eventType.UUID]
+		for _, eventTypeProperty := range eventTypeProperties {
+			if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+				if _, ok := selectedProperties[eventTypeProperty.Name]; len(selectedProperties) == 0 || ok {
+					periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
+				} else if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok {
+					periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
+				}
+			} else {
+				simpleEventTypeProperties = append(simpleEventTypeProperties, eventTypeProperty)
 			}
-		} else {
-			simpleEventTypeProperties = append(simpleEventTypeProperties, eventTypeProperty)
 		}
 	}
 
@@ -106,7 +105,7 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 
 		eventLabels[AssetPathColumnName] = getAssetPath(uuidToAssetMap, events[i].AssetUUID)
 		eventLabels[AssetColumnName] = uuidToAssetMap[events[i].AssetUUID].Name
-		eventLabels[EventTypeColumnName] = uuidToEventTypeMap[events[i].EventTypeUUID].Name
+		eventLabels[EventTypeColumnName] = eventTypes[events[i].EventTypeUUID].Name
 		eventLabels[StartTimeColumnName] = events[i].StartTime.Format(time.RFC3339)
 		eventLabels[StopTimeColumnName] = ""
 		eventLabels[EventUUIDColumnName] = events[i].UUID.String()
@@ -135,6 +134,45 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 			labels[PropertyColumnName] = periodicEventTypeProperties[j].Name
 
 			name := fmt.Sprintf("%s (%s)", periodicEventTypeProperties[j].Name, events[i].UUID)
+
+			// Add parent event details as labels if `includeParentInfo` is true
+			if includeParentInfo && events[i].Parent != nil {
+				parentEvent := *events[i].Parent
+				parentType := eventTypes[parentEvent.EventTypeUUID]
+				parentPrefix := parentType.Name + "_"
+
+				// Add parent event details
+				labels[parentPrefix+EventUUIDColumnName] = parentEvent.UUID.String()
+				labels[parentPrefix+StartTimeColumnName] = parentEvent.StartTime.Format(time.RFC3339)
+				labels[parentPrefix+StopTimeColumnName] = ""
+				if parentEvent.StopTime != nil {
+					eventLabels[parentPrefix+StopTimeColumnName] = parentEvent.StopTime.Format(time.RFC3339)
+				}
+				labels[parentPrefix+AssetUUIDColumnName] = parentEvent.AssetUUID.String()
+				labels[parentPrefix+AssetColumnName] = uuidToAssetMap[parentEvent.AssetUUID].Name
+				labels[parentPrefix+AssetPathColumnName] = getAssetPath(uuidToAssetMap, parentEvent.AssetUUID)
+				labels[parentPrefix+EventTypeUUIDColumnName] = parentEvent.EventTypeUUID.String()
+				labels[parentPrefix+EventTypeColumnName] = parentType.Name
+
+				// Add parent event properties
+				for _, parentProperty := range eventTypePropertiesForEventType[parentEvent.EventTypeUUID] {
+					if parentProperty.Type == schemas.EventTypePropertyTypePeriodic {
+						continue
+					}
+
+					name := parentPrefix + parentProperty.Name
+					if parentEvent.Properties == nil || parentEvent.Properties.Properties == nil {
+						labels[name] = ""
+						continue
+					}
+
+					if value, ok := parentEvent.Properties.Properties[parentProperty.Name]; ok {
+						labels[name] = fmt.Sprintf("%v", value)
+					} else {
+						labels[name] = ""
+					}
+				}
+			}
 
 			switch periodicEventTypeProperties[j].Datatype {
 			case schemas.EventTypePropertyDatatypeBool:
@@ -234,7 +272,7 @@ func EventQueryResultToTrendDataFrame(assets []schemas.Asset, events []schemas.E
 	}, nil
 }
 
-func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, events []schemas.Event, eventTypeProperties []schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
+func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, eventType schemas.EventType, selectedProperties map[string]struct{}, eventTypes map[uuid.UUID]schemas.EventType, events []schemas.Event, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		uuidToAssetMap[asset.UUID] = asset
@@ -277,6 +315,7 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 		fields = append(fields, fieldByColumn[assetProperty])
 	}
 
+	eventTypeProperties := eventTypePropertiesForEventType[eventType.UUID]
 	for _, eventTypeProperty := range eventTypeProperties {
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			continue
@@ -284,6 +323,14 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 
 		if _, ok := fieldByColumn[eventTypeProperty.Name]; ok {
 			continue
+		}
+
+		if len(selectedProperties) > 0 {
+			if _, ok := selectedProperties[eventTypeProperty.Name]; !ok {
+				if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; !ok {
+					continue
+				}
+			}
 		}
 
 		var field *data.Field
@@ -385,6 +432,138 @@ func dataFrameForEventType(assets []schemas.Asset, eventType schemas.EventType, 
 			setUOMFieldConfig(fieldByColumn[eventTypeProperty.Name], eventTypeProperty)
 			addValueToField(fieldByColumn[eventTypeProperty.Name], events[i].Properties.Properties[eventTypeProperty.Name])
 		}
+	}
+
+	if includeParentInfo {
+		parentFields := []*data.Field{}
+		parentFieldsAdded := make(map[string]bool) // Track added fields for parent event types
+
+		// Ensure all possible parent fields are created for each event type
+		for i := range events {
+			if events[i].Parent == nil {
+				continue
+			}
+
+			parentEvent := *events[i].Parent
+			parentEventType, parentEventTypeExists := eventTypes[parentEvent.EventTypeUUID]
+			if !parentEventTypeExists {
+				continue
+			}
+
+			parentPrefix := parentEventType.Name + "_"
+			if !parentFieldsAdded[parentPrefix] {
+				parentFieldsAdded[parentPrefix] = true
+
+				// Add parent fields
+				fieldByColumn[parentPrefix+EventUUIDColumnName] = data.NewField(parentPrefix+EventUUIDColumnName, nil, []*string{})
+				fieldByColumn[parentPrefix+StartTimeColumnName] = data.NewField(parentPrefix+StartTimeColumnName, nil, []*time.Time{})
+				fieldByColumn[parentPrefix+StopTimeColumnName] = data.NewField(parentPrefix+StopTimeColumnName, nil, []*time.Time{})
+				fieldByColumn[parentPrefix+DurationColumnName] = data.NewField(parentPrefix+DurationColumnName, nil, []*float64{})
+				fieldByColumn[parentPrefix+AssetUUIDColumnName] = data.NewField(parentPrefix+AssetUUIDColumnName, nil, []*string{})
+				fieldByColumn[parentPrefix+AssetColumnName] = data.NewField(parentPrefix+AssetColumnName, nil, []*string{})
+				fieldByColumn[parentPrefix+AssetPathColumnName] = data.NewField(parentPrefix+AssetPathColumnName, nil, []*string{})
+				fieldByColumn[parentPrefix+EventTypeUUIDColumnName] = data.NewField(parentPrefix+EventTypeUUIDColumnName, nil, []*string{})
+				fieldByColumn[parentPrefix+EventTypeColumnName] = data.NewField(parentPrefix+EventTypeColumnName, nil, []*string{})
+				parentFields = append(parentFields, fieldByColumn[parentPrefix+EventUUIDColumnName], fieldByColumn[parentPrefix+StartTimeColumnName], fieldByColumn[parentPrefix+StopTimeColumnName], fieldByColumn[parentPrefix+DurationColumnName], fieldByColumn[parentPrefix+AssetUUIDColumnName], fieldByColumn[parentPrefix+AssetColumnName], fieldByColumn[parentPrefix+AssetPathColumnName], fieldByColumn[parentPrefix+EventTypeUUIDColumnName], fieldByColumn[parentPrefix+EventTypeColumnName])
+
+				for _, parentEventTypeProperty := range eventTypePropertiesForEventType[parentEvent.EventTypeUUID] {
+					if parentEventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+						continue
+					}
+
+					parentPropertyFieldName := parentPrefix + parentEventTypeProperty.Name
+					var parentField *data.Field
+					switch parentEventTypeProperty.Datatype {
+					case schemas.EventTypePropertyDatatypeBool:
+						parentField = data.NewField(parentPropertyFieldName, nil, []*bool{})
+					case schemas.EventTypePropertyDatatypeNumber:
+						parentField = data.NewField(parentPropertyFieldName, nil, []*float64{})
+					case schemas.EventTypePropertyDatatypeString:
+						parentField = data.NewField(parentPropertyFieldName, nil, []*string{})
+					default:
+						parentField = data.NewField(parentPropertyFieldName, nil, []interface{}{})
+					}
+					parentFields = append(parentFields, parentField)
+					fieldByColumn[parentPropertyFieldName] = parentField
+				}
+			}
+		}
+
+		// Populate parent data or append nil for rows without a parent
+		for i := range events {
+			// if no parent uuid or if parent event type does not exist, append nil for all parent-related fields
+			hasParent := false
+			if events[i].Parent != nil {
+				if _, ok := eventTypes[events[i].Parent.EventTypeUUID]; ok {
+					hasParent = true
+				}
+			}
+
+			if hasParent {
+				parentEvent := *events[i].Parent
+				parentEventType := eventTypes[parentEvent.EventTypeUUID]
+				parentPrefix := parentEventType.Name + "_"
+
+				fieldByColumn[parentPrefix+EventUUIDColumnName].Append(util.Ptr(parentEvent.UUID.String()))
+				fieldByColumn[parentPrefix+StartTimeColumnName].Append(&parentEvent.StartTime)
+				fieldByColumn[parentPrefix+StopTimeColumnName].Append(parentEvent.StopTime)
+				fieldByColumn[parentPrefix+AssetUUIDColumnName].Append(util.Ptr(parentEvent.AssetUUID.String()))
+				fieldByColumn[parentPrefix+AssetColumnName].Append(util.Ptr(uuidToAssetMap[parentEvent.AssetUUID].Name))
+				fieldByColumn[parentPrefix+AssetPathColumnName].Append(util.Ptr(getAssetPath(uuidToAssetMap, parentEvent.AssetUUID)))
+				fieldByColumn[parentPrefix+EventTypeUUIDColumnName].Append(util.Ptr(parentEvent.EventTypeUUID.String()))
+				fieldByColumn[parentPrefix+EventTypeColumnName].Append(util.Ptr(parentEventType.Name))
+
+				if parentEvent.StopTime != nil {
+					parentDuration := parentEvent.StopTime.Sub(parentEvent.StartTime).Seconds()
+					fieldByColumn[parentPrefix+DurationColumnName].Append(&parentDuration)
+				} else {
+					fieldByColumn[parentPrefix+DurationColumnName].Append(nil)
+				}
+
+				for _, parentEventTypeProperty := range eventTypePropertiesForEventType[parentEvent.EventTypeUUID] {
+					if parentEventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+						continue
+					}
+
+					parentPropertyFieldName := parentPrefix + parentEventTypeProperty.Name
+					if parentEvent.Properties != nil && parentEvent.Properties.Properties != nil {
+						setUOMFieldConfig(fieldByColumn[parentPropertyFieldName], parentEventTypeProperty)
+						addValueToField(fieldByColumn[parentPropertyFieldName], parentEvent.Properties.Properties[parentEventTypeProperty.Name])
+					} else {
+						fieldByColumn[parentPropertyFieldName].Append(nil)
+					}
+				}
+
+				// Append nil for other parent-related fields if there are multiple parent event types
+				for otherParentPrefix := range parentFieldsAdded {
+					if otherParentPrefix == parentPrefix {
+						continue
+					}
+
+					for _, field := range fieldByColumn {
+						// skip if field is not a parent-related field
+						if !strings.HasPrefix(field.Name, otherParentPrefix) {
+							continue
+						}
+
+						addValueToField(field, nil)
+					}
+				}
+			} else {
+				// Append nil for all parent-related fields if no parent exists
+				for parentPrefix := range parentFieldsAdded {
+					for _, parentField := range fieldByColumn {
+						if !strings.HasPrefix(parentField.Name, parentPrefix) {
+							continue
+						}
+
+						addValueToField(parentField, nil)
+					}
+				}
+			}
+		}
+
+		fields = append(parentFields, fields...)
 	}
 
 	return data.NewFrame(eventType.Name, fields...)

@@ -32,6 +32,7 @@ type Event struct {
 	StopTime               *time.Time
 	ParentUUID             *uuid.UUID
 	Properties             *EventProperties
+	Parent                 *Event
 	Source                 EventSource
 	Status                 EventStatus
 	UUID                   uuid.UUID
@@ -49,6 +50,7 @@ type EventFilter struct {
 	Status              []string
 	EventConfigurations []uuid.UUID
 	PropertyFilter      []EventPropertyValueFilter
+	IncludeParentInfo   bool
 	Limit               int
 	ExcludeManualEvents bool
 	Ascending           bool

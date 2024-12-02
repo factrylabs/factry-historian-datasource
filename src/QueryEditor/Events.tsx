@@ -254,6 +254,12 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeIncludeParentInfo = (event: FormEvent<HTMLInputElement>): void => {
+    const enabled = (event as ChangeEvent<HTMLInputElement>).target.checked
+    const updatedQuery = { ...props.query, IncludeParentInfo: enabled } as EventQuery
+    props.onChangeEventQuery(updatedQuery)
+  }
+
   const onChangeAssetProperties = (values: string[]): void => {
     const updatedQuery = { ...props.query, AssetProperties: values }
     props.onChangeEventQuery(updatedQuery)
@@ -350,6 +356,15 @@ export const Events = (props: Props): JSX.Element => {
                   getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
                   onChange={handleTagsSectionChange}
                 />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Include parent info"
+                tooltip="For simple properties it will add columns for the parent event and for periodic properties it will add labels"
+                labelWidth={labelWidth}
+              >
+                <InlineSwitch value={props.query.IncludeParentInfo} onChange={onChangeIncludeParentInfo} />
               </InlineField>
             </InlineFieldRow>
           </FieldSet>
