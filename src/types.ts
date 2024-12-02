@@ -128,6 +128,7 @@ export interface EventQuery {
   QueryAssetProperties: boolean
   AssetProperties?: string[]
   Options?: MeasurementQueryOptions
+  IncludeParentInfo?: boolean
 }
 
 export enum EventTypePropertyType {
