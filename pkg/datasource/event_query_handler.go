@@ -54,7 +54,9 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		for i, eventTypeUUID := range slices.Collect(maps.Keys(eventTypes)) {
 			eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
 		}
-		eventTypeQuery.Add("Types[0]", eventQuery.Type)
+		if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) {
+			eventTypeQuery.Add("Types[0]", eventQuery.Type)
+		}
 		eventTypeProperties, err = ds.API.GetEventTypeProperties(ctx, eventTypeQuery.Encode())
 		if err != nil {
 			return nil, err
