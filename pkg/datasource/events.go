@@ -272,35 +272,97 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 	}, nil
 }
 
+func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.EventTypeProperty) []*data.Field {
+	fields := []*data.Field{
+		data.NewField(prefix+EventUUIDColumnName, nil, []*string{}),
+		data.NewField(prefix+ParentEventUUIDColumnName, nil, []string{}),
+		data.NewField(prefix+AssetUUIDColumnName, nil, []*string{}),
+		data.NewField(prefix+EventTypeUUIDColumnName, nil, []*string{}),
+		data.NewField(prefix+AssetColumnName, nil, []*string{}),
+		data.NewField(prefix+AssetPathColumnName, nil, []*string{}),
+		data.NewField(prefix+EventTypeColumnName, nil, []*string{}),
+		data.NewField(prefix+StartTimeColumnName, nil, []*time.Time{}),
+		data.NewField(prefix+StopTimeColumnName, nil, []*time.Time{}),
+		data.NewField(prefix+DurationColumnName, nil, []*float64{}),
+	}
+
+	for _, parentEventTypeProperty := range eventTypeProperties {
+		if parentEventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+			continue
+		}
+
+		parentPropertyFieldName := prefix + parentEventTypeProperty.Name
+		var parentField *data.Field
+		switch parentEventTypeProperty.Datatype {
+		case schemas.EventTypePropertyDatatypeBool:
+			parentField = data.NewField(parentPropertyFieldName, nil, []*bool{})
+		case schemas.EventTypePropertyDatatypeNumber:
+			parentField = data.NewField(parentPropertyFieldName, nil, []*float64{})
+		case schemas.EventTypePropertyDatatypeString:
+			parentField = data.NewField(parentPropertyFieldName, nil, []*string{})
+		default:
+			parentField = data.NewField(parentPropertyFieldName, nil, []interface{}{})
+		}
+		fields = append(fields, parentField)
+	}
+	return fields
+}
+
+func fillFields(prefix string, fieldByColumn map[string]*data.Field, event *schemas.Event, uuidToAssetMap map[uuid.UUID]schemas.Asset, eventType schemas.EventType, eventTypeProperties []schemas.EventTypeProperty) {
+	parentUUID := ""
+	if event.ParentUUID != nil {
+		parentUUID = event.ParentUUID.String()
+	}
+	addValueToField(fieldByColumn[prefix+EventUUIDColumnName], event.UUID.String())
+	addValueToField(fieldByColumn[prefix+ParentEventUUIDColumnName], parentUUID)
+	addValueToField(fieldByColumn[prefix+AssetUUIDColumnName], event.AssetUUID.String())
+	addValueToField(fieldByColumn[prefix+EventTypeUUIDColumnName], event.EventTypeUUID.String())
+	addValueToField(fieldByColumn[prefix+AssetColumnName], uuidToAssetMap[event.AssetUUID].Name)
+	addValueToField(fieldByColumn[prefix+AssetPathColumnName], getAssetPath(uuidToAssetMap, event.AssetUUID))
+	addValueToField(fieldByColumn[prefix+EventTypeColumnName], eventType.Name)
+	addValueToField(fieldByColumn[prefix+StartTimeColumnName], &event.StartTime)
+	addValueToField(fieldByColumn[prefix+StopTimeColumnName], event.StopTime)
+
+	if event.StopTime != nil {
+		duration := event.StopTime.Sub(event.StartTime).Seconds()
+		fieldByColumn[prefix+DurationColumnName].Append(&duration)
+	} else {
+		fieldByColumn[prefix+DurationColumnName].Append(nil)
+	}
+
+	if event.Properties == nil {
+		for _, eventPropertyType := range eventTypeProperties {
+			if eventPropertyType.Type == schemas.EventTypePropertyTypePeriodic {
+				continue
+			}
+
+			fieldByColumn[prefix+eventPropertyType.Name].Append(nil)
+		}
+		return
+	}
+
+	for _, eventTypeProperty := range eventTypeProperties {
+		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+			continue
+		}
+
+		setUOMFieldConfig(fieldByColumn[prefix+eventTypeProperty.Name], eventTypeProperty)
+		addValueToField(fieldByColumn[prefix+eventTypeProperty.Name], event.Properties.Properties[eventTypeProperty.Name])
+	}
+}
+
 func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, eventType schemas.EventType, selectedProperties map[string]struct{}, eventTypes map[uuid.UUID]schemas.EventType, events []schemas.Event, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		uuidToAssetMap[asset.UUID] = asset
 	}
 
-	fieldByColumn := map[string]*data.Field{}
-	fieldByColumn[StartTimeColumnName] = data.NewField(StartTimeColumnName, nil, []*time.Time{})
-	fieldByColumn[StopTimeColumnName] = data.NewField(StopTimeColumnName, nil, []*time.Time{})
-	fieldByColumn[EventUUIDColumnName] = data.NewField(EventUUIDColumnName, nil, []string{})
-	fieldByColumn[ParentEventUUIDColumnName] = data.NewField(ParentEventUUIDColumnName, nil, []string{})
-	fieldByColumn[AssetUUIDColumnName] = data.NewField(AssetUUIDColumnName, nil, []string{})
-	fieldByColumn[AssetColumnName] = data.NewField(AssetColumnName, nil, []string{})
-	fieldByColumn[AssetPathColumnName] = data.NewField(AssetPathColumnName, nil, []string{})
-	fieldByColumn[DurationColumnName] = data.NewField(DurationColumnName, nil, []*float64{})
-	fieldByColumn[EventTypeUUIDColumnName] = data.NewField(EventTypeUUIDColumnName, nil, []string{})
-	fieldByColumn[EventTypeColumnName] = data.NewField(EventTypeColumnName, nil, []string{})
+	eventTypeProperties := eventTypePropertiesForEventType[eventType.UUID]
+	fields := buildSimpleFieldsForEvent("", eventTypeProperties)
 
-	fields := []*data.Field{
-		fieldByColumn[EventUUIDColumnName],
-		fieldByColumn[ParentEventUUIDColumnName],
-		fieldByColumn[AssetUUIDColumnName],
-		fieldByColumn[EventTypeUUIDColumnName],
-		fieldByColumn[AssetColumnName],
-		fieldByColumn[AssetPathColumnName],
-		fieldByColumn[EventTypeColumnName],
-		fieldByColumn[StartTimeColumnName],
-		fieldByColumn[StopTimeColumnName],
-		fieldByColumn[DurationColumnName],
+	fieldByColumn := map[string]*data.Field{}
+	for _, field := range fields {
+		fieldByColumn[field.Name] = field
 	}
 
 	for assetProperty := range assetPropertyFieldTypes {
@@ -315,7 +377,6 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 		fields = append(fields, fieldByColumn[assetProperty])
 	}
 
-	eventTypeProperties := eventTypePropertiesForEventType[eventType.UUID]
 	for _, eventTypeProperty := range eventTypeProperties {
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			continue
@@ -349,28 +410,32 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 		fieldByColumn[eventTypeProperty.Name] = field
 	}
 
+	parentFields := []*data.Field{}
+	parentFieldsAdded := make(map[string]bool) // Track added fields for parent event types
+
 	for i := range events {
-		fieldByColumn[EventUUIDColumnName].Append(events[i].UUID.String())
-		parentUUID := ""
 		if events[i].ParentUUID != nil {
-			parentUUID = events[i].ParentUUID.String()
-		}
-		fieldByColumn[ParentEventUUIDColumnName].Append(parentUUID)
-		fieldByColumn[AssetUUIDColumnName].Append(events[i].AssetUUID.String())
-		fieldByColumn[EventTypeUUIDColumnName].Append(events[i].EventTypeUUID.String())
-		fieldByColumn[AssetColumnName].Append(uuidToAssetMap[events[i].AssetUUID].Name)
-		fieldByColumn[AssetPathColumnName].Append(getAssetPath(uuidToAssetMap, events[i].AssetUUID))
-		fieldByColumn[EventTypeColumnName].Append(eventType.Name)
-		fieldByColumn[StartTimeColumnName].Append(&events[i].StartTime)
-		fieldByColumn[StopTimeColumnName].Append(events[i].StopTime)
+			if includeParentInfo {
+				parentEvent := *events[i].Parent
+				parentEventType, parentEventTypeExists := eventTypes[parentEvent.EventTypeUUID]
+				if !parentEventTypeExists {
+					continue
+				}
 
-		if events[i].StopTime != nil {
-			duration := events[i].StopTime.Sub(events[i].StartTime).Seconds()
-			fieldByColumn[DurationColumnName].Append(&duration)
-		} else {
-			fieldByColumn[DurationColumnName].Append(nil)
+				parentPrefix := parentEventType.Name + "_"
+				if !parentFieldsAdded[parentPrefix] {
+					parentFieldsAdded[parentPrefix] = true
+
+					parentFieldsForEventType := buildSimpleFieldsForEvent(parentPrefix, eventTypePropertiesForEventType[parentEvent.EventTypeUUID])
+					for _, parentField := range parentFieldsForEventType {
+						fieldByColumn[parentField.Name] = parentField
+						parentFields = append(parentFields, parentField)
+					}
+				}
+			}
 		}
 
+		fillFields("", fieldByColumn, &events[i], uuidToAssetMap, eventType, eventTypeProperties)
 		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]
 		for assetProperty := range assetPropertyFieldTypes {
 			found := false
@@ -412,153 +477,46 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 				field.Append(nil)
 			}
 		}
-
-		if events[i].Properties == nil {
-			for _, eventPropertyType := range eventTypeProperties {
-				if eventPropertyType.Type == schemas.EventTypePropertyTypePeriodic {
-					continue
-				}
-
-				fieldByColumn[eventPropertyType.Name].Append(nil)
-			}
-			continue
-		}
-
-		for _, eventTypeProperty := range eventTypeProperties {
-			if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
-				continue
-			}
-
-			setUOMFieldConfig(fieldByColumn[eventTypeProperty.Name], eventTypeProperty)
-			addValueToField(fieldByColumn[eventTypeProperty.Name], events[i].Properties.Properties[eventTypeProperty.Name])
-		}
 	}
 
 	if includeParentInfo {
-		parentFields := []*data.Field{}
-		parentFieldsAdded := make(map[string]bool) // Track added fields for parent event types
-
-		// Ensure all possible parent fields are created for each event type
-		for i := range events {
-			if events[i].Parent == nil {
-				continue
-			}
-
-			parentEvent := *events[i].Parent
-			parentEventType, parentEventTypeExists := eventTypes[parentEvent.EventTypeUUID]
-			if !parentEventTypeExists {
-				continue
-			}
-
-			parentPrefix := parentEventType.Name + "_"
-			if !parentFieldsAdded[parentPrefix] {
-				parentFieldsAdded[parentPrefix] = true
-
-				// Add parent fields
-				fieldByColumn[parentPrefix+EventUUIDColumnName] = data.NewField(parentPrefix+EventUUIDColumnName, nil, []*string{})
-				fieldByColumn[parentPrefix+StartTimeColumnName] = data.NewField(parentPrefix+StartTimeColumnName, nil, []*time.Time{})
-				fieldByColumn[parentPrefix+StopTimeColumnName] = data.NewField(parentPrefix+StopTimeColumnName, nil, []*time.Time{})
-				fieldByColumn[parentPrefix+DurationColumnName] = data.NewField(parentPrefix+DurationColumnName, nil, []*float64{})
-				fieldByColumn[parentPrefix+AssetUUIDColumnName] = data.NewField(parentPrefix+AssetUUIDColumnName, nil, []*string{})
-				fieldByColumn[parentPrefix+AssetColumnName] = data.NewField(parentPrefix+AssetColumnName, nil, []*string{})
-				fieldByColumn[parentPrefix+AssetPathColumnName] = data.NewField(parentPrefix+AssetPathColumnName, nil, []*string{})
-				fieldByColumn[parentPrefix+EventTypeUUIDColumnName] = data.NewField(parentPrefix+EventTypeUUIDColumnName, nil, []*string{})
-				fieldByColumn[parentPrefix+EventTypeColumnName] = data.NewField(parentPrefix+EventTypeColumnName, nil, []*string{})
-				parentFields = append(parentFields, fieldByColumn[parentPrefix+EventUUIDColumnName], fieldByColumn[parentPrefix+StartTimeColumnName], fieldByColumn[parentPrefix+StopTimeColumnName], fieldByColumn[parentPrefix+DurationColumnName], fieldByColumn[parentPrefix+AssetUUIDColumnName], fieldByColumn[parentPrefix+AssetColumnName], fieldByColumn[parentPrefix+AssetPathColumnName], fieldByColumn[parentPrefix+EventTypeUUIDColumnName], fieldByColumn[parentPrefix+EventTypeColumnName])
-
-				for _, parentEventTypeProperty := range eventTypePropertiesForEventType[parentEvent.EventTypeUUID] {
-					if parentEventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
-						continue
-					}
-
-					parentPropertyFieldName := parentPrefix + parentEventTypeProperty.Name
-					var parentField *data.Field
-					switch parentEventTypeProperty.Datatype {
-					case schemas.EventTypePropertyDatatypeBool:
-						parentField = data.NewField(parentPropertyFieldName, nil, []*bool{})
-					case schemas.EventTypePropertyDatatypeNumber:
-						parentField = data.NewField(parentPropertyFieldName, nil, []*float64{})
-					case schemas.EventTypePropertyDatatypeString:
-						parentField = data.NewField(parentPropertyFieldName, nil, []*string{})
-					default:
-						parentField = data.NewField(parentPropertyFieldName, nil, []interface{}{})
-					}
-					parentFields = append(parentFields, parentField)
-					fieldByColumn[parentPropertyFieldName] = parentField
-				}
-			}
-		}
-
 		// Populate parent data or append nil for rows without a parent
 		for i := range events {
-			// if no parent uuid or if parent event type does not exist, append nil for all parent-related fields
-			hasParent := false
 			if events[i].Parent != nil {
 				if _, ok := eventTypes[events[i].Parent.EventTypeUUID]; ok {
-					hasParent = true
+					parentEvent := *events[i].Parent
+					parentEventType := eventTypes[parentEvent.EventTypeUUID]
+					parentPrefix := parentEventType.Name + "_"
+
+					fillFields(parentPrefix, fieldByColumn, &parentEvent, uuidToAssetMap, parentEventType, eventTypePropertiesForEventType[parentEvent.EventTypeUUID])
+
+					// Append nil for other parent-related fields if there are multiple parent event types
+					for otherParentPrefix := range parentFieldsAdded {
+						if otherParentPrefix == parentPrefix {
+							continue
+						}
+
+						for _, field := range fieldByColumn {
+							// skip if field is not a parent-related field
+							if !strings.HasPrefix(field.Name, otherParentPrefix) {
+								continue
+							}
+
+							addValueToField(field, nil)
+						}
+					}
 				}
+				continue
 			}
 
-			if hasParent {
-				parentEvent := *events[i].Parent
-				parentEventType := eventTypes[parentEvent.EventTypeUUID]
-				parentPrefix := parentEventType.Name + "_"
-
-				fieldByColumn[parentPrefix+EventUUIDColumnName].Append(util.Ptr(parentEvent.UUID.String()))
-				fieldByColumn[parentPrefix+StartTimeColumnName].Append(&parentEvent.StartTime)
-				fieldByColumn[parentPrefix+StopTimeColumnName].Append(parentEvent.StopTime)
-				fieldByColumn[parentPrefix+AssetUUIDColumnName].Append(util.Ptr(parentEvent.AssetUUID.String()))
-				fieldByColumn[parentPrefix+AssetColumnName].Append(util.Ptr(uuidToAssetMap[parentEvent.AssetUUID].Name))
-				fieldByColumn[parentPrefix+AssetPathColumnName].Append(util.Ptr(getAssetPath(uuidToAssetMap, parentEvent.AssetUUID)))
-				fieldByColumn[parentPrefix+EventTypeUUIDColumnName].Append(util.Ptr(parentEvent.EventTypeUUID.String()))
-				fieldByColumn[parentPrefix+EventTypeColumnName].Append(util.Ptr(parentEventType.Name))
-
-				if parentEvent.StopTime != nil {
-					parentDuration := parentEvent.StopTime.Sub(parentEvent.StartTime).Seconds()
-					fieldByColumn[parentPrefix+DurationColumnName].Append(&parentDuration)
-				} else {
-					fieldByColumn[parentPrefix+DurationColumnName].Append(nil)
-				}
-
-				for _, parentEventTypeProperty := range eventTypePropertiesForEventType[parentEvent.EventTypeUUID] {
-					if parentEventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+			// Append nil for all parent-related fields if no parent exists
+			for parentPrefix := range parentFieldsAdded {
+				for _, parentField := range fieldByColumn {
+					if !strings.HasPrefix(parentField.Name, parentPrefix) {
 						continue
 					}
 
-					parentPropertyFieldName := parentPrefix + parentEventTypeProperty.Name
-					if parentEvent.Properties != nil && parentEvent.Properties.Properties != nil {
-						setUOMFieldConfig(fieldByColumn[parentPropertyFieldName], parentEventTypeProperty)
-						addValueToField(fieldByColumn[parentPropertyFieldName], parentEvent.Properties.Properties[parentEventTypeProperty.Name])
-					} else {
-						fieldByColumn[parentPropertyFieldName].Append(nil)
-					}
-				}
-
-				// Append nil for other parent-related fields if there are multiple parent event types
-				for otherParentPrefix := range parentFieldsAdded {
-					if otherParentPrefix == parentPrefix {
-						continue
-					}
-
-					for _, field := range fieldByColumn {
-						// skip if field is not a parent-related field
-						if !strings.HasPrefix(field.Name, otherParentPrefix) {
-							continue
-						}
-
-						addValueToField(field, nil)
-					}
-				}
-			} else {
-				// Append nil for all parent-related fields if no parent exists
-				for parentPrefix := range parentFieldsAdded {
-					for _, parentField := range fieldByColumn {
-						if !strings.HasPrefix(parentField.Name, parentPrefix) {
-							continue
-						}
-
-						addValueToField(parentField, nil)
-					}
+					addValueToField(parentField, nil)
 				}
 			}
 		}
