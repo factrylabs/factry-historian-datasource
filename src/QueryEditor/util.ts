@@ -12,6 +12,7 @@ import {
   Measurement,
   MeasurementQuery,
   MeasurementQueryOptions,
+  PropertyType,
   ValueFilter,
 } from 'types'
 
@@ -365,4 +366,11 @@ export function semverCompare(a: string, b: string): number {
   }
 
   return 0
+}
+
+export function isSupportedPrototypeType(type: PropertyType, version: string): boolean {
+  if (type === PropertyType.PeriodicWithDimension && semverCompare(version, 'v7.2.0') < 0) {
+    return false
+  }
+  return true
 }

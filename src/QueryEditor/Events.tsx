@@ -8,6 +8,7 @@ import { toSelectableValue } from 'components/TagsSection/util'
 import {
   defaultQueryOptions,
   getChildAssets,
+  isSupportedPrototypeType,
   matchedAssets,
   propertyFilterToQueryTags,
   semverCompare,
@@ -180,7 +181,7 @@ export const Events = (props: Props): JSX.Element => {
     return [
       ...new Set(
         eventTypeProperties
-          .filter((e) => e.Type === PropertyType.Periodic)
+          .filter((e) => e.Type === PropertyType.Periodic || e.Type === PropertyType.PeriodicWithDimension)
           .filter((e) => selectedEventTypes.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
@@ -288,6 +289,7 @@ export const Events = (props: Props): JSX.Element => {
               >
                 <Select
                   options={Object.entries(PropertyType)
+                    .filter(([_, value]) => isSupportedPrototypeType(value, props.historianInfo?.Version ?? ''))
                     .filter(([_, value]) => !props.isAnnotationQuery || value === PropertyType.Simple)
                     .map(([key, value]) => ({ label: key, value }))}
                   value={props.query.Type}
