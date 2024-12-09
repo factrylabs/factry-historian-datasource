@@ -128,6 +128,14 @@ export const QueryOptions = (props: Props): JSX.Element => {
     props.onChange({ ...props.state, FillInitialEmptyValues: e.target.checked })
   }
 
+  const onChangeChangesOnly = (e: any): void => {
+    const updatedState = { ...props.state, ChangesOnly: e.target.checked }
+    if (props.state.FillInitialEmptyValues && e.target.checked) {
+      updatedState.FillInitialEmptyValues = false
+    }
+    props.onChange(updatedState)
+  }
+
   const onChangeUseEngineeringSpecs = (e: any): void => {
     props.onChange({ ...props.state, UseEngineeringSpecs: e.target.checked })
   }
@@ -247,8 +255,17 @@ export const QueryOptions = (props: Props): JSX.Element => {
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
-            <InlineField label="Fill empty initial intervals" labelWidth={labelWidth}>
+            <InlineField
+              label="Fill empty initial intervals"
+              labelWidth={labelWidth}
+              disabled={props.state.ChangesOnly}
+            >
               <InlineSwitch value={props.state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField label="Changes only" labelWidth={labelWidth}>
+              <InlineSwitch value={props.state.ChangesOnly} onChange={onChangeChangesOnly} />
             </InlineField>
           </InlineFieldRow>
           {!props.appIsAlertingType && (

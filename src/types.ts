@@ -96,6 +96,7 @@ export interface MeasurementQueryOptions {
   MetadataAsLabels: boolean
   Limit?: number
   ValueFilters?: ValueFilter[]
+  ChangesOnly?: boolean
 }
 
 export interface ValueFilter {
