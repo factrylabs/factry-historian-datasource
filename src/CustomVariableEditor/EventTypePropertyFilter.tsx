@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 
 import { SelectableValue } from '@grafana/data'
-import { AsyncMultiSelect, InlineField, InlineFieldRow, Select } from '@grafana/ui'
+import { AsyncMultiSelect, InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { EventTypeFilter, EventTypePropertiesFilter, EventTypePropertyType, labelWidth } from 'types'
+import { EventTypeFilter, EventTypePropertiesFilter, HistorianInfo, PropertyType, labelWidth } from 'types'
+import { isSupportedPrototypeType } from 'QueryEditor/util'
 
 export function EventTypePropertyFilterRow(props: {
   datasource: DataSource
   onChange: (val: EventTypePropertiesFilter) => void
   initialValue?: EventTypePropertiesFilter
   templateVariables: SelectableValue<string>
+  historianInfo?: HistorianInfo | undefined
 }) {
   const [selectedEventTypes, setEventTypes] = useState<Array<SelectableValue<string>>>()
 
@@ -40,10 +42,13 @@ export function EventTypePropertyFilterRow(props: {
     return selectableValues
   }
 
-  const onTypeChange = (value: SelectableValue<string> | undefined) => {
+  const onTypeChange = (items: Array<SelectableValue<string>> | undefined) => {
+    const types = items?.map((e) => {
+      return e.value || ''
+    })
     props.onChange({
       ...props.initialValue,
-      Types: value?.value ? [value.value] : [],
+      Types: types,
     })
   }
 
@@ -63,19 +68,17 @@ export function EventTypePropertyFilterRow(props: {
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineField label={'Property type'} aria-label={'Property type'} labelWidth={labelWidth}>
-          <Select
+          <MultiSelect
             placeholder="Select property type"
             width={25}
             onChange={(value) => onTypeChange(value)}
-            options={Object.entries(EventTypePropertyType).map(([key, value]) => {
-              return { label: key, value: value as string }
-            })}
+            options={Object.entries(PropertyType)
+              .filter(([_, value]) => isSupportedPrototypeType(value, props.historianInfo?.Version ?? ''))
+              .map(([key, value]) => {
+                return { label: key, value: value as string }
+              })}
             isClearable
-            value={
-              props.initialValue?.Types && props.initialValue.Types.length > 0
-                ? { label: props.initialValue.Types[0], value: props.initialValue.Types[0] }
-                : undefined
-            }
+            value={props.initialValue?.Types}
           />
         </InlineField>
       </InlineFieldRow>

@@ -66,7 +66,7 @@ type eventFrameColumn struct {
 }
 
 // EventQueryResultToTrendDataFrame converts a event query result to data frames
-func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.Asset, events []schemas.Event, eventTypes map[uuid.UUID]schemas.EventType, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, selectedProperties map[string]struct{}, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
+func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.Asset, events []schemas.Event, eventTypes map[uuid.UUID]schemas.EventType, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, selectedProperties map[string]struct{}, eventAssetPropertyFrames map[uuid.UUID]data.Frames, byDimension bool) (data.Frames, error) {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		uuidToAssetMap[asset.UUID] = asset
@@ -78,26 +78,30 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 	for _, eventType := range eventTypes {
 		eventTypeProperties := eventTypePropertiesForEventType[eventType.UUID]
 		for _, eventTypeProperty := range eventTypeProperties {
-			if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
+			if (!byDimension && eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic) || eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodicWithDimension {
 				if _, ok := selectedProperties[eventTypeProperty.Name]; len(selectedProperties) == 0 || ok {
 					periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
 				} else if _, ok := selectedProperties[eventTypeProperty.UUID.String()]; len(selectedProperties) == 0 || ok {
 					periodicEventTypeProperties = append(periodicEventTypeProperties, eventTypeProperty)
 				}
-			} else {
+			}
+			if eventTypeProperty.Type == schemas.EventTypePropertyTypeSimple {
 				simpleEventTypeProperties = append(simpleEventTypeProperties, eventTypeProperty)
 			}
 		}
 	}
 
 	periodicPropertyData := map[float64]map[eventFrameColumn]interface{}{}
-
 	columns := []eventFrameColumn{}
 
 	for i := range events {
 		eventLabels := data.Labels{}
 		for j := range simpleEventTypeProperties {
 			name := simpleEventTypeProperties[j].Name
+			if events[i].Properties == nil {
+				break
+			}
+
 			if value, ok := events[i].Properties.Properties[name]; ok {
 				eventLabels[name] = fmt.Sprintf("%v", value)
 			}
@@ -122,6 +126,10 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 			labels := data.Labels{}
 			maps.Copy(labels, eventLabels)
 			periodicPropertyValues := util.PeriodicPropertyValues{}
+			if events[i].Properties == nil {
+				continue
+			}
+
 			if err := events[i].Properties.Properties.Get(periodicEventTypeProperties[j].Name, &periodicPropertyValues); err != nil {
 				continue
 			}
@@ -188,13 +196,19 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 			setUOMFieldConfig(identifier.Field, periodicEventTypeProperties[j])
 			columns = append(columns, identifier)
 
-			for k := range periodicPropertyValues.Offsets {
-				offset := periodicPropertyValues.Offsets[k]
+			for offset, value := range periodicPropertyValues.ValuesByOffset {
+				if byDimension {
+					if dimensionValue, ok := periodicPropertyValues.DimensionValuesByOffset[offset].(float64); ok {
+						offset = dimensionValue
+					}
+				}
+
 				if _, ok := periodicPropertyData[offset]; !ok {
 					periodicPropertyData[offset] = map[eventFrameColumn]interface{}{}
 				}
-				periodicPropertyData[offset][identifier] = periodicPropertyValues.Values[k]
+				periodicPropertyData[offset][identifier] = value
 			}
+
 		}
 
 		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]
@@ -249,8 +263,10 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 		data.NewField("Offset", nil, []float64{}),
 	}
 
-	fields[0].Config = &data.FieldConfig{
-		Unit: "dtdhms",
+	if !byDimension {
+		fields[0].Config = &data.FieldConfig{
+			Unit: "dtdhms",
+		}
 	}
 
 	offsets := slices.Sorted(maps.Keys(periodicPropertyData))

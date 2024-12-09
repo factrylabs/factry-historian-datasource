@@ -12,6 +12,7 @@ import {
   Measurement,
   MeasurementQuery,
   MeasurementQueryOptions,
+  PropertyType,
   ValueFilter,
 } from 'types'
 
@@ -331,6 +332,18 @@ export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQue
 
 // semverCompare compares two semver strings and returns greater than 0 if a > b, 0 if a == b, and less than 0 if a < b
 export function semverCompare(a: string, b: string): number {
+  if (a === b) {
+    return 0
+  }
+
+  if (a === 'debug') {
+    return 1
+  }
+
+  if (b === 'debug') {
+    return -1
+  }
+
   // remove leading v
   if (a.startsWith('v')) {
     a = a.substring(1)
@@ -365,4 +378,11 @@ export function semverCompare(a: string, b: string): number {
   }
 
   return 0
+}
+
+export function isSupportedPrototypeType(type: PropertyType, version: string): boolean {
+  if (type === PropertyType.PeriodicWithDimension && semverCompare(version, 'v7.2.0') < 0) {
+    return false
+  }
+  return true
 }
