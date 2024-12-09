@@ -206,6 +206,7 @@ export function VariableQueryEditor(
           datasource={props.datasource}
           initialValue={props.query.filter}
           templateVariables={templateVariables}
+          historianInfo={historianInfo}
           onChange={(val) => {
             if (props.query.type === VariableQueryType.EventTypePropertyQuery) {
               props.onChange({ ...props.query, filter: val })

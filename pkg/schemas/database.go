@@ -86,8 +86,9 @@ const (
 
 // The order determines how EventTypePropertyType gets sorted
 const (
-	EventTypePropertyTypeSimple   PropertyType = "simple"
-	EventTypePropertyTypePeriodic PropertyType = "periodic"
+	EventTypePropertyTypeSimple                PropertyType = "simple"
+	EventTypePropertyTypePeriodic              PropertyType = "periodic"
+	EventTypePropertyTypePeriodicWithDimension PropertyType = "periodic_with_dimension"
 )
 
 // EventTypeProperty has the fields of an event type property that are used by the data source

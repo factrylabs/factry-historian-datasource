@@ -16,6 +16,19 @@ func min(a, b int) int {
 
 // SemverCompare compares two semver strings, returns true if a is less than b
 func SemverCompare(a string, b string) bool {
+	if a == b {
+		return false
+	}
+
+	// debug is always more than any other version
+	if b == "debug" {
+		return true
+	}
+
+	if a == "debug" {
+		return false
+	}
+
 	aParts := strings.Split(a, ".")
 	bParts := strings.Split(b, ".")
 	length := min(len(aParts), len(bParts))

@@ -131,11 +131,6 @@ export interface EventQuery {
   IncludeParentInfo?: boolean
 }
 
-export enum EventTypePropertyType {
-  Simple = 'simple',
-  Periodic = 'periodic',
-}
-
 export interface ResourceFilter {
   ScopedVars?: ScopedVars
 }
@@ -262,6 +257,7 @@ export enum PropertyDatatype {
 export enum PropertyType {
   Simple = 'simple',
   Periodic = 'periodic',
+  PeriodicWithDimension = 'periodic_with_dimension',
 }
 
 export interface EventTypeProperty {

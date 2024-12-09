@@ -122,7 +122,9 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames)
 		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false)
+	case string(schemas.EventTypePropertyTypePeriodicWithDimension):
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, true)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
 	}
