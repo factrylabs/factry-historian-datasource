@@ -16,6 +16,7 @@ type MeasurementQueryOptions struct {
 	DisplayDatabaseName    bool
 	DisplayDescription     bool
 	MetadataAsLabels       bool
+	ChangesOnly            bool
 	ValueFilters           []ValueFilter
 }
 

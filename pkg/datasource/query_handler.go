@@ -304,6 +304,33 @@ func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Qu
 			result = deleteFirstRow(result)
 		}
 	}
+	if options.ChangesOnly {
+		for _, frame := range result {
+			valueField, _ := frame.FieldByName("value")
+			if valueField == nil {
+				continue
+			}
+
+			var previousValue interface{}
+			rowsToDelete := []int{}
+			for i := 0; i < valueField.Len(); i++ {
+				value, ok := valueField.ConcreteAt(i)
+				if !ok {
+					continue
+				}
+
+				if previousValue == nil || value != previousValue {
+					previousValue = value
+					continue
+				}
+
+				rowsToDelete = append(rowsToDelete, i)
+			}
+			for i := len(rowsToDelete) - 1; i >= 0; i-- {
+				frame.DeleteRow(rowsToDelete[i])
+			}
+		}
+	}
 
 	return addMetaData(result, options.UseEngineeringSpecs), nil
 }
