@@ -12,7 +12,7 @@ import { HistorianDataSourceOptions, HistorianInfo, Query, VariableQuery, Variab
 import { EventTypePropertyFilterRow } from './EventTypePropertyFilter'
 import { EventTypeFilterRow } from './EventTypeFilter'
 import { PropertyValuesFilterRow } from './PropertyValuesFilter'
-import { semverCompare } from 'QueryEditor/util'
+import { isFeatureEnabled } from 'util/semver'
 
 export function VariableQueryEditor(
   props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions, VariableQuery>
@@ -51,7 +51,7 @@ export function VariableQueryEditor(
       { label: 'Asset property', value: VariableQueryType.AssetPropertyQuery },
     ] as Array<SelectableValue<string>>
 
-    if (historianInfo !== undefined && semverCompare(historianInfo.Version, 'v7.2.0') >= 0) {
+    if (historianInfo !== undefined && isFeatureEnabled(historianInfo.Version, 'v7.2.0', true)) {
       options.push({ label: 'Event property values', value: VariableQueryType.PropertyValuesQuery })
     }
     return options
@@ -216,7 +216,7 @@ export function VariableQueryEditor(
       )}
       {props.query.type === VariableQueryType.PropertyValuesQuery &&
         historianInfo &&
-        semverCompare(historianInfo.Version, 'v7.2.0') >= 0 && (
+        isFeatureEnabled(historianInfo.Version, 'v7.2.0', true) && (
           <PropertyValuesFilterRow
             datasource={props.datasource}
             initialValue={props.query.filter}

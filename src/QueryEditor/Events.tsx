@@ -11,7 +11,6 @@ import {
   isSupportedPrototypeType,
   matchedAssets,
   propertyFilterToQueryTags,
-  semverCompare,
   tagsToQueryTags,
 } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
@@ -30,6 +29,7 @@ import {
   PropertyType,
 } from 'types'
 import { KnownOperator } from 'components/TagsSection/types'
+import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: EventQuery
@@ -279,7 +279,7 @@ export const Events = (props: Props): JSX.Element => {
     const basicOperators: KnownOperator[] = ['=', '!=', '<', '<=', '>', '>=']
     const v72Operators: KnownOperator[] = ['~', '!~', 'IN', 'NOT IN', 'IS NULL', 'IS NOT NULL', 'EXISTS', 'NOT EXISTS']
 
-    if (props.historianInfo && semverCompare(props.historianInfo.Version, 'v7.2.0') >= 0) {
+    if (props.historianInfo && isFeatureEnabled(props.historianInfo.Version, 'v7.2.0', true)) {
       return basicOperators.concat(v72Operators)
     }
     return basicOperators

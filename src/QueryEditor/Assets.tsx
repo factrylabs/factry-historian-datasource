@@ -5,8 +5,9 @@ import { default as Cascader } from 'components/Cascader/Cascader'
 import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
-import { getChildAssets, matchedAssets, semverCompare, tagsToQueryTags, valueFiltersToQueryTags } from './util'
+import { getChildAssets, matchedAssets, tagsToQueryTags, valueFiltersToQueryTags } from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, HistorianInfo, labelWidth, MeasurementQueryOptions } from 'types'
+import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -176,7 +177,7 @@ export const Assets = (props: Props): JSX.Element => {
             valueFilters={valueFiltersToQueryTags(props.query.Options.ValueFilters ?? [])}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={[]}
-            hideValueFilter={props.historianInfo && semverCompare(props.historianInfo?.Version, 'v7.1.0') < 0}
+            hideValueFilter={props.historianInfo && isFeatureEnabled(props.historianInfo?.Version, 'v7.1.0')}
             templateVariables={props.templateVariables}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
