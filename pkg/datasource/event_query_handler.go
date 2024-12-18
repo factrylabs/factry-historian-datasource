@@ -63,7 +63,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	}
 
 	var eventTypeProperties []schemas.EventTypeProperty
-	if util.CheckMinimumVersion(historianInfo, "6.4.0") {
+	if util.CheckMinimumVersion(historianInfo, "6.4.0", false) {
 		eventTypeQuery := url.Values{}
 		for i, eventTypeUUID := range slices.Collect(maps.Keys(eventTypeUUIDs)) {
 			eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())

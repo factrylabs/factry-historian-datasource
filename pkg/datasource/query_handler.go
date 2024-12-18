@@ -125,7 +125,7 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 	}
 
 	var assetProperties []schemas.AssetProperty
-	canFilterAssetProperties := util.CheckMinimumVersion(historianInfo, "6.3.0")
+	canFilterAssetProperties := util.CheckMinimumVersion(historianInfo, "6.3.0", false)
 	if canFilterAssetProperties {
 		assetPropertyQuery := url.Values{}
 

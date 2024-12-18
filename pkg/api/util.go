@@ -14,7 +14,7 @@ import (
 // GetFilteredAssets returns a map of assets that match the given asset strings
 func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
 	assetUUIDSet := map[uuid.UUID]schemas.Asset{}
-	if util.CheckMinimumVersion(historianInfo, "6.4.0") {
+	if util.CheckMinimumVersion(historianInfo, "6.4.0", false) {
 		for _, assetString := range assetStrings {
 			searchKey := "Path"
 			if _, err := uuid.Parse(assetString); err == nil {
@@ -54,7 +54,7 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 func (api *API) GetFilteredEventTypes(ctx context.Context, eventTypeStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.EventType, error) {
 	eventTypeUUIDSet := map[uuid.UUID]schemas.EventType{}
 
-	if util.CheckMinimumVersion(historianInfo, "6.4.0") {
+	if util.CheckMinimumVersion(historianInfo, "6.4.0", false) {
 		for _, eventTypeString := range eventTypeStrings {
 			eventTypeQuery := url.Values{}
 			eventTypeQuery.Add("Keyword", eventTypeString)

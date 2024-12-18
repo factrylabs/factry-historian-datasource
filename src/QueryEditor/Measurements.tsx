@@ -5,7 +5,7 @@ import { DataSource } from 'datasource'
 import { DatabaseSelect } from 'components/util/DatabaseSelect'
 import { MeasurementSelect } from 'components/util/MeasurementSelect'
 import { QueryOptions } from './QueryOptions'
-import { semverCompare, tagsToQueryTags, valueFiltersToQueryTags } from './util'
+import { tagsToQueryTags, valueFiltersToQueryTags } from './util'
 import {
   HistorianInfo,
   labelWidth,
@@ -15,6 +15,7 @@ import {
   MeasurementQueryOptions,
   TimeseriesDatabase,
 } from 'types'
+import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: MeasurementQuery
@@ -186,7 +187,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
             appIsAlertingType={props.appIsAlertingType}
             datatypes={datatypes}
             templateVariables={props.templateVariables}
-            hideValueFilter={props.historianInfo && semverCompare(props.historianInfo?.Version, 'v7.1.0') < 0}
+            hideValueFilter={props.historianInfo && isFeatureEnabled(props.historianInfo?.Version, 'v7.1.0')}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
             onChange={onChangeMeasurementQueryOptions}
