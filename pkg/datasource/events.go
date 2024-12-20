@@ -27,6 +27,8 @@ const (
 	EventUUIDColumnName       = "EventUUID"
 	ParentEventUUIDColumnName = "ParentEventUUID"
 	EventTypeUUIDColumnName   = "EventTypeUUID"
+
+	parentEventPrefix = "Parent_"
 )
 
 // EventQueryResultToDataFrame converts a event query result to data frames
@@ -147,7 +149,7 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 			if includeParentInfo && events[i].Parent != nil {
 				parentEvent := *events[i].Parent
 				parentType := eventTypes[parentEvent.EventTypeUUID]
-				parentPrefix := parentType.Name + "_"
+				parentPrefix := parentEventPrefix
 
 				// Add parent event details
 				labels[parentPrefix+EventUUIDColumnName] = parentEvent.UUID.String()
@@ -433,12 +435,12 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 		if events[i].ParentUUID != nil {
 			if includeParentInfo {
 				parentEvent := *events[i].Parent
-				parentEventType, parentEventTypeExists := eventTypes[parentEvent.EventTypeUUID]
+				_, parentEventTypeExists := eventTypes[parentEvent.EventTypeUUID]
 				if !parentEventTypeExists {
 					continue
 				}
 
-				parentPrefix := parentEventType.Name + "_"
+				parentPrefix := parentEventPrefix
 				if !parentFieldsAdded[parentPrefix] {
 					parentFieldsAdded[parentPrefix] = true
 
@@ -502,7 +504,7 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 				if _, ok := eventTypes[events[i].Parent.EventTypeUUID]; ok {
 					parentEvent := *events[i].Parent
 					parentEventType := eventTypes[parentEvent.EventTypeUUID]
-					parentPrefix := parentEventType.Name + "_"
+					parentPrefix := parentEventPrefix
 
 					fillFields(parentPrefix, fieldByColumn, &parentEvent, uuidToAssetMap, parentEventType, eventTypePropertiesForEventType[parentEvent.EventTypeUUID])
 
