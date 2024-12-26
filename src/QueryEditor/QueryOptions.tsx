@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useState } from 'react'
+import React, { ChangeEvent, useState, useEffect } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
@@ -30,6 +30,22 @@ export interface Props {
 export const QueryOptions = (props: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
   const [seriesLimit, setSeriesLimit] = useDebounce<number>(props.seriesLimit, 500, props.onChangeSeriesLimit)
+
+  useEffect(() => {
+    if (props.state.Aggregation?.Period) {
+      const periodExists = periods.some(
+        (period) => period.value === props.state.Aggregation?.Period
+      )
+
+      if (!periodExists) {
+        const customValue: SelectableValue<string> = {
+          value: props.state.Aggregation?.Period,
+          label: props.state.Aggregation?.Period
+        }
+        setPeriods((prevPeriods) => [...prevPeriods, customValue])
+      }
+    }
+  }, [periods, props.state.Aggregation?.Period])
 
   const getAggregationOptions = (
     datatypes: string[],
