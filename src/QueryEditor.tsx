@@ -124,11 +124,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   onChangeAssetMeasurementQuery(assetMeasurementQuery: AssetMeasurementQuery): void {
     const { onChange, query } = this.props
-    query.queryType = 'AssetMeasurementQuery'
-    query.query = assetMeasurementQuery
-    query.tabIndex = TabIndex.Assets
-    query.historianInfo = this.historianInfo
-    onChange(query)
+    const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
+    updatedQuery.queryType = 'AssetMeasurementQuery'
+    updatedQuery.query = assetMeasurementQuery
+    updatedQuery.tabIndex = TabIndex.Assets
+    updatedQuery.historianInfo = this.historianInfo
+    onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
       ...this.state,
@@ -138,11 +139,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   onChangeMeasurementQuery(measurementQuery: MeasurementQuery): void {
     const { onChange, query } = this.props
-    query.queryType = 'MeasurementQuery'
-    query.query = measurementQuery
-    query.tabIndex = TabIndex.Measurements
-    query.historianInfo = this.historianInfo
-    onChange(query)
+    const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
+    updatedQuery.queryType = 'MeasurementQuery'
+    updatedQuery.query = measurementQuery
+    updatedQuery.tabIndex = TabIndex.Measurements
+    updatedQuery.historianInfo = this.historianInfo
+    onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
       ...this.state,
@@ -152,11 +154,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   onChangeRawQuery(rawQuery: RawQuery): void {
     const { onChange, query } = this.props
-    query.queryType = 'RawQuery'
-    query.query = rawQuery
-    query.tabIndex = TabIndex.RawQuery
-    query.historianInfo = this.historianInfo
-    onChange(query)
+    const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
+    updatedQuery.queryType = 'RawQuery'
+    updatedQuery.query = rawQuery
+    updatedQuery.tabIndex = TabIndex.RawQuery
+    updatedQuery.historianInfo = this.historianInfo
+    onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
       ...this.state,
@@ -166,11 +169,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   onChangeEventQuery(eventQuery: EventQuery): void {
     const { onChange, query } = this.props
-    query.queryType = 'EventQuery'
-    query.query = eventQuery
-    query.tabIndex = TabIndex.Events
-    query.historianInfo = this.historianInfo
-    onChange(query)
+    const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
+    updatedQuery.queryType = 'EventQuery'
+    updatedQuery.query = eventQuery
+    updatedQuery.tabIndex = TabIndex.Events
+    updatedQuery.historianInfo = this.historianInfo
+    onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
       ...this.state,
@@ -180,9 +184,10 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   onChangeSeriesLimit(value: number): void {
     const { onChange, query } = this.props
-    query.seriesLimit = value
-    query.historianInfo = this.historianInfo
-    onChange(query)
+    const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
+    updatedQuery.seriesLimit = value
+    updatedQuery.historianInfo = this.historianInfo
+    onChange(updatedQuery)
     this.onRunQuery(this.props)
   }
 
