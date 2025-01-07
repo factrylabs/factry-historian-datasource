@@ -72,7 +72,7 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 			}
 		}
 
-		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, query.SeriesLimit, query.HistorianInfo)
+		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
 		return response
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
@@ -90,7 +90,7 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 		}
 
 		measurementQuery.Measurements = measurements
-		response.Frames, response.Error = ds.handleMeasurementQuery(ctx, measurementQuery, backendQuery.TimeRange)
+		response.Frames, response.Error = ds.handleMeasurementQuery(ctx, measurementQuery, backendQuery.TimeRange, backendQuery.Interval)
 		return response
 	case QueryTypeRaw:
 		rawQuery := schemas.RawQuery{}
@@ -110,7 +110,7 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 			}
 		}
 
-		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, query.SeriesLimit, query.HistorianInfo)
+		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
 		return response
 	}
 
@@ -118,7 +118,7 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 	return response
 }
 
-func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, timeRange backend.TimeRange, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
+func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, timeRange backend.TimeRange, interval time.Duration, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
 	assets, err := ds.API.GetFilteredAssets(ctx, assetMeasurementQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ assetLoop:
 		Options:      assetMeasurementQuery.Options,
 	}
 
-	frames, err := ds.handleQuery(ctx, historianQuery(measurementQuery, timeRange), measurementQuery.Options)
+	frames, err := ds.handleQuery(ctx, historianQuery(measurementQuery, timeRange, interval), measurementQuery.Options)
 	if err != nil {
 		return nil, err
 	}
@@ -242,8 +242,8 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 	return parsedMeasurements, nil
 }
 
-func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measurementQuery schemas.MeasurementQuery, timeRange backend.TimeRange) (data.Frames, error) {
-	frames, err := ds.handleQuery(ctx, historianQuery(measurementQuery, timeRange), measurementQuery.Options)
+func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measurementQuery schemas.MeasurementQuery, timeRange backend.TimeRange, interval time.Duration) (data.Frames, error) {
+	frames, err := ds.handleQuery(ctx, historianQuery(measurementQuery, timeRange, interval), measurementQuery.Options)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +383,7 @@ func fillQueryVariables(query string, databaseType string, timeRange backend.Tim
 	return query
 }
 
-func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange) schemas.Query {
+func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange, interval time.Duration) schemas.Query {
 	start := timeRange.From.Truncate(time.Second)
 	end := timeRange.To.Truncate(time.Second)
 	historianQuery := schemas.Query{
@@ -398,6 +398,9 @@ func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange)
 
 	if query.Options.Aggregation != nil {
 		historianQuery.Aggregation = query.Options.Aggregation
+		if query.Options.Aggregation.Period == "" || query.Options.Aggregation.Period == "$__interval" {
+			historianQuery.Aggregation.Period = interval.String()
+		}
 	}
 
 	if query.Options.Limit != nil {
