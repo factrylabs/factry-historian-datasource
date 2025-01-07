@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, timeRange backend.TimeRange, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
+func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery schemas.EventQuery, timeRange backend.TimeRange, interval time.Duration, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
 	assets, err := ds.API.GetFilteredAssets(ctx, eventQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 
 		for i := range events {
 			var err error
-			frames, err := ds.handleEventAssetMeasurementQuery(ctx, eventQuery.Type, events[i], assetMeasurementQuery, assets, assetProperties, timeRange, seriesLimit)
+			frames, err := ds.handleEventAssetMeasurementQuery(ctx, eventQuery.Type, events[i], assetMeasurementQuery, assets, assetProperties, timeRange, interval, seriesLimit)
 			if err != nil {
 				return nil, err
 			}
@@ -130,7 +130,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	}
 }
 
-func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Context, queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, timeRange backend.TimeRange, seriesLimit int) (data.Frames, error) {
+func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Context, queryType string, event schemas.Event, assetMeasurementQuery schemas.AssetMeasurementQuery, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, timeRange backend.TimeRange, interval time.Duration, seriesLimit int) (data.Frames, error) {
 	if assetMeasurementQuery.Options.Aggregation == nil {
 		return nil, errors.New("no aggregation specified")
 	}
@@ -159,7 +159,7 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 		Options:      assetMeasurementQuery.Options,
 	}
 
-	historianQuery := historianQuery(measurementQuery, timeRange)
+	historianQuery := historianQuery(measurementQuery, timeRange, interval)
 	historianQuery.Start = event.StartTime
 	historianQuery.End = event.StopTime
 
