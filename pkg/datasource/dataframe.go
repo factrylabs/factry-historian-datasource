@@ -15,7 +15,7 @@ import (
 )
 
 // fieldLabelsFromMeta are the field labels that are extracted from the metadata
-var fieldLabelsFromMeta = []string{"MeasurementUUID", "MeasurementName", "DatabaseUUID", "DatabaseName", "AssetProperty", "AssetPropertyUUID", "AssetUUID", "AssetPath", "AssetName"}
+var fieldLabelsFromMeta = []string{"MeasurementUUID", "MeasurementName", "DatabaseUUID", "DatabaseName", "AssetProperty", "AssetPropertyUUID", "AssetUUID", "AssetPath", "AssetName", "Description"}
 
 // getLabelsFromFrame returns the tag from a frame
 func getLabelsFromFrame(frame *data.Frame) map[string]interface{} {
