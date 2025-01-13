@@ -351,16 +351,12 @@ export function semverCompare(a: string, b: string): number {
   if (b.startsWith('v')) {
     b = b.substring(1)
   }
-  const aParts = a.split('.')
-  const bParts = b.split('.')
+  const aParts = a.split(/[-.]/)
+  const bParts = b.split(/[-.]/)
 
-  for (let i = 0; i < aParts.length; i++) {
-    if (i >= bParts.length) {
-      return 1
-    }
-
-    const aPart = parseInt(aParts[i], 10)
-    const bPart = parseInt(bParts[i], 10)
+  for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+    const aPart = parseInt(aParts[i] || '0', 10)
+    const bPart = parseInt(bParts[i] || '0', 10)
 
     if (aPart < bPart) {
       return -1
@@ -369,11 +365,13 @@ export function semverCompare(a: string, b: string): number {
     if (aPart > bPart) {
       return 1
     }
+
+    if (aParts[i] !== bParts[i]) {
+      return aParts[i] > bParts[i] ? 1 : -1
+    }
   }
 
-  if (aParts.length < bParts.length) {
-    return -1
-  } else if (aParts.length > bParts.length) {
+  if (aParts.length > bParts.length) {
     return 1
   }
 
