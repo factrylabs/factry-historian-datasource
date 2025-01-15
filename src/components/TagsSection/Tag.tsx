@@ -18,6 +18,7 @@ function adjustOperatorIfNeeded(currentOperator: string, newTagValue: string): s
 
 const knownOperators: KnownOperator[] = ['=']
 const knownConditions: KnownCondition[] = ['AND', 'OR']
+const operatorsWithoutValue: KnownOperator[] = ['IS NULL', 'IS NOT NULL', 'EXISTS', 'NOT EXISTS']
 
 const operatorOptions: Array<SelectableValue<KnownOperator>> = knownOperators.map(toSelectableValue)
 const conditionOptions: Array<SelectableValue<KnownCondition>> = knownConditions.map(toSelectableValue)
@@ -116,6 +117,7 @@ export const Tag = ({
           onChange({ ...tag, operator: op.value })
         }}
       />
+      {operatorsWithoutValue.includes(operator as KnownOperator) ? null : (
       <Seg
         allowCustomValue
         value={(tag.value === '' ? 'select tag value' : tag.value)}
@@ -125,6 +127,7 @@ export const Tag = ({
           onChange({ ...tag, value, operator: adjustOperatorIfNeeded(operator, value) })
         }}
       />
+      )}
     </div>
   )
 }

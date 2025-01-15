@@ -277,7 +277,7 @@ export const Events = (props: Props): JSX.Element => {
 
   const getValueFilterOperators = (): KnownOperator[] => {
     const basicOperators: KnownOperator[] = ['=', '!=', '<', '<=', '>', '>=']
-    const v72Operators: KnownOperator[] = ['~', '!~', 'IN', 'NOT IN']
+    const v72Operators: KnownOperator[] = ['~', '!~', 'IN', 'NOT IN', 'IS NULL', 'IS NOT NULL', 'EXISTS', 'NOT EXISTS']
 
     if (props.historianInfo && semverCompare(props.historianInfo.Version, 'v7.2.0') >= 0) {
       return basicOperators.concat(v72Operators)
