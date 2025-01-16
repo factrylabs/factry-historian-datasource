@@ -116,6 +116,7 @@ export const Tag = ({
           onChange({ ...tag, operator: op.value })
         }}
       />
+      {operator === 'IS NULL' || operator === 'IS NOT NULL' || operator === 'EXISTS' || operator === 'NOT EXISTS' ? null : (
       <Seg
         allowCustomValue
         value={(tag.value === '' ? 'select tag value' : tag.value)}
@@ -125,6 +126,7 @@ export const Tag = ({
           onChange({ ...tag, value, operator: adjustOperatorIfNeeded(operator, value) })
         }}
       />
+      )}
     </div>
   )
 }

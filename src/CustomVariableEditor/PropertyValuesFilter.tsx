@@ -307,7 +307,7 @@ export function PropertyValuesFilterRow(props: {
         <InlineField label="WHERE" labelWidth={labelWidth}>
           <TagsSection
             tags={propertyFilterToQueryTags(props.initialValue?.EventFilter.PropertyFilter ?? [])}
-            operators={['=', '!=', '<', '<=', '>', '>=', '~', '!~', 'IN', 'NOT IN']}
+            operators={['=', '!=', '<', '<=', '>', '>=', '~', '!~', 'IN', 'NOT IN', 'IS NULL', 'IS NOT NULL', 'EXISTS', 'NOT EXISTS']}
             getTagKeyOptions={() =>
               Promise.resolve(availableSimpleProperties(props.initialValue?.EventFilter.EventTypes ?? []))
             }
