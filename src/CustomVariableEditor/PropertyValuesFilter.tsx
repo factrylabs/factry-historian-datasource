@@ -20,6 +20,7 @@ import { getChildAssets, matchedAssets, propertyFilterToQueryTags } from 'QueryE
 import { toSelectableValue } from 'components/TagsSection/util'
 import { TagsSection } from 'components/TagsSection/TagsSection'
 import { QueryTag } from 'components/TagsSection/types'
+import { getValueFilterOperatorsForVersion, operatorsWithoutValue } from 'util/eventFilter'
 
 export function PropertyValuesFilterRow(props: {
   datasource: DataSource
@@ -129,7 +130,9 @@ export function PropertyValuesFilterRow(props: {
         Datatype: dataType,
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
-        Value: tag.value,
+      }
+      if (!operatorsWithoutValue.includes(tag.operator as any)) {
+        eventPropertyFilter.Value = tag.value
       }
       filter.push(eventPropertyFilter)
     })
@@ -307,7 +310,7 @@ export function PropertyValuesFilterRow(props: {
         <InlineField label="WHERE" labelWidth={labelWidth}>
           <TagsSection
             tags={propertyFilterToQueryTags(props.initialValue?.EventFilter.PropertyFilter ?? [])}
-            operators={['=', '!=', '<', '<=', '>', '>=', '~', '!~', 'IN', 'NOT IN', 'IS NULL', 'IS NOT NULL', 'EXISTS', 'NOT EXISTS']}
+            operators={getValueFilterOperatorsForVersion(props.historianInfo?.Version ?? '')}
             getTagKeyOptions={() =>
               Promise.resolve(availableSimpleProperties(props.initialValue?.EventFilter.EventTypes ?? []))
             }

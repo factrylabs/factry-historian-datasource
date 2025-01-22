@@ -4,7 +4,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { AddButton } from 'components/util/AddButton'
 import { Tag } from './Tag'
 import { getCondition, getOperator, toSelectableValue } from './util'
-import { KnownCondition, KnownOperator } from './types'
+import { KnownCondition, KnownOperator } from '../../util/eventFilter'
 
 export interface QueryTag {
   key: string

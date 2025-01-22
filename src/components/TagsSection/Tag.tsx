@@ -2,7 +2,8 @@ import React from 'react'
 
 import { SelectableValue } from '@grafana/data'
 import { Seg } from '../util/Seg'
-import { KnownCondition, KnownOperator, QueryTag } from './types'
+import { QueryTag } from './types'
+import { KnownCondition, KnownOperator, operatorsWithoutValue } from '../../util/eventFilter'
 import { getCondition, getOperator, isRegex, toSelectableValue } from './util'
 
 function adjustOperatorIfNeeded(currentOperator: string, newTagValue: string): string {
@@ -18,7 +19,6 @@ function adjustOperatorIfNeeded(currentOperator: string, newTagValue: string): s
 
 const knownOperators: KnownOperator[] = ['=']
 const knownConditions: KnownCondition[] = ['AND', 'OR']
-const operatorsWithoutValue: KnownOperator[] = ['IS NULL', 'IS NOT NULL', 'EXISTS', 'NOT EXISTS']
 
 const operatorOptions: Array<SelectableValue<KnownOperator>> = knownOperators.map(toSelectableValue)
 const conditionOptions: Array<SelectableValue<KnownCondition>> = knownConditions.map(toSelectableValue)
@@ -118,15 +118,15 @@ export const Tag = ({
         }}
       />
       {operatorsWithoutValue.includes(operator as KnownOperator) ? null : (
-      <Seg
-        allowCustomValue
-        value={(tag.value === '' ? 'select tag value' : tag.value)}
-        loadOptions={getTagValueSegmentOptions}
-        onChange={(v) => {
-          const value = v.value ?? ''
-          onChange({ ...tag, value, operator: adjustOperatorIfNeeded(operator, value) })
-        }}
-      />
+        <Seg
+          allowCustomValue
+          value={tag.value === '' ? 'select tag value' : tag.value}
+          loadOptions={getTagValueSegmentOptions}
+          onChange={(v) => {
+            const value = v.value ?? ''
+            onChange({ ...tag, value, operator: adjustOperatorIfNeeded(operator, value) })
+          }}
+        />
       )}
     </div>
   )
