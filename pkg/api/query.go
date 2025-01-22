@@ -118,8 +118,31 @@ func (api *API) GetTagValues(ctx context.Context, measurementUUID, tagKey string
 	return handleDataFramesResponse(response)
 }
 
+func fixPropertyFilterValues(filter schemas.EventFilter) schemas.EventFilter {
+	for i := range filter.PropertyFilter {
+		if filter.PropertyFilter[i].Datatype == "" {
+			filter.PropertyFilter[i].Datatype = "string"
+		}
+
+		switch filter.PropertyFilter[i].Operator {
+		case "EXISTS", "NOT EXISTS", "IS NULL", "IS NOT NULL":
+			filter.PropertyFilter[i].Value = nil
+		case "IN", "NOT IN":
+			if filter.PropertyFilter[i].Value == nil {
+				filter.PropertyFilter[i].Value = []interface{}{}
+			}
+		default:
+			if filter.PropertyFilter[i].Value == nil {
+				filter.PropertyFilter[i].Value = ""
+			}
+		}
+	}
+	return filter
+}
+
 func getEventFilter(filter schemas.EventFilter) (url.Values, error) {
 	encoder := form.NewEncoder()
+	filter = fixPropertyFilterValues(filter)
 	values, err := encoder.Encode(&filter)
 	if err != nil {
 		return nil, err

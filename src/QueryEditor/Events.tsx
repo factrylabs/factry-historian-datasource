@@ -28,8 +28,7 @@ import {
   PropertyDatatype,
   PropertyType,
 } from 'types'
-import { KnownOperator } from 'components/TagsSection/types'
-import { isFeatureEnabled } from 'util/semver'
+import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
 
 export interface Props {
   query: EventQuery
@@ -143,8 +142,10 @@ export const Events = (props: Props): JSX.Element => {
         Datatype: dataType,
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
-        Value: tag.value,
         ScopedVars: {},
+      }
+      if (needsValue(eventPropertyFilter.Operator as KnownOperator)) {
+        eventPropertyFilter.Value = tag.value
       }
       filter.push(eventPropertyFilter)
     })
@@ -276,13 +277,7 @@ export const Events = (props: Props): JSX.Element => {
   }
 
   const getValueFilterOperators = (): KnownOperator[] => {
-    const basicOperators: KnownOperator[] = ['=', '!=', '<', '<=', '>', '>=']
-    const v72Operators: KnownOperator[] = ['~', '!~', 'IN', 'NOT IN', 'IS NULL', 'IS NOT NULL', 'EXISTS', 'NOT EXISTS']
-
-    if (props.historianInfo && isFeatureEnabled(props.historianInfo.Version, 'v7.2.0', true)) {
-      return basicOperators.concat(v72Operators)
-    }
-    return basicOperators
+    return getValueFilterOperatorsForVersion(props.historianInfo?.Version ?? '')
   }
 
   return (
