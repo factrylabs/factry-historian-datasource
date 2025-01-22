@@ -20,7 +20,7 @@ import { getChildAssets, matchedAssets, propertyFilterToQueryTags } from 'QueryE
 import { toSelectableValue } from 'components/TagsSection/util'
 import { TagsSection } from 'components/TagsSection/TagsSection'
 import { QueryTag } from 'components/TagsSection/types'
-import { getValueFilterOperatorsForVersion, operatorsWithoutValue } from 'util/eventFilter'
+import { getValueFilterOperatorsForVersion, needsValue } from 'util/eventFilter'
 
 export function PropertyValuesFilterRow(props: {
   datasource: DataSource
@@ -131,7 +131,7 @@ export function PropertyValuesFilterRow(props: {
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
       }
-      if (!operatorsWithoutValue.includes(tag.operator as any)) {
+      if (needsValue(tag.operator as any)) {
         eventPropertyFilter.Value = tag.value
       }
       filter.push(eventPropertyFilter)
