@@ -169,6 +169,10 @@ assetLoop:
 		}
 	}
 
+	if len(measurementUUIDs) == 0 {
+		return nil, nil
+	}
+
 	measurementQuery := schemas.MeasurementQuery{
 		Measurements: slices.Collect(maps.Keys(measurementUUIDs)),
 		Options:      assetMeasurementQuery.Options,
