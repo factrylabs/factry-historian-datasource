@@ -15,7 +15,7 @@ Available query types:
 - Measurement
 - Asset
 - Even type
-- Database
+- Database 
 - Event type property
 - Asset property
 
