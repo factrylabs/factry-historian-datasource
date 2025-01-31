@@ -105,7 +105,9 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 				return nil, err
 			}
 
-			eventAssetPropertyFrames[events[i].UUID] = frames
+			if len(frames) > 0 {
+				eventAssetPropertyFrames[events[i].UUID] = frames
+			}
 		}
 	}
 
@@ -152,6 +154,10 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 				break
 			}
 		}
+	}
+
+	if len(measurementUUIDs) == 0 {
+		return nil, nil
 	}
 
 	measurementQuery := schemas.MeasurementQuery{
