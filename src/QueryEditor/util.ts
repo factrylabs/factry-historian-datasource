@@ -332,7 +332,7 @@ export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQue
 }
 
 export function isSupportedPrototypeType(type: PropertyType, version: string): boolean {
-  if (type === PropertyType.PeriodicWithDimension && isFeatureEnabled(version, 'v7.2.0', true)) {
+  if (type === PropertyType.PeriodicWithDimension && isFeatureEnabled(version, '7.2.0', true)) {
     return false
   }
   return true

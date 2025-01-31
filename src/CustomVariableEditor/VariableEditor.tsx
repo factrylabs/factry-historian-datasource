@@ -51,7 +51,7 @@ export function VariableQueryEditor(
       { label: 'Asset property', value: VariableQueryType.AssetPropertyQuery },
     ] as Array<SelectableValue<string>>
 
-    if (historianInfo !== undefined && isFeatureEnabled(historianInfo.Version, 'v7.2.0', true)) {
+    if (historianInfo !== undefined && isFeatureEnabled(historianInfo.Version, '7.2.0', true)) {
       options.push({ label: 'Event property values', value: VariableQueryType.PropertyValuesQuery })
     }
     return options
@@ -216,7 +216,7 @@ export function VariableQueryEditor(
       )}
       {props.query.type === VariableQueryType.PropertyValuesQuery &&
         historianInfo &&
-        isFeatureEnabled(historianInfo.Version, 'v7.2.0', true) && (
+        isFeatureEnabled(historianInfo.Version, '7.2.0', true) && (
           <PropertyValuesFilterRow
             datasource={props.datasource}
             initialValue={props.query.filter}

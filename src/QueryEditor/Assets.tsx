@@ -177,7 +177,7 @@ export const Assets = (props: Props): JSX.Element => {
             valueFilters={valueFiltersToQueryTags(props.query.Options.ValueFilters ?? [])}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={[]}
-            hideValueFilter={props.historianInfo && isFeatureEnabled(props.historianInfo?.Version, 'v7.1.0')}
+            hideValueFilter={!props.historianInfo || !isFeatureEnabled(props.historianInfo?.Version, '7.1.0')}
             templateVariables={props.templateVariables}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}

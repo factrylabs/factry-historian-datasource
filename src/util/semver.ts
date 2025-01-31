@@ -14,6 +14,10 @@ type SemVer = {
 
 // Helper function to parse a semantic version string
 function parseSemVer(version: string): SemVer {
+  // remove leading 'v' if present
+  if (version.startsWith('v')) {
+    version = version.slice(1)
+  }
   const matches = version.match(semVerRegex)
   if (!matches) {
     return {
