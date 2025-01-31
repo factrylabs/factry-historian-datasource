@@ -28,7 +28,7 @@ export function needsValue(operator: KnownOperator): boolean {
 
 export function getValueFilterOperatorsForVersion(version: string): KnownOperator[] {
   let operators = basicOperators
-  if (version && isFeatureEnabled(version, 'v7.2.0', true)) {
+  if (version && isFeatureEnabled(version, '7.2.0', true)) {
     operators = operators.concat(v72Operators)
   }
 

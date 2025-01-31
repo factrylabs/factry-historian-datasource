@@ -109,7 +109,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
         hideLimit={props.queryType === 'simple'}
         hideGroupBy={props.queryType === 'simple'}
         hideAdvancedOptions={props.queryType === 'simple'}
-        hideValueFilter={props.historianInfo && isFeatureEnabled(props.historianInfo?.Version, 'v7.1.0')}
+        hideValueFilter={!props.historianInfo || !isFeatureEnabled(props.historianInfo?.Version, '7.1.0')}
         getTagKeyOptions={getTagKeyOptions}
         getTagValueOptions={getTagValueOptions}
         onChange={props.onChangeQueryOptions}

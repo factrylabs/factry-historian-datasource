@@ -187,7 +187,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
             appIsAlertingType={props.appIsAlertingType}
             datatypes={datatypes}
             templateVariables={props.templateVariables}
-            hideValueFilter={props.historianInfo && isFeatureEnabled(props.historianInfo?.Version, 'v7.1.0')}
+            hideValueFilter={!props.historianInfo || !isFeatureEnabled(props.historianInfo?.Version, '7.1.0')}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
             onChange={onChangeMeasurementQueryOptions}
