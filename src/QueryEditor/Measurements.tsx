@@ -114,7 +114,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
 
     if (props.query.IsRegex) {
       const filter: MeasurementFilter = {
-        Keyword: props.query.Regex,
+        Keyword: '/' + props.query.Regex + '/',
         DatabaseUUIDs: props.query.Databases,
         ScopedVars: {},
       }
@@ -135,7 +135,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
 
     if (props.query.IsRegex) {
       const filter: MeasurementFilter = {
-        Keyword: props.query.Regex,
+        Keyword: '/' + props.query.Regex + '/',
         DatabaseUUIDs: props.query.Databases,
         ScopedVars: {},
       }
