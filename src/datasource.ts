@@ -119,7 +119,18 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
                 (e) => e.Value !== 'enter a value'
               )
             }
-            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.map((e) => {
+            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.filter(e => {
+              if (e.Operator === 'IS NULL' || e.Operator === 'IS NOT NULL' || e.Operator === 'EXISTS' || e.Operator === 'NOT EXISTS') {
+                return true
+              }
+
+              if (typeof e.Value === 'number' && isNaN(e.Value) || typeof e.Value === 'string' && e.Value === '' ) {
+                return false
+              }
+
+              return true
+              })
+            .map((e) => {
               e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
               if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
                 const replacedValue = this.multiSelectReplace(String(e.Value), request.scopedVars)
@@ -140,7 +151,6 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
                     break
                 }
               }
-
               return e
             })
             target.query = eventQuery
