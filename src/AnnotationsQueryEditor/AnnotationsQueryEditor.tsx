@@ -3,7 +3,7 @@ import { QueryEditorProps } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Events } from 'QueryEditor/Events'
 import { DataSource } from 'datasource'
-import { HistorianDataSourceOptions, Query, EventQuery, PropertyType, HistorianInfo } from 'types'
+import { HistorianDataSourceOptions, Query, EventQuery, PropertyType } from 'types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -14,7 +14,6 @@ export class AnnotationsQueryEditor extends Component<Props> {
     this.onChangeSeriesLimit = this.onChangeSeriesLimit.bind(this)
   }
 
-  historianInfo: HistorianInfo | undefined
   templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
@@ -25,7 +24,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     const { query } = this.props
 
     try {
-      this.historianInfo = await this.props.datasource.getInfo()
+      await this.props.datasource.refreshInfo()
     } catch (_) {}
     if (!query.query) {
       this.onChangeEventQuery({
@@ -44,7 +43,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     const { onChange, query } = this.props
     query.queryType = 'EventQuery'
     query.query = eventQuery
-    query.historianInfo = this.historianInfo
+    query.historianInfo = this.props.datasource.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
   }
@@ -52,7 +51,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
   onChangeSeriesLimit(value: number): void {
     const { onChange, query } = this.props
     query.seriesLimit = value
-    query.historianInfo = this.historianInfo
+    query.historianInfo = this.props.datasource.historianInfo
     onChange(query)
     this.onRunQuery(this.props)
   }
@@ -85,7 +84,6 @@ export class AnnotationsQueryEditor extends Component<Props> {
             query={this.props.query.query as EventQuery}
             seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
-            historianInfo={this.historianInfo}
             isAnnotationQuery
             onChangeEventQuery={this.onChangeEventQuery}
             onChangeSeriesLimit={this.onChangeSeriesLimit}

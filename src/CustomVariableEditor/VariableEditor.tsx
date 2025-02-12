@@ -31,8 +31,8 @@ export function VariableQueryEditor(
   useEffect(() => {
     const load = async () => {
       try {
-        const historianInfo = await props.datasource.getInfo()
-        setHistorianInfo(historianInfo)
+        await props.datasource.refreshInfo()
+        setHistorianInfo(props.datasource.historianInfo)
       } catch (_) {}
       setLoading(false)
     }
