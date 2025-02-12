@@ -76,9 +76,19 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 			return nil, err
 		}
 	} else {
-		eventTypeProperties, err = ds.API.GetEventTypeProperties(ctx, "")
+		allEventTypeProperties, err := ds.API.GetEventTypeProperties(ctx, "")
 		if err != nil {
 			return nil, err
+		}
+
+		for _, eventTypeProperty := range allEventTypeProperties {
+			if _, ok := eventTypeUUIDs[eventTypeProperty.EventTypeUUID]; !ok {
+				continue
+			}
+			if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) && eventTypeProperty.Type != schemas.EventTypePropertyTypeSimple {
+				continue
+			}
+			eventTypeProperties = append(eventTypeProperties, eventTypeProperty)
 		}
 	}
 
