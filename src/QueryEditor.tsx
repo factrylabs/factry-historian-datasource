@@ -19,7 +19,6 @@ import {
   TabIndex,
   PropertyType,
   EventPropertyFilter,
-  HistorianInfo,
 } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -35,7 +34,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   }
 
   mountFinished = false
-  historianInfo: HistorianInfo | undefined
   appIsAlertingType = this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting
   state = {
     tabIndex: this.props.datasource.defaultTab,
@@ -76,7 +74,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     const tabIndex = query.tabIndex ?? this.state.tabIndex
     this.setTabIndex(tabIndex)
     try {
-      this.historianInfo = await this.props.datasource.getInfo()
+      await this.props.datasource.refreshInfo()
     } catch (_) {}
     this.mountFinished = true
     // force re-render
@@ -128,7 +126,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     updatedQuery.queryType = 'AssetMeasurementQuery'
     updatedQuery.query = assetMeasurementQuery
     updatedQuery.tabIndex = TabIndex.Assets
-    updatedQuery.historianInfo = this.historianInfo
+    updatedQuery.historianInfo = this.props.datasource.historianInfo
     onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
@@ -143,7 +141,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     updatedQuery.queryType = 'MeasurementQuery'
     updatedQuery.query = measurementQuery
     updatedQuery.tabIndex = TabIndex.Measurements
-    updatedQuery.historianInfo = this.historianInfo
+    updatedQuery.historianInfo = this.props.datasource.historianInfo
     onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
@@ -158,7 +156,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     updatedQuery.queryType = 'RawQuery'
     updatedQuery.query = rawQuery
     updatedQuery.tabIndex = TabIndex.RawQuery
-    updatedQuery.historianInfo = this.historianInfo
+    updatedQuery.historianInfo = this.props.datasource.historianInfo
     onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
@@ -173,7 +171,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     updatedQuery.queryType = 'EventQuery'
     updatedQuery.query = eventQuery
     updatedQuery.tabIndex = TabIndex.Events
-    updatedQuery.historianInfo = this.historianInfo
+    updatedQuery.historianInfo = this.props.datasource.historianInfo
     onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
@@ -186,7 +184,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     const { onChange, query } = this.props
     const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
     updatedQuery.seriesLimit = value
-    updatedQuery.historianInfo = this.historianInfo
+    updatedQuery.historianInfo = this.props.datasource.historianInfo
     onChange(updatedQuery)
     this.onRunQuery(this.props)
   }
@@ -242,7 +240,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Assets
             query={this.props.query.query as AssetMeasurementQuery}
-            historianInfo={this.historianInfo}
             seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
             appIsAlertingType={this.appIsAlertingType}
@@ -257,7 +254,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         content: (
           <Measurements
             query={this.props.query.query as MeasurementQuery}
-            historianInfo={this.historianInfo}
             seriesLimit={this.props.query.seriesLimit}
             appIsAlertingType={this.appIsAlertingType}
             datasource={this.props.datasource}
@@ -274,7 +270,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             query={this.props.query.query as EventQuery}
             seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}
-            historianInfo={this.historianInfo}
             appIsAlertingType={this.appIsAlertingType}
             onChangeEventQuery={this.onChangeEventQuery}
             onChangeSeriesLimit={this.onChangeSeriesLimit}

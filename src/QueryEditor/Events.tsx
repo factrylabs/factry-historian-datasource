@@ -22,7 +22,6 @@ import {
   EventQuery,
   EventType,
   EventTypeProperty,
-  HistorianInfo,
   labelWidth,
   MeasurementQueryOptions,
   PropertyDatatype,
@@ -34,7 +33,6 @@ export interface Props {
   query: EventQuery
   seriesLimit: number
   datasource: DataSource
-  historianInfo: HistorianInfo | undefined
   appIsAlertingType?: boolean
   isAnnotationQuery?: boolean
   onChangeEventQuery: (query: EventQuery) => void
@@ -277,7 +275,7 @@ export const Events = (props: Props): JSX.Element => {
   }
 
   const getValueFilterOperators = (): KnownOperator[] => {
-    return getValueFilterOperatorsForVersion(props.historianInfo?.Version ?? '')
+    return getValueFilterOperatorsForVersion(props.datasource.historianInfo?.Version ?? '')
   }
 
   return (
@@ -294,7 +292,9 @@ export const Events = (props: Props): JSX.Element => {
               >
                 <Select
                   options={Object.entries(PropertyType)
-                    .filter(([_, value]) => isSupportedPrototypeType(value, props.historianInfo?.Version ?? ''))
+                    .filter(([_, value]) =>
+                      isSupportedPrototypeType(value, props.datasource.historianInfo?.Version ?? '')
+                    )
                     .filter(([_, value]) => !props.isAnnotationQuery || value === PropertyType.Simple)
                     .map(([key, value]) => ({ label: key, value }))}
                   value={props.query.Type}
@@ -379,7 +379,6 @@ export const Events = (props: Props): JSX.Element => {
               <EventAssetProperties
                 appIsAlertingType={props.appIsAlertingType ?? false}
                 datasource={props.datasource}
-                historianInfo={props.historianInfo}
                 seriesLimit={props.seriesLimit}
                 queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
                 selectedAssetProperties={props.query.AssetProperties ?? []}
