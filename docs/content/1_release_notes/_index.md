@@ -21,6 +21,22 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
+## v2.2.0
+
+### Changes
+
+- Introduced the ability to include parent event information in event queries.
+- Implemented support for event property value filters compatible with v7.2.0.
+- Added an option to only return changed values in measurement queries.
+- Added support for event properties with dimensions in event queries.
+- Description of measurements and or asset properties are now available as labels in query results.
+
+### Bug Fixes
+
+- Checked the validity of regular expressions before sending them to the historian.
+- Fixed issues with custom interval selection in the event query.
+- Fixed an issue where modifying a duplicated panel could impact the original panel.
+
 ## v2.1.0
 
 ### Bug Fixes
