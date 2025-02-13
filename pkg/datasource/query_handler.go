@@ -402,7 +402,7 @@ func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange,
 
 	if query.Options.Aggregation != nil {
 		historianQuery.Aggregation = query.Options.Aggregation
-		if query.Options.Aggregation.Period == "" || query.Options.Aggregation.Period == "$__interval" {
+		if query.Options.Aggregation.Period == "$__interval" {
 			historianQuery.Aggregation.Period = interval.String()
 		}
 	}
