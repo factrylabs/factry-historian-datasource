@@ -1,9 +1,5 @@
 package schemas
 
-import (
-	"github.com/google/uuid"
-)
-
 // MeasurementQueryOptions are measurement query options
 type MeasurementQueryOptions struct {
 	Tags                   map[string]string
@@ -48,7 +44,7 @@ type MeasurementQuery struct {
 type RawQuery struct {
 	Query              string
 	Format             Format
-	TimeseriesDatabase uuid.UUID
+	TimeseriesDatabase string
 }
 
 // EventQuery is used to query events

@@ -45,11 +45,10 @@ export const Assets = (props: Props): JSX.Element => {
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const assetProperties = items.map((e) => e.value ?? '')
-    const updatedQuery = {
+    props.onChangeAssetMeasurementQuery({
       ...props.query,
       AssetProperties: assetProperties,
-    } as AssetMeasurementQuery
-    props.onChangeAssetMeasurementQuery(updatedQuery)
+    })
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
@@ -60,12 +59,12 @@ export const Assets = (props: Props): JSX.Element => {
         properties = [assetProperty.Name]
       }
     }
-    const updatedQuery = {
+
+    props.onChangeAssetMeasurementQuery({
       ...props.query,
-      Assets: [asset],
       AssetProperties: properties,
-    } as AssetMeasurementQuery
-    props.onChangeAssetMeasurementQuery(updatedQuery)
+      Assets: [asset],
+    })
   }
 
   const handleChangeMeasurementQueryOptions = (options: MeasurementQueryOptions): void => {
@@ -111,7 +110,7 @@ export const Assets = (props: Props): JSX.Element => {
   }
 
   const getSelectedAssetProperties = (): AssetProperty[] => {
-    const assetProperties = new Set<AssetProperty>()
+    const resultingAssetProperties = new Set<AssetProperty>()
     const selectedAssetProperties = props.query.AssetProperties?.flatMap((e) => props.datasource.multiSelectReplace(e))
     const selectedAssets = props.query.Assets.flatMap((e) =>
       matchedAssets(props.datasource.multiSelectReplace(e), assets).map((asset) => asset.UUID)
@@ -123,10 +122,10 @@ export const Assets = (props: Props): JSX.Element => {
 
       const assetSelected = selectedAssets.find((e) => e === assetProperty.AssetUUID)
       if (propertySelected && assetSelected) {
-        assetProperties.add(assetProperty)
+        resultingAssetProperties.add(assetProperty)
       }
     }
-    return Array.from(assetProperties)
+    return Array.from(resultingAssetProperties)
   }
 
   return (

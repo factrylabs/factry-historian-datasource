@@ -260,6 +260,13 @@ func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measu
 }
 
 func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Query, options schemas.MeasurementQueryOptions) (data.Frames, error) {
+	// Remove empty tags
+	for key, value := range query.Tags {
+		if value == "" {
+			delete(query.Tags, key)
+		}
+	}
+
 	result, err := ds.API.MeasurementQuery(ctx, query)
 	if err != nil {
 		return nil, err
@@ -361,6 +368,10 @@ func getLastQueryForFrame(frame *data.Frame, q schemas.Query) schemas.Query {
 }
 
 func (ds *HistorianDataSource) handleRawQuery(ctx context.Context, rawQuery schemas.RawQuery, timeRange backend.TimeRange, interval time.Duration) (data.Frames, error) {
+	if rawQuery.Query == "" || rawQuery.TimeseriesDatabase == "" {
+		return nil, nil
+	}
+
 	rawQuery.Query = fillQueryVariables(rawQuery.Query, "Influx", timeRange, interval)
 
 	result, err := ds.API.RawQuery(ctx, rawQuery.TimeseriesDatabase, schemas.RawQuery{Query: rawQuery.Query, Format: schemas.ArrowFormat})

@@ -59,7 +59,6 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     },
     rawQuery: {
       Query: '',
-      TimeseriesDatabase: '',
     },
   } as QueryEditorState
 
@@ -195,39 +194,8 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         children?: React.ReactNode
       }>
   ) {
-    if (!props.query.queryType) {
+    if (!this.props.query.queryType) {
       return
-    }
-
-    if (props.query.queryType === 'MeasurementQuery') {
-      const query = props.query.query as MeasurementQuery
-      if (query.IsRegex && !query.Regex) {
-        return
-      }
-      if (!query?.Measurements) {
-        return
-      }
-    }
-
-    if (props.query.queryType === 'AssetMeasurementQuery') {
-      const query = props.query.query as AssetMeasurementQuery
-      if (!query.Assets || !query?.AssetProperties || query?.AssetProperties.length === 0) {
-        return
-      }
-    }
-
-    if (props.query.queryType === 'EventQuery') {
-      const query = props.query.query as EventQuery
-      if (!query?.EventTypes || !query?.Assets) {
-        return
-      }
-    }
-
-    if (props.query.queryType === 'RawQuery') {
-      const query = props.query.query as RawQuery
-      if (!query?.Query) {
-        return
-      }
     }
 
     this.props.onRunQuery()
