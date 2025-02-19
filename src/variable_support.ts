@@ -69,7 +69,7 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         }
 
         const pagination: Pagination = {
-          Limit: 0,
+          Limit: 100,
           Page: 0,
         }
 

@@ -10,7 +10,6 @@ import (
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/go-playground/form"
 	"github.com/go-resty/resty/v2"
-	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"google.golang.org/protobuf/proto"
 )
@@ -55,7 +54,7 @@ func (api *API) MeasurementQuery(ctx context.Context, query schemas.Query) (data
 }
 
 // RawQuery executes a raw time series query
-func (api *API) RawQuery(ctx context.Context, timeseriesDatabaseUUID uuid.UUID, query schemas.RawQuery) (data.Frames, error) {
+func (api *API) RawQuery(ctx context.Context, timeseriesDatabaseUUID string, query schemas.RawQuery) (data.Frames, error) {
 	request := api.client.R().SetContext(ctx)
 	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
 	response, err := request.SetBody(query).Post(fmt.Sprintf("/api/timeseries/%v/raw-query", timeseriesDatabaseUUID))

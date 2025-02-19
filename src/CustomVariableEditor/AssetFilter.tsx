@@ -13,7 +13,7 @@ export function AssetFilterRow(props: {
   templateVariables: Array<SelectableValue<string>>
 }) {
   const [parentAssets, setParentAssets] = useState<Array<SelectableValue<string>>>()
-  const [pathValid, setPathValid] = useState<boolean>(false)
+  const [pathValid, setPathValid] = useState<boolean>(true)
 
   const onPathChange = (value: string, valid: boolean) => {
     setPathValid(valid)

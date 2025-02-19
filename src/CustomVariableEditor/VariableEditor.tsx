@@ -79,7 +79,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                  valid: false,
+                  valid: true,
                   filter: {},
                 })
               }
@@ -87,7 +87,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                  valid: false,
+                  valid: true,
                   filter: {},
                 })
               }
@@ -95,7 +95,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                  valid: false,
+                  valid: true,
                   filter: {},
                 })
               }
@@ -103,7 +103,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
-                  valid: false,
+                  valid: true,
                   filter: {},
                 })
               }
