@@ -20,19 +20,16 @@ inputs:
 outputs:
   plugin-id:
     description: 'The plugin id'
-    value: ${{ steps.metadata.outputs.plugin-id }}
+    value: ${{ steps.package-plugin.outputs.plugin-id }}
   plugin-version:
     description: 'The plugin version'
-    value: ${{ steps.metadata.outputs.plugin-version }}
-  plugin-type:
-    description: 'The plugin type'
-    value: ${{ steps.metadata.outputs.plugin-type }}
+    value: ${{ steps.package-plugin.outputs.plugin-version }}
   archive:
     description: 'The plugin archive'
-    value: ${{ steps.metadata.outputs.archive }}
+    value: ${{ steps.package-plugin.outputs.archive }}
   archive-sha1sum:
     description: 'The plugin archive sha1sum'
-    value: ${{ steps.metadata.outputs.archive-sha1sum }}
+    value: ${{ steps.package-plugin.outputs.archive-sha1sum }}
   github-tag:
     description: 'The github tag'
     value: ${{ steps.metadata.outputs.github-tag }}
