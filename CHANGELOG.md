@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.2.1
+
+### Big Fixes
+
+- Fixed a potential panicy race condition in the query handler that could be triggered by executing multiple queries.
+
 ## v2.2.0
 
 ### Changes
