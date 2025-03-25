@@ -21,6 +21,12 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
+## v2.2.1
+
+### Big Fixes
+
+- Fixed a potential panicy race condition in the query handler that could be triggered by executing multiple queries.
+
 ## v2.2.0
 
 ### Changes
@@ -52,7 +58,6 @@ This is the compatibility matrix for version listed on this page. If you have do
 - Enabled aggregation over the entire time period of a dashboard.
 - Added variable query for distinct event property values (requires historian > v7.2.0).
 - Introduced support for value filters in time series queries (requires historian > v7.1.0).
-
 
 ## v2.0.4
 
@@ -94,7 +99,7 @@ This is the compatibility matrix for version listed on this page. If you have do
 
 ## v2.0.0
 
-### Changes 
+### Changes
 
 - Enabled annotations for events
 - Added dashboard variable query editors for: measurement, databases, assets, asset properties, event types and event type properties
