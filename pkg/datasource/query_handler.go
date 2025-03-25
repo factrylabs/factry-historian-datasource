@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -36,6 +37,7 @@ type Query struct {
 // QueryData handles incoming backend queries
 func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	response := backend.NewQueryDataResponse()
+	locker := sync.Mutex{}
 
 	// set context, so queries in process can be cancelled if the request/context is cancelled/done
 	eg, egCtx := errgroup.WithContext(ctx)
@@ -46,7 +48,9 @@ func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.Query
 	for _, q := range req.Queries {
 		eg.Go(func() error {
 			res := ds.queryData(egCtx, q)
+			locker.Lock()
 			response.Responses[q.RefID] = res
+			locker.Unlock()
 			return nil
 		})
 	}
