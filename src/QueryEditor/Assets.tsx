@@ -7,7 +7,6 @@ import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
 import { getChildAssets, matchedAssets, tagsToQueryTags, valueFiltersToQueryTags } from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
-import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -175,9 +174,7 @@ export const Assets = (props: Props): JSX.Element => {
             valueFilters={valueFiltersToQueryTags(props.query.Options.ValueFilters ?? [])}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={[]}
-            hideValueFilter={
-              !props.datasource.historianInfo || !isFeatureEnabled(props.datasource.historianInfo?.Version, '7.1.0')
-            }
+            historianVersion={props.datasource.historianInfo?.Version ?? ''}
             templateVariables={props.templateVariables}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}

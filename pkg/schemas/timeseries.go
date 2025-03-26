@@ -29,6 +29,7 @@ const (
 	Last     AggregationType = "last"
 	Max      AggregationType = "max"
 	Min      AggregationType = "min"
+	TWA      AggregationType = "twa"
 )
 
 // FillType is a string

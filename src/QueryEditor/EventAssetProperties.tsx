@@ -8,7 +8,6 @@ import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
 import { Asset, AssetProperty, MeasurementQueryOptions, labelWidth } from 'types'
 import { valueFiltersToQueryTags } from './util'
-import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   datasource: DataSource
@@ -108,9 +107,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
         hideLimit={props.queryType === 'simple'}
         hideGroupBy={props.queryType === 'simple'}
         hideAdvancedOptions={props.queryType === 'simple'}
-        hideValueFilter={
-          !props.datasource.historianInfo || !isFeatureEnabled(props.datasource.historianInfo?.Version, '7.1.0')
-        }
+        historianVersion={props.datasource.historianInfo?.Version ?? ''}
         getTagKeyOptions={getTagKeyOptions}
         getTagValueOptions={getTagValueOptions}
         onChange={props.onChangeQueryOptions}

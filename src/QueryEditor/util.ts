@@ -38,6 +38,17 @@ export function getAggregations(): Array<SelectableValue<string>> {
   })
 }
 
+export function getAggregationsForVersionAndDatatypes(
+  datatypes: string[],
+  version: string
+): Array<SelectableValue<string>> {
+  let selectable = getAggregationsForDatatypes(datatypes)
+  if (!isFeatureEnabled(version, '7.3.0', true)) {
+    return selectable.filter((aggregation) => aggregation.value !== 'twa')
+  }
+  return selectable
+}
+
 export function getAggregationsForDatatypes(datatypes: string[]): Array<SelectableValue<string>> {
   let aggregations = Object.values(AggregationName)
 

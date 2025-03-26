@@ -66,6 +66,7 @@ export enum AggregationName {
   Last = 'last',
   Max = 'max',
   Min = 'min',
+  TWA = 'twa',
 }
 
 export enum FillType {
