@@ -1,8 +1,12 @@
 # Changelog
 
-## v2.2.1
+## v2.3.0
 
-### Big Fixes
+### Changes
+
+- Added support for time weighted average aggregation for historian version v7.3.0 and later.
+
+### Bug Fixes
 
 - Fixed a potential panicy race condition in the query handler that could be triggered by executing multiple queries.
 
