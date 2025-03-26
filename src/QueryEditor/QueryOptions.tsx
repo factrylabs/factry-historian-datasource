@@ -3,8 +3,9 @@ import { SelectableValue } from '@grafana/data'
 import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
-import { getAggregationsForDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
+import { getAggregationsForVersionAndDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
 import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions, ValueFilter } from 'types'
+import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   state: MeasurementQueryOptions
@@ -18,9 +19,9 @@ export interface Props {
   hideLimit?: boolean
   hideGroupBy?: boolean
   hideTagFilter?: boolean
-  hideValueFilter?: boolean
   hideAdvancedOptions?: boolean
   templateVariables: Array<SelectableValue<string>>
+  historianVersion: string
   getTagKeyOptions?: () => Promise<string[]>
   getTagValueOptions?: (key: string) => Promise<string[]>
   onChange: (options: MeasurementQueryOptions) => void
@@ -33,14 +34,12 @@ export const QueryOptions = (props: Props): JSX.Element => {
 
   useEffect(() => {
     if (props.state.Aggregation?.Period) {
-      const periodExists = periods.some(
-        (period) => period.value === props.state.Aggregation?.Period
-      )
+      const periodExists = periods.some((period) => period.value === props.state.Aggregation?.Period)
 
       if (!periodExists) {
         const customValue: SelectableValue<string> = {
           value: props.state.Aggregation?.Period,
-          label: props.state.Aggregation?.Period
+          label: props.state.Aggregation?.Period,
         }
         setPeriods((prevPeriods) => [...prevPeriods, customValue])
       }
@@ -51,7 +50,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
     datatypes: string[],
     options: MeasurementQueryOptions
   ): Array<SelectableValue<string>> => {
-    const validAggregations = getAggregationsForDatatypes(datatypes)
+    const validAggregations = getAggregationsForVersionAndDatatypes(datatypes, props.historianVersion)
     if (
       options.Aggregation?.Name !== undefined &&
       options.Aggregation?.Name !== 'last' &&
@@ -237,7 +236,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
           </InlineField>
         </InlineFieldRow>
       )}
-      {!props.hideValueFilter && (
+      {isFeatureEnabled(props.historianVersion, '7.1.0') && (
         <InlineFieldRow>
           <InlineField label="Filter values" labelWidth={labelWidth}>
             <TagsSection
