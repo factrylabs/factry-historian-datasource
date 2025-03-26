@@ -1,6 +1,6 @@
 {
   "name": "factry-historian-datasource",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "A datasource plugin for Factry Historian",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",

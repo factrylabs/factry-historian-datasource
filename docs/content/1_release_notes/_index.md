@@ -21,9 +21,13 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
-## v2.2.1
+## v2.3.0
 
-### Big Fixes
+### Changes
+
+- Added support for time weighted average aggregation for historian version v7.3.0 and later.
+
+### Bug Fixes
 
 - Fixed a potential panicy race condition in the query handler that could be triggered by executing multiple queries.
 
