@@ -13,7 +13,7 @@ type GroupProps = {
 export const Group = ({ group, loadOptions, onRemove, onChange }: GroupProps): JSX.Element => {
   const defaultOptions = async () => {
     const options = await loadOptions()
-    return [{ label: '-- remove filter --', value: undefined } as SelectableValue<string>].concat(options)
+    return [{ label: '-- remove group by --', value: undefined } as SelectableValue<string>].concat(options)
   }
 
   return (
