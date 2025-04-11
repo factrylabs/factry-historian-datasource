@@ -132,7 +132,7 @@ func fixPropertyFilterValues(filter schemas.EventFilter) schemas.EventFilter {
 			}
 		default:
 			if filter.PropertyFilter[i].Value == nil {
-				filter.PropertyFilter[i].Value = ""
+				filter.PropertyFilter[i].Value = []interface{}{}
 			}
 		}
 	}
