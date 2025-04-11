@@ -155,6 +155,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
                     e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars)
                     break
                 }
+                e.Value = [e.Value as string]
               }
               return e
             })

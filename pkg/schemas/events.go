@@ -67,7 +67,7 @@ type EventProperties struct {
 type EventPropertyValueFilter struct {
 	Property  string
 	Datatype  string
-	Value     interface{}
+	Value     []interface{}
 	Operator  string
 	Condition string
 }
