@@ -60,9 +60,9 @@ Limitations:
 - Only the `=` operator is available
 - Only `AND` is available when you have multiple tag filters
 
-#### Limit
+#### Max values
 
-The maximum amount of returned data points per series.
+The maximum amount of measurement values fetched per series.
 
 ### Advanced options
 
@@ -80,8 +80,8 @@ Includes the database name for the selected measurement(s) in the label.
 
 Includes the description for the selected measurement(s) in the label (if one is available).
 
-#### Measurement limit
+#### Max Measurements
 
-Limits the amount of measurements queried.
+Limits the amount of measurements fetched.
 
-Beware: measurements with no points in the configured interval also count towards the limit. These measurements are not visible, making it seem like less measurements than configured were queried.
+Beware: measurements with no points in the configured interval also count towards the limit. These measurements are not visible, making it seem like less measurements than configured were fetched.
