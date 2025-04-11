@@ -153,7 +153,11 @@ export const Measurements = (props: Props): React.JSX.Element => {
       {!loading && (
         <>
           <InlineFieldRow>
-            <InlineField label="Database" labelWidth={labelWidth} tooltip="Specify a time series database to work with">
+            <InlineField 
+              label="Database" 
+              labelWidth={labelWidth} 
+              tooltip="Specify one or more databases to filter for measurements in the selected databases only, or leave empty to search all databases"
+            >
               <DatabaseSelect
                 datasource={props.datasource}
                 templateVariables={props.templateVariables}

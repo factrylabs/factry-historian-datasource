@@ -177,7 +177,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
         <InlineField
           label="Aggregation"
           labelWidth={labelWidth}
-          tooltip="Specify an aggregation, leave empty to query raw data"
+          tooltip="Specify an aggregation and an interval to fetch an aggregated measurement value for each interval, or remove both to fetch raw data"
         >
           <Select
             value={props.state.Aggregation?.Name}
@@ -213,7 +213,10 @@ export const QueryOptions = (props: Props): JSX.Element => {
       </InlineFieldRow>
       {!props.hideGroupBy && (
         <InlineFieldRow>
-          <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
+          <InlineLabel 
+            width={labelWidth} 
+            tooltip="Group measurement values as a field (e.g. column/trend) per tag (e.g. status)"
+          >
             Group by
           </InlineLabel>
           <GroupBySection
@@ -225,7 +228,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
       )}
       {!props.hideTagFilter && (
         <InlineFieldRow>
-          <InlineField label="Filter tags" labelWidth={labelWidth}>
+          <InlineField 
+            label="Filter tags"
+            tooltip="Filter measurement values by one or more tag conditions (e.g. status = Good)"
+            labelWidth={labelWidth}
+          >
             <TagsSection
               tags={props.tags}
               conditions={['AND']}
@@ -238,7 +245,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
       )}
       {isFeatureEnabled(props.historianVersion, '7.1.0') && (
         <InlineFieldRow>
-          <InlineField label="Filter values" labelWidth={labelWidth}>
+          <InlineField 
+            label="Filter values"
+            tooltip="Filter measurement values by one or more value conditions (e.g. value > 0)"
+            labelWidth={labelWidth}
+          >
             <TagsSection
               tags={props.valueFilters}
               conditions={['AND', 'OR']}
@@ -253,7 +264,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
       )}
       {!props.hideLimit && (
         <InlineFieldRow>
-          <InlineField label="Limit" labelWidth={labelWidth}>
+          <InlineField
+            label="Max values"
+            tooltip="The maximum amount of values to fetch per measurement"
+            labelWidth={labelWidth}
+          >
             <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={props.state.Limit} />
           </InlineField>
         </InlineFieldRow>
@@ -263,7 +278,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
           <InlineFieldRow>
             <InlineField
               label="Include last known point"
-              tooltip="Includes the last known point before the selected time range"
+              tooltip="Includes the last known measurement value before the selected time range"
               labelWidth={labelWidth}
             >
               <InlineSwitch value={props.state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
@@ -272,6 +287,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
           <InlineFieldRow>
             <InlineField
               label="Fill empty initial intervals"
+              tooltip="Fills the measurement value before the first value in the selected time range"
               labelWidth={labelWidth}
               disabled={props.state.ChangesOnly}
             >
@@ -279,7 +295,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
-            <InlineField label="Changes only" labelWidth={labelWidth}>
+            <InlineField 
+              label="Changes only" 
+              tooltip="Removes measurement values that are equal to the previous value in the selected time range"
+              labelWidth={labelWidth}
+            >
               <InlineSwitch value={props.state.ChangesOnly} onChange={onChangeChangesOnly} />
             </InlineField>
           </InlineFieldRow>
@@ -304,15 +324,15 @@ export const QueryOptions = (props: Props): JSX.Element => {
             <InlineField
               label="Add metadata as labels"
               labelWidth={labelWidth}
-              tooltip="Adds metadata such as MeasurementUUID and DatabaseUUID as labels to the query result"
+              tooltip="Adds metadata (e.g. MeasurementUUID as a label) to the field name"
             >
               <InlineSwitch value={props.state.MetadataAsLabels} onChange={onChangeMetadataAsLabels} />
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
             <InlineField
-              label="Measurement limit"
-              tooltip="The maximum amount of measurement series a query can return"
+              label="Max Measurements"
+              tooltip="The maximum amount of measurements to fetch"
               labelWidth={labelWidth}
             >
               <Input value={seriesLimit} type="number" min={1} onChange={onChangeSeriesLimit} />
