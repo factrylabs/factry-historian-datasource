@@ -212,7 +212,9 @@ export const QueryOptions = (props: Props): JSX.Element => {
         <InlineField
           label="Aggregation"
           labelWidth={labelWidth}
-          tooltip={`Specify an aggregation${props.aggregationRequired ? '' : ', leave empty to query raw data'}`}
+          tooltip={`Specify an aggregation and an interval to fetch an aggregated measurement value for each interval${
+            props.aggregationRequired ? '' : ', remove both to fetch raw data'
+          }`}
         >
           <VerticalGroup spacing="xs">
             <HorizontalGroup spacing="xs">
@@ -264,7 +266,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
                   />
                 </InlineField>
               )}
-              <InlineField>
+              <InlineField tooltip="Includes the last known value before the selected time range">
                 <Checkbox
                   label="Include last known point"
                   value={props.state.IncludeLastKnownPoint}
@@ -277,7 +279,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
       </InlineFieldRow>
       {!props.hideGroupBy && (
         <InlineFieldRow>
-          <InlineLabel width={labelWidth} tooltip="Add all tags to group by">
+          <InlineLabel width={labelWidth} tooltip="Group values per tag (e.g. status)">
             Group by
           </InlineLabel>
           <GroupBySection
@@ -302,7 +304,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
       )}
       {!props.hideTagFilter && (
         <InlineFieldRow>
-          <InlineField label="Filter tags" labelWidth={labelWidth}>
+          <InlineField
+            label="Filter tags"
+            tooltip="Filter values by one or more tag conditions (e.g. status = Good)"
+            labelWidth={labelWidth}
+          >
             <TagsSection
               tags={props.tags}
               conditions={['AND']}
@@ -315,7 +321,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
       )}
       {isFeatureEnabled(props.historianVersion, '7.1.0') && (
         <InlineFieldRow>
-          <InlineField label="Filter values" labelWidth={labelWidth}>
+          <InlineField
+            label="Filter values"
+            tooltip="Filter values by one or more conditions (e.g. value > 0)"
+            labelWidth={labelWidth}
+          >
             <TagsSection
               tags={props.valueFilters}
               conditions={['AND', 'OR']}
@@ -330,7 +340,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
       )}
       {!props.hideLimit && (
         <InlineFieldRow>
-          <InlineField label="Limit" labelWidth={labelWidth}>
+          <InlineField
+            label="Max values"
+            tooltip="The maximum amount of values to fetch per measurement"
+            labelWidth={labelWidth}
+          >
             <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={props.state.Limit} />
           </InlineField>
         </InlineFieldRow>
@@ -340,7 +354,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
           <br />
           <ControlledCollapse label="Advanced options" isOpen={false}>
             <InlineFieldRow>
-              <InlineField label="Changes only" labelWidth={labelWidth}>
+              <InlineField
+                label="Changes only"
+                tooltip="Hide equal consecutive values (keeps the first value) within the selected time range"
+                labelWidth={labelWidth}
+              >
                 <InlineSwitch value={props.state.ChangesOnly} onChange={onChangeChangesOnly} />
               </InlineField>
             </InlineFieldRow>
@@ -372,8 +390,8 @@ export const QueryOptions = (props: Props): JSX.Element => {
             </InlineFieldRow>
             <InlineFieldRow>
               <InlineField
-                label="Measurement limit"
-                tooltip="The maximum amount of measurement series a query can return"
+                label="Max Measurements"
+                tooltip="The maximum amount of measurements to fetch"
                 labelWidth={labelWidth}
               >
                 <Input value={seriesLimit} type="number" min={0} onChange={onChangeSeriesLimit} />

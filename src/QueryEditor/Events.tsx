@@ -5,7 +5,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
-import { Asset, AssetMeasurementQuery, EventQuery, labelWidth, TimeRange } from 'types'
+import { Asset, AssetMeasurementQuery, EventQuery, labelWidth, PropertyType, TimeRange } from 'types'
 import { EventFilter } from './EventFilter'
 import { DateRangePicker } from 'components/util/DateRangePicker'
 
@@ -134,8 +134,10 @@ export const Events = (props: Props): JSX.Element => {
             />
             <InlineFieldRow>
               <InlineField
-                label="Include parent info"
-                tooltip="For simple properties it will add columns for the parent event and for periodic properties it will add labels"
+                label="Include Parent Event"
+                tooltip={`Adds the simple properties of the parent event as ${
+                  props.query.Type === PropertyType.Simple ? 'fields' : 'labels'
+                }`}
                 labelWidth={labelWidth}
               >
                 <InlineSwitch value={props.query.IncludeParentInfo} onChange={onChangeIncludeParentInfo} />
@@ -170,7 +172,7 @@ export const Events = (props: Props): JSX.Element => {
               </InlineField>
             </InlineFieldRow>
           </FieldSet>
-          <FieldSet label="Query asset properties">
+          <FieldSet label="Fetch Asset Properties">
             <InlineFieldRow>
               <InlineField label="Enabled" labelWidth={labelWidth}>
                 <InlineSwitch value={props.query.QueryAssetProperties} onChange={onChangeQueryAssetProperties} />

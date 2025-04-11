@@ -348,7 +348,12 @@ export const EventFilter = (props: Props): JSX.Element => {
       {!loading && (
         <>
           <InlineFieldRow>
-            <InlineField grow labelWidth={labelWidth} label="Query Type" tooltip="Specify a property type to work with">
+            <InlineField
+              grow
+              labelWidth={labelWidth}
+              label="Query Type"
+              tooltip="Select the property type: simple or periodic"
+            >
               <Select
                 options={Object.entries(PropertyType)
                   .filter(([_, value]) => isSupportedPropertyType(value, props.datasource.historianInfo?.Version ?? ''))
@@ -360,7 +365,12 @@ export const EventFilter = (props: Props): JSX.Element => {
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
-            <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
+            <InlineField
+              label="Assets"
+              grow
+              labelWidth={labelWidth}
+              tooltip="Specify an asset to work with, or use a regex to select multiple assets at once (e.g. /Parent\\\\Child.*/)"
+            >
               <Cascader
                 initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
                 initialLabel={initialLabel()}
@@ -390,7 +400,12 @@ export const EventFilter = (props: Props): JSX.Element => {
           </InlineFieldRow>
           <InlineFieldRow>
             {props.multiSelectProperties ? (
-              <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
+              <InlineField
+                label="Properties"
+                grow
+                labelWidth={labelWidth}
+                tooltip="Specify one or more event properties to work with, or leave empty to use all event properties"
+              >
                 <MultiSelect
                   value={props.query.Properties}
                   options={availableProperties(props.query.EventTypes ?? [], props.query.IncludeParentInfo ?? false)}
@@ -413,7 +428,7 @@ export const EventFilter = (props: Props): JSX.Element => {
               label="Statuses"
               grow
               labelWidth={labelWidth}
-              tooltip="Specify one or more status to work with, selecting none will use all statuses"
+              tooltip="Specify one or more event statuses to filter events on the selected statuses, or leave empty to use all event statuses"
             >
               <MultiSelect value={props.query.Statuses} options={availableStatuses()} onChange={onSelectStatuses} />
             </InlineField>
@@ -421,7 +436,7 @@ export const EventFilter = (props: Props): JSX.Element => {
           <InlineFieldRow>
             <InlineField
               label="WHERE"
-              tooltip="Filters events based on property values (regular and parent)"
+              tooltip="Filter events based on property values of the event or its parent (e.g. event property X value > 0)"
               labelWidth={labelWidth}
             >
               <TagsSection

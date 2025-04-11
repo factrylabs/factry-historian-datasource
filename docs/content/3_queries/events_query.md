@@ -56,9 +56,9 @@ The events can be filtered by the values of their `simple` properties.
 - Select a comparison operator (=, !=, <, <=, >, =>)
 - If filtering multiple properties select a logical operator (AND, OR)
 
-### Query asset properties
+### Fetch asset properties
 
-If enabled, you can query asset properties on the selected asset(s), like you would do for an [assets query](./assets_query.md#configuring-the-query).
+If enabled, you can fetch asset properties on the selected asset(s), like you would do for an [assets query](./assets_query.md#configuring-the-query).
 
 #### Asset property selection
 
@@ -97,9 +97,9 @@ Limitations:
 - Only the `=` operator is available
 - Only `AND` is available when you have multiple tag filters
 
-##### Limit (only for periodic queries)
+##### Max values (only for periodic properties)
 
-The maximum amount of returned data points per series.
+The maximum amount of values fetched per property.
 
 #### Advanced options
 
@@ -117,8 +117,8 @@ Includes the database name for the the measurement linked to the asset property 
 
 Includes the description for the the measurement linked to the asset property in the label (if one is available).
 
-##### Measurement limit (only for periodic queries)
+##### Max Measurements (only for periodic queries)
 
-Limits the amount of measurements queried.
+Limits the amount of measurements fetched.
 
-Beware: measurements with no points in the configured interval also count towards the limit. These measurements are not visible, making it seem like less measurements than configured were queried.
+Beware: measurements with no points in the configured interval also count towards the limit. These measurements are not visible, making it seem like less measurements than configured were fetched.
