@@ -290,7 +290,7 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 	}, nil
 }
 
-func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.EventTypeProperty) []*data.Field {
+func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}) []*data.Field {
 	fields := []*data.Field{
 		data.NewField(prefix+EventUUIDColumnName, nil, []*string{}),
 		data.NewField(prefix+ParentEventUUIDColumnName, nil, []string{}),
@@ -307,6 +307,14 @@ func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.Even
 	for _, parentEventTypeProperty := range eventTypeProperties {
 		if parentEventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			continue
+		}
+
+		if len(selectedProperties) > 0 {
+			if _, ok := selectedProperties[parentEventTypeProperty.Name]; !ok {
+				if _, ok := selectedProperties[parentEventTypeProperty.UUID.String()]; !ok {
+					continue
+				}
+			}
 		}
 
 		parentPropertyFieldName := prefix + parentEventTypeProperty.Name
@@ -364,6 +372,10 @@ func fillFields(prefix string, fieldByColumn map[string]*data.Field, event *sche
 			continue
 		}
 
+		if _, ok := fieldByColumn[prefix+eventTypeProperty.Name]; !ok {
+			continue
+		}
+
 		setUOMFieldConfig(fieldByColumn[prefix+eventTypeProperty.Name], eventTypeProperty)
 		addValueToField(fieldByColumn[prefix+eventTypeProperty.Name], event.Properties.Properties[eventTypeProperty.Name])
 	}
@@ -376,7 +388,7 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 	}
 
 	eventTypeProperties := eventTypePropertiesForEventType[eventType.UUID]
-	fields := buildSimpleFieldsForEvent("", eventTypeProperties)
+	fields := buildSimpleFieldsForEvent("", eventTypeProperties, selectedProperties)
 
 	fieldByColumn := map[string]*data.Field{}
 	for _, field := range fields {
@@ -444,7 +456,7 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 				if !parentFieldsAdded[parentPrefix] {
 					parentFieldsAdded[parentPrefix] = true
 
-					parentFieldsForEventType := buildSimpleFieldsForEvent(parentPrefix, eventTypePropertiesForEventType[parentEvent.EventTypeUUID])
+					parentFieldsForEventType := buildSimpleFieldsForEvent(parentPrefix, eventTypePropertiesForEventType[parentEvent.EventTypeUUID], map[string]struct{}{})
 					for _, parentField := range parentFieldsForEventType {
 						fieldByColumn[parentField.Name] = parentField
 						parentFields = append(parentFields, parentField)
