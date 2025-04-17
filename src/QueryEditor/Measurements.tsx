@@ -72,9 +72,18 @@ export const Measurements = (props: Props): React.JSX.Element => {
   }, [props.datasource, props.query.Measurements])
 
   const onTimeseriesDatabaseChange = (values: string[]): void => {
+    let measurements = props.query.Measurements ?? []
+    if (values.length > 0) {
+      const selectedMeasurementsUpdate = selectedMeasurements?.filter((measurement) =>
+        values.includes(measurement.DatabaseUUID)
+      )
+      const selectedMeasurementsUUIDs = selectedMeasurementsUpdate?.map((measurement) => measurement.UUID)
+      measurements = selectedMeasurementsUUIDs ?? []
+    }
     props.onChangeMeasurementQuery({
       ...props.query,
       Databases: values,
+      Measurements: measurements,
     })
   }
 
