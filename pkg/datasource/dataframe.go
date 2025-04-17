@@ -262,7 +262,11 @@ func setRawFrameNames(frames data.Frames) {
 				suffix = fmt.Sprintf(" {%s}", strings.Join(labelPairs, ", "))
 			}
 
-			field.Config.DisplayNameFromDS = frame.Name + "." + field.Name + suffix
+			displayName := field.Name + suffix
+			if frame.Name != "" {
+				displayName = frame.Name + displayName
+			}
+			field.Config.DisplayNameFromDS = displayName
 		}
 	}
 }
