@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -16,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"golang.org/x/sync/errgroup"
+	"github.com/grafana/grafana-plugin-sdk-go/experimental/concurrent"
 )
 
 // QueryTypes are a list of query types
@@ -36,27 +35,9 @@ type Query struct {
 
 // QueryData handles incoming backend queries
 func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	response := backend.NewQueryDataResponse()
-	locker := sync.Mutex{}
-
-	// set context, so queries in process can be cancelled if the request/context is cancelled/done
-	eg, egCtx := errgroup.WithContext(ctx)
-
-	// limit the number of concurrent queries
-	eg.SetLimit(10)
-
-	for _, q := range req.Queries {
-		eg.Go(func() error {
-			res := ds.queryData(egCtx, q)
-			locker.Lock()
-			response.Responses[q.RefID] = res
-			locker.Unlock()
-			return nil
-		})
-	}
-
-	err := eg.Wait()
-	return response, err
+	return concurrent.QueryData(ctx, req, func(ctx context.Context, query concurrent.Query) (res backend.DataResponse) {
+		return ds.queryData(ctx, query.DataQuery)
+	}, 10)
 }
 
 func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backend.DataQuery) backend.DataResponse {
