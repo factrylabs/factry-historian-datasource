@@ -239,10 +239,6 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 			return nil, err
 		}
 
-		if len(res) == 0 {
-			return nil, fmt.Errorf("invalid measurement: %v", measurement)
-		}
-
 		for i := range res {
 			parsedMeasurements = append(parsedMeasurements, res[i].UUID.String())
 		}
