@@ -301,7 +301,9 @@ func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.Even
 		data.NewField(prefix+EventTypeColumnName, nil, []*string{}),
 		data.NewField(prefix+StartTimeColumnName, nil, []*time.Time{}),
 		data.NewField(prefix+StopTimeColumnName, nil, []*time.Time{}),
-		data.NewField(prefix+DurationColumnName, nil, []*float64{}),
+		data.NewField(prefix+DurationColumnName, nil, []*float64{}).SetConfig(&data.FieldConfig{
+			Unit: "dtdhms",
+		}),
 	}
 
 	for _, parentEventTypeProperty := range eventTypeProperties {
