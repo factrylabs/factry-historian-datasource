@@ -9,6 +9,7 @@ export interface Props {
   initialValue: string[]
   templateVariables: Array<SelectableValue<string>>
   onChange: (values: Array<SelectableValue<string>>) => void
+  onOpenMenu?: () => void
 }
 
 export const AssetProperties = (props: Props): JSX.Element => {
@@ -34,6 +35,7 @@ export const AssetProperties = (props: Props): JSX.Element => {
         value={props.initialValue}
         options={availableProperties(props.selectedAssets)}
         onChange={onSelectProperties}
+        onOpenMenu={props.onOpenMenu}
       />
     </>
   )

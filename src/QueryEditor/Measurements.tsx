@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { InlineField, InlineFieldRow } from '@grafana/ui'
 import { DataSource } from 'datasource'
@@ -32,14 +32,15 @@ export const Measurements = (props: Props): React.JSX.Element => {
   const [selectedDatabases, setSelectedDatabases] = useState<Array<SelectableValue<string>>>()
   const [datatypes, setDatatypes] = useState<string[]>([])
 
+  const fetchDatabases = useCallback(async () => {
+    const databases = await props.datasource.getTimeseriesDatabases()
+    setDatabases(databases)
+  }, [props.datasource])
+
   // load the databases for the measurements component
   useEffect(() => {
-    const load = async () => {
-      const databases = await props.datasource.getTimeseriesDatabases()
-      setDatabases(databases)
-    }
-    load()
-  }, [props.datasource])
+    fetchDatabases()
+  }, [fetchDatabases])
 
   // load the selected measurements for the measurements component
   useEffect(() => {
@@ -184,6 +185,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
             onChange={onMeasurementsChange}
             onChangeIsRegex={onChangeIsRegex}
             onChangeRegex={onChangeRegex}
+            onOpenMenu={fetchDatabases}
           />
           <QueryOptions
             state={props.query.Options}

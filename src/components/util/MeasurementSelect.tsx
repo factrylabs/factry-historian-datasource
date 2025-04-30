@@ -26,6 +26,7 @@ export interface Props {
   onChange: (values: string[]) => void
   onChangeIsRegex: (value: boolean) => void
   onChangeRegex: (value: string) => void
+  onOpenMenu?: () => void
 }
 
 export const MeasurementSelect = (props: Props): React.JSX.Element => {
@@ -127,6 +128,7 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
                     loadOptions={(query) => loadMeasurementOptions(query, props.selectedDatabases)}
                     defaultOptions
                     onChange={onMeasurementChange}
+                    onOpenMenu={props.onOpenMenu}
                     menuShouldPortal
                     key={props.selectedDatabases?.length} // Forcing this component to remount when selectedDatabases changes
                   />

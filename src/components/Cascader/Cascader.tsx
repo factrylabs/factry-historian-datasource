@@ -31,6 +31,8 @@ export interface CascaderProps extends Themeable2 {
   /** If true all levels are shown in the input by simple concatenating the labels */
   displayAllSelectedLevels?: boolean
   onBlur?: () => void
+  // When cascader is opened
+  onOpen?: () => void;
   /** When mounted focus automatically on the input */
   autoFocus?: boolean
   /** Keep the dropdown open all the time, useful in case whole cascader visibility is controlled by the parent */
@@ -258,6 +260,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
 
   openCascade = () => {
     this.setState({ focusCascade: true })
+    this.props.onOpen?.()
   }
 
   render() {
