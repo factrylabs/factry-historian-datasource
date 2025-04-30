@@ -6,6 +6,7 @@ import { AssetFilter, AssetPropertyFilter, HistorianInfo, MeasurementDatatype } 
 import { SelectableValue } from '@grafana/data'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 import { isFeatureEnabled } from 'util/semver'
+import { useDebounce } from 'QueryEditor/util'
 
 export function AssetPropertyFilterRow(props: {
   datasource: DataSource
@@ -15,6 +16,13 @@ export function AssetPropertyFilterRow(props: {
   historianInfo?: HistorianInfo | undefined
 }) {
   const [selectedAssets, setAssets] = useState<Array<SelectableValue<string>>>()
+  const [keyword, setKeyword] = useDebounce<string>(props.initialValue?.Keyword ?? '', 500, (value) => props.onChange(
+    {
+      ...props.initialValue,
+      Keyword: value,
+    },
+    keywordValid
+  ))
   const [keywordValid, setKeywordValid] = useState<boolean>(true)
 
   const onAssetsChange = (values: Array<SelectableValue<string>>) => {
@@ -27,13 +35,7 @@ export function AssetPropertyFilterRow(props: {
 
   const onKeywordChange = (value: string, valid: boolean) => {
     setKeywordValid(valid)
-    props.onChange(
-      {
-        ...props.initialValue,
-        Keyword: value,
-      },
-      valid
-    )
+    setKeyword(value)
   }
 
   const onDatatypesChange = (items: Array<SelectableValue<string>> | undefined) => {
@@ -88,7 +90,7 @@ export function AssetPropertyFilterRow(props: {
               labelWidth={20}
               tooltip={<div>Searches asset property by name or  description, to use a regex surround pattern with /</div>}
             >
-              <MaybeRegexInput onChange={onKeywordChange} initialValue={props.initialValue?.Keyword} />
+              <MaybeRegexInput onChange={onKeywordChange} initialValue={keyword} />
             </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
