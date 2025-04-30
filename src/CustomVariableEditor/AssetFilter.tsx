@@ -5,6 +5,7 @@ import { DataSource } from 'datasource'
 import { AssetFilter } from 'types'
 import { SelectableValue } from '@grafana/data'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
+import { useDebounce } from 'QueryEditor/util'
 
 export function AssetFilterRow(props: {
   datasource: DataSource
@@ -13,17 +14,20 @@ export function AssetFilterRow(props: {
   templateVariables: Array<SelectableValue<string>>
 }) {
   const [parentAssets, setParentAssets] = useState<Array<SelectableValue<string>>>()
-  const [pathValid, setPathValid] = useState<boolean>(true)
-
-  const onPathChange = (value: string, valid: boolean) => {
-    setPathValid(valid)
+  const [path, setPath] = useDebounce<string>(props.initialValue?.Path ?? '', 500, (value) =>
     props.onChange(
       {
         ...props.initialValue,
         Path: value,
       },
-      valid
+      pathValid
     )
+  )
+  const [pathValid, setPathValid] = useState<boolean>(true)
+
+  const onPathChange = (value: string, valid: boolean) => {
+    setPathValid(valid)
+    setPath(value)
   }
 
   const onUseAssetPathChange = (event: ChangeEvent<HTMLInputElement>): void => {
@@ -77,7 +81,7 @@ export function AssetFilterRow(props: {
           labelWidth={20}
           tooltip={<div>Searches asset by path, to use a regex surround pattern with /</div>}
         >
-          <MaybeRegexInput onChange={onPathChange} initialValue={props.initialValue?.Path} />
+          <MaybeRegexInput onChange={onPathChange} initialValue={path} />
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
