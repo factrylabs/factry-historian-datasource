@@ -155,6 +155,8 @@ export interface AssetFilter extends ResourceFilter {
 export interface AssetPropertyFilter extends ResourceFilter {
   AssetUUIDs?: string[]
   Recursive?: boolean
+  Keyword?: string
+  Datatypes?: string[]
 }
 
 export interface TimeseriesDatabaseFilter extends ResourceFilter {
@@ -326,6 +328,7 @@ export type AssetPropertyVariableQuery = {
   refId: string
   type: VariableQueryType.AssetPropertyQuery
   filter?: AssetPropertyFilter
+  valid: boolean
 }
 
 export type PropertyValuesVariableQuery = {
@@ -346,4 +349,10 @@ export type VariableQuery =
 export interface HistorianInfo {
   Version: string
   APIVersion: string
+}
+
+export enum MeasurementDatatype {
+  Number = 'number',
+  Bool = 'boolean',
+  String = 'string',
 }
