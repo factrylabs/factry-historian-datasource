@@ -118,6 +118,7 @@ export function VariableQueryEditor(
                 props.onChange({
                   ...props.query,
                   type: value.value!,
+                  valid: true,
                   filter: {},
                 })
               }
@@ -172,9 +173,10 @@ export function VariableQueryEditor(
           datasource={props.datasource}
           initialValue={props.query.filter}
           templateVariables={templateVariables}
-          onChange={(val) => {
+          historianInfo={historianInfo}
+          onChange={(val, valid) => {
             if (props.query.type === VariableQueryType.AssetPropertyQuery) {
-              props.onChange({ ...props.query, filter: val })
+              props.onChange({ ...props.query, filter: val, valid: valid })
             }
           }}
         />
