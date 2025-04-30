@@ -6,6 +6,7 @@ import { DataSource } from 'datasource'
 import { DatabaseSelect } from 'components/util/DatabaseSelect'
 import { MeasurementFilter } from 'types'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
+import { useDebounce } from 'QueryEditor/util'
 
 export interface MeasurementFilterProps {
   datasource: DataSource
@@ -16,15 +17,20 @@ export interface MeasurementFilterProps {
 
 export function MeasurementFilterRow(props: MeasurementFilterProps) {
   const [selectedDatabases, setSelectedDatabases] = useState<Array<SelectableValue<string>>>()
-
-  const onKeywordChange = (keyword: string, valid: boolean) => {
+  const [keyword, setKeyword] = useDebounce<string>(props.initialValue?.Keyword ?? '', 500, (value) =>
     props.onChange(
       {
         ...props.initialValue,
-        Keyword: keyword,
+        Keyword: value,
       },
-      valid
+      keywordValid
     )
+  )
+  const [keywordValid, setKeywordValid] = useState<boolean>(true)
+
+  const onKeywordChange = (keyword: string, valid: boolean) => {
+    setKeywordValid(valid)
+    setKeyword(keyword)
   }
 
   const onDatabaseChange = (values: string[]) => {
@@ -48,7 +54,7 @@ export function MeasurementFilterRow(props: MeasurementFilterProps) {
         >
           <MaybeRegexInput
             onChange={(value, ok) => onKeywordChange(value, ok)}
-            initialValue={props.initialValue?.Keyword}
+            initialValue={keyword}
           />
         </InlineField>
       </InlineFieldRow>
