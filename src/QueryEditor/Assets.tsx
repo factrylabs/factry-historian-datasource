@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { CascaderOption, InlineField, InlineFieldRow } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { default as Cascader } from 'components/Cascader/Cascader'
@@ -23,19 +23,22 @@ export const Assets = (props: Props): JSX.Element => {
   const [assets, setAssets] = useState<Asset[]>([])
   const [assetProperties, setAssetProperties] = useState<AssetProperty[]>([])
 
-  useEffect(() => {
-    const load = async () => {
-      const assets = await props.datasource.getAssets()
-      setAssets(assets)
-      const assetProperties = await props.datasource.getAssetProperties()
-      setAssetProperties(assetProperties)
-      setLoading(false)
-    }
-    if (loading) {
-      load()
-    }
-  }, [loading, props.datasource])
+  const fetchAssetsAndProperties = useCallback(async() => {
+    const assets = await props.datasource.getAssets()
+    setAssets(assets)
+    const assetProperties = await props.datasource.getAssetProperties()
+    setAssetProperties(assetProperties)
+  }, [props.datasource])
 
+  useEffect(() => {
+    if (loading) {
+      (async () => {
+        await fetchAssetsAndProperties()
+        setLoading(false)
+      })()
+    }
+  }, [loading, fetchAssetsAndProperties])
+  
   const assetOptions = getChildAssets(null, assets, assetProperties).concat(
     props.templateVariables.map((e) => {
       return { value: e.value, label: e.label } as CascaderOption
@@ -145,6 +148,7 @@ export const Assets = (props: Props): JSX.Element => {
                 displayAllSelectedLevels
                 onSelect={onAssetChange}
                 separator="\\"
+                onOpen={fetchAssetsAndProperties}
               />
             </InlineField>
           </InlineFieldRow>
@@ -164,6 +168,7 @@ export const Assets = (props: Props): JSX.Element => {
                 )}
                 templateVariables={props.templateVariables}
                 onChange={onSelectProperties}
+                onOpenMenu={fetchAssetsAndProperties}
               />
             </InlineField>
           </InlineFieldRow>

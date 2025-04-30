@@ -22,17 +22,17 @@ export interface Props {
   onChangeAssetProperties: (assetProperties: string[]) => void
   onChangeQueryOptions: (options: MeasurementQueryOptions) => void
   onChangeSeriesLimit: (value: number) => void
+  onOpenMenu?: () => void
 }
 
 export const EventAssetProperties = (props: Props): React.JSX.Element => {
   const [assetProperties, setAssetProperties] = useState<AssetProperty[]>([])
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       const result = await props.datasource.getAssetProperties()
       setAssetProperties(result)
-    }
-    load()
+    })()
   }, [props.datasource])
 
   const onChangeAssetProperties = (items: Array<SelectableValue<string>>): void => {
@@ -91,6 +91,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
             selectedAssets={props.selectedAssets}
             templateVariables={props.templateVariables}
             onChange={onChangeAssetProperties}
+            onOpenMenu={props.onOpenMenu}
           />
         </InlineField>
       </InlineFieldRow>

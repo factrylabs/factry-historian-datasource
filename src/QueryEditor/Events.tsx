@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEvent, useEffect, useState } from 'react'
+import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
 import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, MultiSelect, Select } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
@@ -52,22 +52,25 @@ export const Events = (props: Props): JSX.Element => {
     })
   const assetOptions = getChildAssets(null, assets).concat(templateVariables)
 
+  const fetchAll = useCallback(async () => {
+    const assets = await props.datasource.getAssets()
+    setAssets(assets)
+    const eventTypes = await props.datasource.getEventTypes()
+    setEventTypes(eventTypes)
+    const eventTypeProperties = await props.datasource.getEventTypeProperties()
+    setEventTypeProperties(eventTypeProperties)
+    const eventConfigurations = await props.datasource.getEventConfigurations()
+    setEventConfigurations(eventConfigurations)
+  }, [props.datasource])
+
   useEffect(() => {
-    const load = async () => {
-      const assets = await props.datasource.getAssets()
-      setAssets(assets)
-      const eventTypes = await props.datasource.getEventTypes()
-      setEventTypes(eventTypes)
-      const eventTypeProperties = await props.datasource.getEventTypeProperties()
-      setEventTypeProperties(eventTypeProperties)
-      const eventConfigurations = await props.datasource.getEventConfigurations()
-      setEventConfigurations(eventConfigurations)
-      setLoading(false)
-    }
     if (loading) {
-      load()
+      (async () => {
+        await fetchAll()
+        setLoading(false)
+      })()
     }
-  }, [loading, props.datasource])
+  }, [loading, fetchAll])
 
   const onSelectEventTypes = (items: Array<SelectableValue<string>>): void => {
     const selectedEventTypes = items.map((e) => {
@@ -326,6 +329,7 @@ export const Events = (props: Props): JSX.Element => {
                   value={props.query.EventTypes}
                   options={availableEventTypes(props.query.Assets?.length ? props.query.Assets[0] : '')}
                   onChange={onSelectEventTypes}
+                  onOpenMenu={fetchAll}
                 />
               </InlineField>
             </InlineFieldRow>
@@ -335,6 +339,7 @@ export const Events = (props: Props): JSX.Element => {
                   value={props.query.Properties}
                   options={availableProperties(props.query.EventTypes ?? [])}
                   onChange={onSelectProperties}
+                  onOpenMenu={fetchAll}
                 />
               </InlineField>
             </InlineFieldRow>
@@ -389,6 +394,7 @@ export const Events = (props: Props): JSX.Element => {
                 onChangeAssetProperties={onChangeAssetProperties}
                 onChangeQueryOptions={onChangeQueryOptions}
                 onChangeSeriesLimit={props.onChangeSeriesLimit}
+                onOpenMenu={fetchAll}
               />
             )}
           </FieldSet>
