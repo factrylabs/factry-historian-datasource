@@ -402,12 +402,6 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 		return
 	}
 
-	if field.Config == nil {
-		field.Config = &data.FieldConfig{
-			Unit: "none",
-		}
-	}
-
 	if frame.Meta == nil || frame.Meta.Custom == nil {
 		return
 	}
@@ -426,6 +420,12 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 	config, err := attributes.GetAttributes("Config")
 	if err != nil || !useEngineeringSpecs {
 		return
+	}
+
+	if field.Config == nil {
+		field.Config = &data.FieldConfig{
+			Unit: "none",
+		}
 	}
 
 	if uom := config.GetString("UoM"); uom != "" {
