@@ -6,7 +6,7 @@ import { AssetFilter, AssetPropertyFilter, HistorianInfo, MeasurementDatatype } 
 import { SelectableValue } from '@grafana/data'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 import { isFeatureEnabled } from 'util/semver'
-import { useDebounce } from 'QueryEditor/util'
+import { sortByLabel, useDebounce } from 'QueryEditor/util'
 
 export function AssetPropertyFilterRow(props: {
   datasource: DataSource
@@ -57,10 +57,11 @@ export function AssetPropertyFilterRow(props: {
     const selectableValues = assets
       .map((e) => {
         return {
-          label: e.Name,
+          label: e.AssetPath ? e.AssetPath : e.Name,
           value: e.UUID,
         } as SelectableValue<string>
       })
+      .sort(sortByLabel)
       .concat(props.templateVariables)
     if (!selectedAssets) {
       setAssets(selectableValues.filter((e) => props.initialValue?.AssetUUIDs?.includes(e.value ?? '')))
