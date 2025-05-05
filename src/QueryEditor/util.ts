@@ -282,7 +282,11 @@ export const sortByName = (a: Named, b: Named): number => {
   return idA.localeCompare(idB)
 }
 
-export function sortByLabel(a: CascaderOption, b: CascaderOption): number {
+export function sortByLabel(a: CascaderOption | SelectableValue, b: CascaderOption | SelectableValue): number {
+  if (!a.label || !b.label) {
+    return 0
+  }
+
   const idA = a.label.toUpperCase()
   const idB = b.label.toUpperCase()
   return idA.localeCompare(idB)
