@@ -140,31 +140,40 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
-  const handleTagsSectionChange = (updatedTags: QueryTag[]): void => {
-    const filter: EventPropertyFilter[] = []
+  const handleEventPropertyFilterChange = (updatedTags: QueryTag[]): void => {
+    const propertyFilter: EventPropertyFilter[] = []
     updatedTags.forEach((tag) => {
-      const dataType = getDatatype(tag.key)
-      let eventPropertyFilter: EventPropertyFilter = {
+      const isParent = tag.key.startsWith('parent:')
+      const cleanKey = tag.key.replace('parent:', '')
+      const dataType = getDatatype(cleanKey, isParent)
+      const filter: EventPropertyFilter = {
         Property: tag.key,
         Datatype: dataType,
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
         ScopedVars: {},
+        Parent: isParent,
+        ...(needsValue(tag.operator as KnownOperator) ? { Value: tag.value } : {}),
       }
-      if (needsValue(eventPropertyFilter.Operator as KnownOperator)) {
-        eventPropertyFilter.Value = tag.value
-      }
-      filter.push(eventPropertyFilter)
+        propertyFilter.push(filter)
     })
-    const updatedQuery = { ...props.query, PropertyFilter: filter } as EventQuery
+    const updatedQuery = {
+      ...props.query,
+      PropertyFilter: propertyFilter,
+    }
     props.onChangeEventQuery(updatedQuery)
   }
 
-  const getDatatype = (property: string): PropertyDatatype => {
+  const getDatatype = (property: string, isParent: boolean): PropertyDatatype => {
+    let selectedEventTypesUUIDs: string[] = []
+    if (isParent) {
+      selectedEventTypesUUIDs = getSelectedParentEventTypes(props.query.EventTypes ?? [])
+    } else {
+      selectedEventTypesUUIDs = getSelectedEventTypes(props.query.EventTypes ?? [])
+    }
     const datatype = eventTypeProperties
-      .filter((e) => props.query.EventTypes?.includes(e.EventTypeUUID))
+      .filter((e) => selectedEventTypesUUIDs.includes(e.EventTypeUUID))
       .find((e) => e.Name === property)?.Datatype
-
     if (!datatype) {
       return PropertyDatatype.Number
     }
@@ -172,20 +181,32 @@ export const Events = (props: Props): JSX.Element => {
     return datatype
   }
 
-  const availableSimpleProperties = (eventTypes: string[]): string[] => {
-    const selectedEventTypes = eventTypes.flatMap((e) => props.datasource.multiSelectReplace(e))
+  const getTagsKeyOptions = (eventTypes: string[]): string[] => {
+    return [
+      ...availableSimpleProperties(eventTypes),
+      ...availableSimpleProperties(eventTypes, true).map(k => `parent:${k}`),
+    ]
+  }
+
+  const availableSimpleProperties = (eventTypeSelectors: string[], onlyParentProperties = false): string[] => {
+    let selectedEventTypeUUIDs: string[] = []
+    if (onlyParentProperties) {
+      selectedEventTypeUUIDs = getSelectedParentEventTypes(eventTypeSelectors)
+    } else {
+      selectedEventTypeUUIDs = getSelectedEventTypes(eventTypeSelectors)
+    }
     return [
       ...new Set(
         eventTypeProperties
           .filter((e) => e.Type === PropertyType.Simple)
-          .filter((e) => selectedEventTypes.includes(e.EventTypeUUID))
+          .filter((e) => selectedEventTypeUUIDs.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
     ]
   }
 
-  const availablePeriodicProperties = (eventTypes: string[]): string[] => {
-    const selectedEventTypes = eventTypes.flatMap((e) => props.datasource.multiSelectReplace(e))
+  const availablePeriodicProperties = (eventTypeSelectors: string[]): string[] => {
+    const selectedEventTypeUUIDs = getSelectedEventTypes(eventTypeSelectors)
     return [
       ...new Set(
         eventTypeProperties
@@ -194,16 +215,38 @@ export const Events = (props: Props): JSX.Element => {
               ? e.Type === PropertyType.PeriodicWithDimension || e.Type === PropertyType.Periodic
               : e.Type === PropertyType.PeriodicWithDimension
           )
-          .filter((e) => selectedEventTypes.includes(e.EventTypeUUID))
+          .filter((e) => selectedEventTypeUUIDs.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
     ]
   }
 
-  const availableProperties = (eventTypes: string[]): Array<SelectableValue<string>> => {
+  const getSelectedEventTypes = (eventTypeSelectors: string[]): string[] => {
+    let selectedEventTypeUUIDs = eventTypeSelectors.flatMap((e) => props.datasource.multiSelectReplace(e))
+    return selectedEventTypeUUIDs
+  }
+
+  const getSelectedParentEventTypes = (eventTypeSelectors: string[]): string[] => {
+    const selectedEventTypes = eventTypes.filter((e) =>
+      eventTypeSelectors.some((et) => e.UUID === et)
+    )
+    const parentEventTypes = eventTypes.filter((e) =>
+      selectedEventTypes.some((et) => e.UUID === et.ParentUUID)
+    )
+    const parentEventTypeUUIDs = parentEventTypes.map((e) => e.UUID)
+    return parentEventTypeUUIDs
+  }
+
+  const availableProperties = (eventTypes: string[], includeParentInfo: boolean): Array<SelectableValue<string>> => {
     let properties = [] as string[]
     if (props.query.Type === PropertyType.Simple) {
       properties = availableSimpleProperties(eventTypes)
+      if (includeParentInfo) {
+        properties = [
+          ...properties,
+          ...availableSimpleProperties(eventTypes, true).map((k) => `parent:${k}`),
+        ]
+      }
     } else {
       properties = availablePeriodicProperties(eventTypes)
     }
@@ -347,7 +390,7 @@ export const Events = (props: Props): JSX.Element => {
               <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
                 <MultiSelect
                   value={props.query.Properties}
-                  options={availableProperties(props.query.EventTypes ?? [])}
+                  options={availableProperties(props.query.EventTypes ?? [], props.query.IncludeParentInfo ?? false)}
                   onChange={onSelectProperties}
                   onOpenMenu={fetchAll}
                 />
@@ -364,13 +407,23 @@ export const Events = (props: Props): JSX.Element => {
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>
-              <InlineField label="WHERE" labelWidth={labelWidth}>
+              <InlineField
+                label="WHERE"
+                tooltip="Filters events based on property values (regular and parent)"
+                labelWidth={labelWidth}
+              >
                 <TagsSection
                   tags={propertyFilterToQueryTags(props.query.PropertyFilter ?? [])}
                   operators={getValueFilterOperators()}
-                  getTagKeyOptions={() => Promise.resolve(availableSimpleProperties(props.query.EventTypes ?? []))}
-                  getTagValueOptions={(key) => Promise.resolve(availablePropertyValues(key))}
-                  onChange={handleTagsSectionChange}
+                  getTagKeyOptions={() =>
+                    Promise.resolve(getTagsKeyOptions(props.query.EventTypes ?? []))
+                  }
+                  getTagValueOptions={(key) => {
+                    const isParent = key.startsWith('parent:')
+                    const cleanKey = isParent ? key.replace('parent:', '') : key
+                    return Promise.resolve(availablePropertyValues(cleanKey))
+                  }}
+                  onChange={handleEventPropertyFilterChange}
                 />
               </InlineField>
             </InlineFieldRow>

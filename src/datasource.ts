@@ -11,6 +11,7 @@ import {
   Attributes,
   Collector,
   EventConfiguration,
+  EventPropertyFilter,
   EventQuery,
   EventType,
   EventTypeFilter,
@@ -114,51 +115,13 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e, request.scopedVars))
             eventQuery.Properties = eventQuery.Properties?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
-            )
+            ).map((e) => e.replace('parent:', ''))
             if (eventQuery.QueryAssetProperties && eventQuery.Options?.ValueFilters) {
               eventQuery.Options.ValueFilters = eventQuery.Options.ValueFilters.filter(
                 (e) => e.Value !== 'enter a value'
               )
             }
-            eventQuery.PropertyFilter = eventQuery.PropertyFilter?.filter((e) => {
-              if (
-                e.Operator === 'IS NULL' ||
-                e.Operator === 'IS NOT NULL' ||
-                e.Operator === 'EXISTS' ||
-                e.Operator === 'NOT EXISTS'
-              ) {
-                return true
-              }
-
-              if ((typeof e.Value === 'number' && isNaN(e.Value)) || (typeof e.Value === 'string' && e.Value === '')) {
-                return false
-              }
-
-              return true
-            }).map((e) => {
-              e.Property = this.templateSrv.replace(e.Property, request.scopedVars)
-              if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
-                const replacedValue = this.multiSelectReplace(String(e.Value), request.scopedVars)
-                if (replacedValue.length === 0) {
-                  return e
-                }
-                e.Value = replacedValue
-              } else {
-                switch (e.Datatype) {
-                  case PropertyDatatype.Number:
-                    e.Value = parseFloat(this.templateSrv.replace(String(e.Value), request.scopedVars))
-                    break
-                  case PropertyDatatype.Bool:
-                    e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars) === 'true'
-                    break
-                  case PropertyDatatype.String:
-                    e.Value = this.templateSrv.replace(String(e.Value), request.scopedVars)
-                    break
-                }
-                e.Value = [e.Value as string]
-              }
-              return e
-            })
+            eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, request.scopedVars)
             target.query = eventQuery
             break
           }
@@ -168,6 +131,56 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         return target
       })
     return super.query(request)
+  }
+
+  replaceEventPropertyFilter(
+    eventPropertyFilter: EventPropertyFilter[],
+    scopedVars: ScopedVars
+  ): EventPropertyFilter[] {
+    return eventPropertyFilter
+      .filter((e) => {
+        if (
+          e.Operator === 'IS NULL' ||
+          e.Operator === 'IS NOT NULL' ||
+          e.Operator === 'EXISTS' ||
+          e.Operator === 'NOT EXISTS'
+        ) {
+          return true
+        }
+
+        if ((typeof e.Value === 'number' && isNaN(e.Value)) || (typeof e.Value === 'string' && e.Value === '')) {
+          return false
+        }
+
+        return true
+      })
+      .map((e) => {
+        e.Property = this.templateSrv.replace(e.Property, scopedVars)
+        if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+          const replacedValue = this.multiSelectReplace(String(e.Value), scopedVars)
+          if (replacedValue.length === 0) {
+            return e
+          }
+          e.Value = replacedValue
+        } else {
+          switch (e.Datatype) {
+            case PropertyDatatype.Number:
+              e.Value = parseFloat(this.templateSrv.replace(String(e.Value), scopedVars))
+              break
+            case PropertyDatatype.Bool:
+              e.Value = this.templateSrv.replace(String(e.Value), scopedVars) === 'true'
+              break
+            case PropertyDatatype.String:
+              e.Value = this.templateSrv.replace(String(e.Value), scopedVars)
+              break
+          }
+          e.Value = [e.Value as string]
+        }
+        if (e.Parent) {
+          e.Property = e.Property.replace('parent:', '')
+        }
+        return e
+      })
   }
 
   // https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/

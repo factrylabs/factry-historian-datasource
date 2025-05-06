@@ -69,6 +69,7 @@ type EventType struct {
 	BaseModel
 	Description string
 	Properties  []EventTypeProperty
+	ParentUUID  *uuid.UUID
 }
 
 // PropertyDatatype enum for the event type property datatype
