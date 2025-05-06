@@ -59,4 +59,5 @@ type EventQuery struct {
 	QueryAssetProperties bool
 	AssetProperties      []string
 	Options              *MeasurementQueryOptions
+	Limit                int
 }

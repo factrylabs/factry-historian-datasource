@@ -1,5 +1,5 @@
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
-import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, MultiSelect, Select } from '@grafana/ui'
+import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input, MultiSelect, Select } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { default as Cascader } from 'components/Cascader/Cascader'
@@ -12,6 +12,7 @@ import {
   matchedAssets,
   propertyFilterToQueryTags,
   tagsToQueryTags,
+  useDebounce,
 } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
@@ -45,6 +46,11 @@ export const Events = (props: Props): JSX.Element => {
   const [eventTypes, setEventTypes] = useState<EventType[]>([])
   const [eventTypeProperties, setEventTypeProperties] = useState<EventTypeProperty[]>([])
   const [eventConfigurations, setEventConfigurations] = useState<EventConfiguration[]>([])
+  const [limit, setLimit] = useDebounce<number>(props.query.Limit ?? 1000, 500, (value) => {
+    const updatedQuery = { ...props.query, Limit: limit } as EventQuery
+    props.onChangeEventQuery(updatedQuery)
+  })
+
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
@@ -65,7 +71,7 @@ export const Events = (props: Props): JSX.Element => {
 
   useEffect(() => {
     if (loading) {
-      (async () => {
+      ;(async () => {
         await fetchAll()
         setLoading(false)
       })()
@@ -267,6 +273,10 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeLimit = (event: ChangeEvent<HTMLInputElement>): void => {
+    setLimit(Number(event.target.value))
+  }
+
   const onChangeAssetProperties = (values: string[]): void => {
     const updatedQuery = { ...props.query, AssetProperties: values }
     props.onChangeEventQuery(updatedQuery)
@@ -371,6 +381,15 @@ export const Events = (props: Props): JSX.Element => {
                 labelWidth={labelWidth}
               >
                 <InlineSwitch value={props.query.IncludeParentInfo} onChange={onChangeIncludeParentInfo} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Limit"
+                tooltip="Limit the number of events returned, 0 for no limit"
+                labelWidth={labelWidth}
+              >
+                <Input value={limit} type="number" min={0} onChange={onChangeLimit} />
               </InlineField>
             </InlineFieldRow>
           </FieldSet>

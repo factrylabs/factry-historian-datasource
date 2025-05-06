@@ -131,6 +131,7 @@ export interface EventQuery {
   AssetProperties?: string[]
   Options?: MeasurementQueryOptions
   IncludeParentInfo?: boolean
+  Limit?: number
 }
 
 export interface ResourceFilter {
