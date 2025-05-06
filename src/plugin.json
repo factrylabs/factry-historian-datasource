@@ -36,6 +36,10 @@
       {
         "name": "Documentation",
         "url": "https://docs.factry.cloud/docs/grafana-datasource/latest"
+      },
+      {
+        "name": "Changelog",
+        "url": "https://docs.factry.cloud/docs/grafana-datasource/latest/1_release_notes/"
       }
     ],
     "screenshots": [
