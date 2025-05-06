@@ -315,7 +315,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
               tooltip="The maximum amount of measurement series a query can return"
               labelWidth={labelWidth}
             >
-              <Input value={seriesLimit} type="number" min={1} onChange={onChangeSeriesLimit} />
+              <Input value={seriesLimit} type="number" min={0} onChange={onChangeSeriesLimit} />
             </InlineField>
           </InlineFieldRow>
         </CollapsableSection>

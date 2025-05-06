@@ -37,13 +37,18 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		return data.Frames{}, nil
 	}
 
+	limit := math.MaxInt
+	if eventQuery.Limit > 0 {
+		limit = eventQuery.Limit
+	}
+
 	filter := schemas.EventFilter{
 		StartTime:         timeRange.From,
 		StopTime:          timeRange.To,
 		AssetUUIDs:        slices.Collect(maps.Keys(assets)),
 		EventTypeUUIDs:    slices.Collect(maps.Keys(eventTypes)),
 		PreloadProperties: true,
-		Limit:             math.MaxInt32,
+		Limit:             limit,
 		PropertyFilter:    eventQuery.PropertyFilter,
 		Status:            eventQuery.Statuses,
 	}
