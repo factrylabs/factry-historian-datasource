@@ -2,9 +2,13 @@
 
 [Grafana](https://grafana.com) datasource for [Factry Historian](https://factry.io).
 
+⚠️ *Warning:* Before upgrading this datasource, make sure to read the [release notes](https://github.com/factrylabs/factry-historian-datasource/releases) to understand any breaking changes or required migration steps.
+
 ## Introduction
 
 Empower anyone to analyze industrial process and event data with Grafana. The Grafana Data Source for Factry Historian makes it easy for users to browse assets, trend time-series and event data such as batches or shifts – with zero technical skills required.
+
+
 
 ## Typical use cases
 
