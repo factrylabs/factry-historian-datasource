@@ -187,6 +187,7 @@ export interface EventPropertyFilter extends ResourceFilter {
   Value?: string | number | boolean | string[]
   Operator: string
   Condition: string
+  Parent: boolean
 }
 
 export interface Pagination {
@@ -251,6 +252,7 @@ export interface EventType {
   Name: string
   UUID: string
   Description: string
+  ParentUUID?: string
 }
 
 export enum PropertyDatatype {

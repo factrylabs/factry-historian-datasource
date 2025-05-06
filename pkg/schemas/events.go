@@ -50,7 +50,6 @@ type EventFilter struct {
 	Status              []string
 	EventConfigurations []uuid.UUID
 	PropertyFilter      []EventPropertyValueFilter
-	IncludeParentInfo   bool
 	Limit               int
 	ExcludeManualEvents bool
 	Ascending           bool
@@ -70,6 +69,7 @@ type EventPropertyValueFilter struct {
 	Value     []interface{}
 	Operator  string
 	Condition string
+	Parent    bool
 }
 
 // EventPropertyValuesRequest is a request for event property values

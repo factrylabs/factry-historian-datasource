@@ -458,7 +458,7 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 				if !parentFieldsAdded[parentPrefix] {
 					parentFieldsAdded[parentPrefix] = true
 
-					parentFieldsForEventType := buildSimpleFieldsForEvent(parentPrefix, eventTypePropertiesForEventType[parentEvent.EventTypeUUID], map[string]struct{}{})
+					parentFieldsForEventType := buildSimpleFieldsForEvent(parentPrefix, eventTypePropertiesForEventType[parentEvent.EventTypeUUID], selectedProperties)
 					for _, parentField := range parentFieldsForEventType {
 						fieldByColumn[parentField.Name] = parentField
 						parentFields = append(parentFields, parentField)

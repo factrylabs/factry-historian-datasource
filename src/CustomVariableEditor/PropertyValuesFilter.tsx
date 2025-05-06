@@ -130,6 +130,7 @@ export function PropertyValuesFilterRow(props: {
         Datatype: dataType,
         Condition: tag.condition || '',
         Operator: tag.operator || '=',
+        Parent: false,
       }
       if (needsValue(tag.operator as any)) {
         eventPropertyFilter.Value = tag.value
