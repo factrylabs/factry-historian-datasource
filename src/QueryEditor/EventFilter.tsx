@@ -19,6 +19,7 @@ import {
 } from 'types'
 import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
 import { getChildAssets, isSupportedPrototypeType, matchedAssets, propertyFilterToQueryTags } from './util'
+import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: EventQuery
@@ -140,6 +141,10 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const getDatatype = (property: string, isParent: boolean): PropertyDatatype => {
+    if (property === 'duration') {
+      return PropertyDatatype.String
+    }
+
     let selectedEventTypesUUIDs: string[] = []
     if (isParent) {
       selectedEventTypesUUIDs = getSelectedParentEventTypes(props.query.EventTypes ?? [])
@@ -157,8 +162,26 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const getTagsKeyOptions = (eventTypes: string[]): string[] => {
+    const durationFilterSupported = isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0', true)
+    let tagKeyOptions: string[] = []
+    if (durationFilterSupported) {
+      tagKeyOptions = [
+        'duration',
+      ]
+    }
+    tagKeyOptions = [
+      ...tagKeyOptions,
+      ...availableSimpleProperties(eventTypes)
+    ]
+
+    if (durationFilterSupported) {
+      tagKeyOptions = [
+        ...tagKeyOptions,
+        'parent:duration',
+      ]
+    }
     return [
-      ...availableSimpleProperties(eventTypes),
+      ...tagKeyOptions,
       ...availableSimpleProperties(eventTypes, true).map(k => `parent:${k}`),
     ]
   }
