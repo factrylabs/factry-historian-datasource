@@ -295,13 +295,13 @@ export const Events = (props: Props): JSX.Element => {
     <>
       {!loading && (
         <>
-          <FieldSet label="Event query">
+          <FieldSet>
             <InlineFieldRow>
               <InlineField
                 grow
                 labelWidth={labelWidth}
-                label="Query Type"
-                tooltip="Specify a property type to work with"
+                label="Type"
+                tooltip="Specify a property type to work with, where simple includes simple properties and periodic includes periodic properties"
               >
                 <Select
                   options={Object.entries(PropertyType)
@@ -316,7 +316,12 @@ export const Events = (props: Props): JSX.Element => {
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>
-              <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
+              <InlineField 
+                label="Assets" 
+                grow 
+                labelWidth={labelWidth}
+                tooltip="Specify an asset to work with, or use a regex to select multiple assets at once (e.g. /Parent\\\\Child.*/)"
+              >
                 <Cascader
                   initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
                   initialLabel={initialLabel()}
@@ -330,10 +335,10 @@ export const Events = (props: Props): JSX.Element => {
 
             <InlineFieldRow>
               <InlineField
-                label="Event types"
+                label="Event Types"
                 grow
                 labelWidth={labelWidth}
-                tooltip="Specify one or more event type to work with"
+                tooltip="Specify one or more event types to work with"
               >
                 <MultiSelect
                   value={props.query.EventTypes}
@@ -344,7 +349,12 @@ export const Events = (props: Props): JSX.Element => {
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>
-              <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
+              <InlineField 
+                label="Properties" 
+                grow 
+                labelWidth={labelWidth} 
+                tooltip="Specify one or more event properties to work with, or leave empty to use all event properties"
+              >
                 <MultiSelect
                   value={props.query.Properties}
                   options={availableProperties(props.query.EventTypes ?? [])}
@@ -355,16 +365,20 @@ export const Events = (props: Props): JSX.Element => {
             </InlineFieldRow>
             <InlineFieldRow>
               <InlineField
-                label="Statuses"
+                label="Event Statuses"
                 grow
                 labelWidth={labelWidth}
-                tooltip="Specify one or more status to work with, selecting none will use all statuses"
+                tooltip="Specify one or more event statuses to filter events on the selected statuses, or leave empty to use all event statuses"
               >
                 <MultiSelect value={props.query.Statuses} options={availableStatuses()} onChange={onSelectStatuses} />
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>
-              <InlineField label="WHERE" labelWidth={labelWidth}>
+              <InlineField 
+                label="Filter Events" 
+                labelWidth={labelWidth}
+                tooltip="Filter events on one or more event property value conditions (e.g. event property X value > 0)"
+              >
                 <TagsSection
                   tags={propertyFilterToQueryTags(props.query.PropertyFilter ?? [])}
                   operators={getValueFilterOperators()}
@@ -376,8 +390,8 @@ export const Events = (props: Props): JSX.Element => {
             </InlineFieldRow>
             <InlineFieldRow>
               <InlineField
-                label="Include parent info"
-                tooltip="For simple properties it will add columns for the parent event and for periodic properties it will add labels"
+                label="Include Parent Event"
+                tooltip="Adds fields with the parent event simple properties (on fetching simple properties) or add labels with the parent event simple properties (on fetching periodic properties)"
                 labelWidth={labelWidth}
               >
                 <InlineSwitch value={props.query.IncludeParentInfo} onChange={onChangeIncludeParentInfo} />
@@ -393,7 +407,7 @@ export const Events = (props: Props): JSX.Element => {
               </InlineField>
             </InlineFieldRow>
           </FieldSet>
-          <FieldSet label="Query asset properties">
+          <FieldSet label="Fetch Asset Properties">
             <InlineFieldRow>
               <InlineField label="Enabled" labelWidth={labelWidth}>
                 <InlineSwitch value={props.query.QueryAssetProperties} onChange={onChangeQueryAssetProperties} />

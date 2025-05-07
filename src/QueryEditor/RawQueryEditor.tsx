@@ -67,7 +67,7 @@ export const RawQueryEditor = (props: Props): JSX.Element => {
               label="Database"
               grow
               labelWidth={labelWidth}
-              tooltip="Specify a time series database to work with"
+              tooltip="Specify a time-series database to work with"
             >
               <Select
                 value={selectable(selectableTimeseriesDatabases(databases), props.query.TimeseriesDatabase)}
