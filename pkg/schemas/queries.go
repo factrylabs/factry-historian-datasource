@@ -1,5 +1,7 @@
 package schemas
 
+import "time"
+
 // MeasurementQueryOptions are measurement query options
 type MeasurementQueryOptions struct {
 	Tags                   map[string]string
@@ -60,4 +62,12 @@ type EventQuery struct {
 	AssetProperties      []string
 	Options              *MeasurementQueryOptions
 	Limit                int
+	OverrideTimeRange    bool `json:"overrideTimeRange"`
+	TimeRange            TimeRange
+}
+
+// TimeRange contains a user-defined time range that can be used to override the grafana dashboard time range
+type TimeRange struct {
+	From *time.Time `json:"fromParsed,omitempty"`
+	To   *time.Time `json:"toParsed,omitempty"`
 }

@@ -1,5 +1,6 @@
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
 import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input } from '@grafana/ui'
+import { DateTime } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import {
   defaultQueryOptions,
@@ -16,8 +17,10 @@ import {
   labelWidth,
   MeasurementQueryOptions,
   PropertyType,
+  TimeRange,
 } from 'types'
 import { EventFilter } from './EventFilter'
+import { DateRangePicker } from 'components/util/DateRangePicker'
 
 export interface Props {
   query: EventQuery
@@ -25,6 +28,7 @@ export interface Props {
   datasource: DataSource
   appIsAlertingType?: boolean
   isAnnotationQuery?: boolean
+  range?: { from: DateTime; to: DateTime }
   onChangeEventQuery: (query: EventQuery) => void
   onChangeSeriesLimit: (value: number) => void
 }
@@ -78,6 +82,21 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeOverrideTimeRange = (event: ChangeEvent<HTMLInputElement>): void => {
+    let updatedQuery = {
+      ...props.query,
+      OverrideTimeRange: event.target.checked,
+    }
+    // When the override time range is enabled, we set the time range to that of the dashboard
+    if (event.target.checked) {
+      updatedQuery.TimeRange = {
+        from: props.range?.from.toString() || '',
+        to: props.range?.to.toString() || '',
+      }
+    }
+    props.onChangeEventQuery(updatedQuery)
+  }
+
   const onChangeProperties = (properties: string[]) => {
     const updatedQuery = { ...props.query, Properties: properties }
     props.onChangeEventQuery(updatedQuery)
@@ -117,6 +136,11 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeTimeRange = (value: TimeRange): void => {
+    const updatedQuery = { ...props.query, TimeRange: value }
+    props.onChangeEventQuery(updatedQuery)
+  }
+
   return (
     <>
       {!loading && (
@@ -143,6 +167,20 @@ export const Events = (props: Props): JSX.Element => {
                 <InlineSwitch value={props.query.IncludeParentInfo} onChange={onChangeIncludeParentInfo} />
               </InlineField>
             </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField label="Override time range" labelWidth={labelWidth}>
+                <div>
+                  <InlineSwitch
+                    label="Override time range"
+                    value={props.query.OverrideTimeRange}
+                    onChange={onChangeOverrideTimeRange}
+                  />
+                </div>
+              </InlineField>
+            </InlineFieldRow>
+            {props.query.OverrideTimeRange && (
+              <DateRangePicker override={props.query.OverrideTimeRange} dateTimeRange={props.query.TimeRange} onChange={onChangeTimeRange} datasource={props.datasource} />
+            )}
             <InlineFieldRow>
               <InlineField
                 label="Limit"

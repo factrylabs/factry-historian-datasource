@@ -1,4 +1,4 @@
-import { CoreApp, DataQueryRequest, DataSourceInstanceSettings, ScopedVars } from '@grafana/data'
+import { CoreApp, DataQueryRequest, DataSourceInstanceSettings, dateTime, ScopedVars } from '@grafana/data'
 import { DataSourceWithBackend, TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { VariableSupport } from 'variable_support'
 import { AnnotationsQueryEditor } from 'AnnotationsQueryEditor/AnnotationsQueryEditor'
@@ -125,6 +125,28 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
               )
             }
             eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, request.scopedVars)
+
+            // Time Range overrides
+            if (eventQuery.TimeRange && eventQuery.OverrideTimeRange) {
+              const resolvedFromTime = eventQuery.TimeRange.from ? this.replace(eventQuery.TimeRange.from) : null
+              const timestampFrom = Number(resolvedFromTime)
+              const parsedFromTime = eventQuery.TimeRange.from
+                ? dateTime(isNaN(timestampFrom) ? resolvedFromTime : timestampFrom).toISOString()
+                : null
+
+              const resolvedToTime = eventQuery.TimeRange.to ? this.replace(eventQuery.TimeRange.to) : null
+              const timestampTo = Number(resolvedToTime)
+              const parsedToTime = eventQuery.TimeRange.to
+                ? dateTime(isNaN(timestampTo) ? resolvedToTime : timestampTo).toISOString()
+                : null
+
+              eventQuery.TimeRange = {
+                from: eventQuery.TimeRange.from,
+                fromParsed: parsedFromTime,
+                to: eventQuery.TimeRange.to,
+                toParsed: parsedToTime,
+              }
+            }
             target.query = eventQuery
             break
           }
@@ -235,6 +257,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.multiSelectReplace(e, filter.ScopedVars))
     filter.Keyword = this.templateSrv.replace(filter.Keyword, filter.ScopedVars)
     return filter
+  }
+
+  containsTemplate(value: string): boolean {
+    // Using our own custom function to check for template variables since the templateSrv.containsTemplate() function
+    // does not seem to work with scenes in anything but the latest version of Grafana.
+    return typeof value === 'string' && /\$\{?[_a-zA-Z][_a-zA-Z0-9]*(?::[a-zA-Z0-9_]+)?}?/.test(value)
   }
 
   async refreshInfo(): Promise<void> {
@@ -389,8 +417,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     let params: Record<string, unknown> = {
       ...filter.EventFilter,
       ...filter.HistorianInfo,
-      From: filter.From,
-      To: filter.To,
+      From:
+        filter.EventFilter.OverrideTimeRange && filter.EventFilter.TimeRange.from
+          ? dateTime(filter.EventFilter.TimeRange.from).toISOString()
+          : filter.From,
+      To:
+        filter.EventFilter.OverrideTimeRange && filter.EventFilter.TimeRange.to
+          ? dateTime(filter.EventFilter.TimeRange.to).toISOString()
+          : filter.To,
     }
 
     delete params.PropertyFilter

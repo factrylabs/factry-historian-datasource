@@ -223,8 +223,8 @@ func (api *API) GetDistinctEventPropertyValues(ctx context.Context, eventTypePro
 		EventTypeUUIDs: slices.Collect(maps.Keys(eventTypes)),
 		Limit:          0,
 		Status:         request.Statuses,
-		StartTime:      request.From,
-		StopTime:       request.To,
+		StartTime:      &request.From,
+		StopTime:       &request.To,
 		PropertyFilter: request.PropertyFilter,
 	}
 	encoder := form.NewEncoder()

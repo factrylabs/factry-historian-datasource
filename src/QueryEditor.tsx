@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { RadioButtonGroup, InlineField, InlineFieldRow } from '@grafana/ui'
-import { CoreApp, QueryEditorProps } from '@grafana/data'
+import { CoreApp, dateTime, QueryEditorProps } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Assets } from 'QueryEditor/Assets'
 import { Events } from 'QueryEditor/Events'
@@ -19,6 +19,7 @@ import {
   TabIndex,
   PropertyType,
   EventPropertyFilter,
+  TimeRange,
 } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -57,6 +58,8 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       Properties: [] as string[],
       QueryAssetProperties: false,
       Limit: 1000,
+      OverrideTimeRange: false,
+      TimeRange: { from: dateTime(this.props.range?.from).toISOString(), to: dateTime(this.props.range?.to).toISOString() } as TimeRange,
     },
     rawQuery: {
       Query: '',
@@ -172,6 +175,11 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     updatedQuery.query = eventQuery
     updatedQuery.tabIndex = TabIndex.Events
     updatedQuery.historianInfo = this.props.datasource.historianInfo
+
+    updatedQuery.query = {
+      ...eventQuery,
+    }
+
     onChange(updatedQuery)
     this.onRunQuery(this.props)
     this.setState({
@@ -236,6 +244,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         title: 'Events',
         content: (
           <Events
+            range={this.props.range}
             query={this.props.query.query as EventQuery}
             seriesLimit={this.props.query.seriesLimit}
             datasource={this.props.datasource}

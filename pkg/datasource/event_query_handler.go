@@ -42,9 +42,17 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		limit = eventQuery.Limit
 	}
 
+	var startTime *time.Time = &timeRange.From
+	var stopTime *time.Time = &timeRange.To
+
+	if eventQuery.OverrideTimeRange {
+		startTime = eventQuery.TimeRange.From
+		stopTime = eventQuery.TimeRange.To
+	}
+
 	filter := schemas.EventFilter{
-		StartTime:         timeRange.From,
-		StopTime:          timeRange.To,
+		StartTime:         startTime,
+		StopTime:          stopTime,
 		AssetUUIDs:        slices.Collect(maps.Keys(assets)),
 		EventTypeUUIDs:    slices.Collect(maps.Keys(eventTypes)),
 		PreloadProperties: true,
