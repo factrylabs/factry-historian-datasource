@@ -56,6 +56,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       EventTypes: [] as string[],
       Properties: [] as string[],
       QueryAssetProperties: false,
+      Limit: 1000,
     },
     rawQuery: {
       Query: '',

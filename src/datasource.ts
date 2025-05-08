@@ -137,50 +137,52 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     eventPropertyFilter: EventPropertyFilter[],
     scopedVars: ScopedVars
   ): EventPropertyFilter[] {
-    return eventPropertyFilter
-      .filter((e) => {
-        if (
-          e.Operator === 'IS NULL' ||
-          e.Operator === 'IS NOT NULL' ||
-          e.Operator === 'EXISTS' ||
-          e.Operator === 'NOT EXISTS'
-        ) {
+    return (
+      eventPropertyFilter
+        ?.filter((e) => {
+          if (
+            e.Operator === 'IS NULL' ||
+            e.Operator === 'IS NOT NULL' ||
+            e.Operator === 'EXISTS' ||
+            e.Operator === 'NOT EXISTS'
+          ) {
+            return true
+          }
+
+          if ((typeof e.Value === 'number' && isNaN(e.Value)) || (typeof e.Value === 'string' && e.Value === '')) {
+            return false
+          }
+
           return true
-        }
-
-        if ((typeof e.Value === 'number' && isNaN(e.Value)) || (typeof e.Value === 'string' && e.Value === '')) {
-          return false
-        }
-
-        return true
-      })
-      .map((e) => {
-        e.Property = this.templateSrv.replace(e.Property, scopedVars)
-        if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
-          const replacedValue = this.multiSelectReplace(String(e.Value), scopedVars)
-          if (replacedValue.length === 0) {
-            return e
+        })
+        .map((e) => {
+          e.Property = this.templateSrv.replace(e.Property, scopedVars)
+          if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+            const replacedValue = this.multiSelectReplace(String(e.Value), scopedVars)
+            if (replacedValue.length === 0) {
+              return e
+            }
+            e.Value = replacedValue
+          } else {
+            switch (e.Datatype) {
+              case PropertyDatatype.Number:
+                e.Value = parseFloat(this.templateSrv.replace(String(e.Value), scopedVars))
+                break
+              case PropertyDatatype.Bool:
+                e.Value = this.templateSrv.replace(String(e.Value), scopedVars) === 'true'
+                break
+              case PropertyDatatype.String:
+                e.Value = this.templateSrv.replace(String(e.Value), scopedVars)
+                break
+            }
+            e.Value = [e.Value as string]
           }
-          e.Value = replacedValue
-        } else {
-          switch (e.Datatype) {
-            case PropertyDatatype.Number:
-              e.Value = parseFloat(this.templateSrv.replace(String(e.Value), scopedVars))
-              break
-            case PropertyDatatype.Bool:
-              e.Value = this.templateSrv.replace(String(e.Value), scopedVars) === 'true'
-              break
-            case PropertyDatatype.String:
-              e.Value = this.templateSrv.replace(String(e.Value), scopedVars)
-              break
+          if (e.Parent) {
+            e.Property = e.Property.replace('parent:', '')
           }
-          e.Value = [e.Value as string]
-        }
-        if (e.Parent) {
-          e.Property = e.Property.replace('parent:', '')
-        }
-        return e
-      })
+          return e
+        }) ?? []
+    )
   }
 
   // https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
@@ -394,8 +396,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         params['PropertyFilter[' + i + '].Condition'] = filter.EventFilter.PropertyFilter[i].Condition
         params['PropertyFilter[' + i + '].Datatype'] = filter.EventFilter.PropertyFilter[i].Datatype
         params['PropertyFilter[' + i + '].Operator'] = filter.EventFilter.PropertyFilter[i].Operator
-        params['PropertyFilter[' + i + '].Property'] = filter.EventFilter.PropertyFilter[i].Property
+        params['PropertyFilter[' + i + '].Property'] = filter.EventFilter.PropertyFilter[i].Property.replace(
+          'parent:',
+          ''
+        )
         params['PropertyFilter[' + i + '].Value'] = filter.EventFilter.PropertyFilter[i].Value
+        params['PropertyFilter[' + i + '].Parent'] = filter.EventFilter.PropertyFilter[i].Parent
       }
     }
     return this.getResource(`event-property-values/${filter.EventTypePropertyUUID}`, params)
