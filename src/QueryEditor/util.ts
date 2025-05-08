@@ -315,6 +315,7 @@ export function defaultQueryOptions(appIsAlertingType: boolean): MeasurementQuer
     DisplayDescription: false,
     MetadataAsLabels: true,
     ValueFilters: [],
+    Datatypes: [],
   }
 }
 
