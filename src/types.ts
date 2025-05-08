@@ -134,6 +134,15 @@ export interface EventQuery {
   Options?: MeasurementQueryOptions
   IncludeParentInfo?: boolean
   Limit?: number
+  OverrideTimeRange: boolean
+  TimeRange: TimeRange
+}
+
+export interface TimeRange {
+  from?: string | null
+  fromParsed?: string | null
+  to?: string | null
+  toParsed?: string | null
 }
 
 export interface ResourceFilter {

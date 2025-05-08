@@ -142,6 +142,8 @@ export function VariableQueryEditor(
                       Properties: [],
                       PropertyFilter: [],
                       QueryAssetProperties: false,
+                      OverrideTimeRange: false,
+                      TimeRange: {from: '', to: ''},
                     },
                   },
                 })

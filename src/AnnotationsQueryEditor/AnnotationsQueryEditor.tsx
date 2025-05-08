@@ -35,6 +35,8 @@ export class AnnotationsQueryEditor extends Component<Props> {
         EventTypes: [],
         Properties: [],
         QueryAssetProperties: false,
+        OverrideTimeRange: false,
+        TimeRange: {from: '', to: ''},
       })
     }
   }

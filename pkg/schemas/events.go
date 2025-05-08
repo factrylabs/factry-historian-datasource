@@ -43,8 +43,8 @@ type Event struct {
 
 // EventFilter is used to filter events
 type EventFilter struct {
-	StartTime           time.Time
-	StopTime            time.Time
+	StartTime           *time.Time
+	StopTime            *time.Time
 	AssetUUIDs          []uuid.UUID
 	EventTypeUUIDs      []uuid.UUID
 	Status              []string
