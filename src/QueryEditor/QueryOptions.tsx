@@ -4,18 +4,27 @@ import {
   Checkbox,
   ControlledCollapse,
   HorizontalGroup,
+  VerticalGroup,
   InlineField,
   InlineFieldRow,
   InlineLabel,
   InlineSwitch,
   Input,
+  MultiSelect,
   Select,
-  VerticalGroup,
 } from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
 import { getAggregationsForVersionAndDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
-import { Aggregation, Attributes, fieldWidth, labelWidth, MeasurementQueryOptions, ValueFilter } from 'types'
+import {
+  Aggregation,
+  Attributes,
+  fieldWidth,
+  labelWidth,
+  MeasurementDatatype,
+  MeasurementQueryOptions,
+  ValueFilter,
+} from 'types'
 import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
@@ -31,6 +40,7 @@ export interface Props {
   hideGroupBy?: boolean
   hideTagFilter?: boolean
   hideAdvancedOptions?: boolean
+  hideDatatypeFilter?: boolean
   templateVariables: Array<SelectableValue<string>>
   historianVersion: string
   getTagKeyOptions?: () => Promise<string[]>
@@ -38,6 +48,10 @@ export interface Props {
   onChange: (options: MeasurementQueryOptions) => void
   onChangeSeriesLimit: (value: number) => void
 }
+
+const datatypeOptions: Array<SelectableValue<string>> = Object.entries(MeasurementDatatype).map(([_, value]) => {
+  return { label: value, value: value }
+})
 
 export const QueryOptions = (props: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
@@ -183,6 +197,14 @@ export const QueryOptions = (props: Props): JSX.Element => {
     setSeriesLimit(Number(event.target.value))
   }
 
+  const onChangeDatatypes = (selected: Array<SelectableValue<string>>): void => {
+    if (!selected) {
+      props.onChange({ ...props.state, Datatypes: [] })
+    } else {
+      const selectedDatatypes = selected.map((e) => e.value ?? '')
+      props.onChange({ ...props.state, Datatypes: selectedDatatypes })
+    }
+  }
   return (
     <>
       <InlineFieldRow>
@@ -261,6 +283,19 @@ export const QueryOptions = (props: Props): JSX.Element => {
             groups={props.state.GroupBy || []}
             onChange={onGroupByChange}
           />
+        </InlineFieldRow>
+      )}
+      {!props.hideDatatypeFilter && (
+        <InlineFieldRow>
+          <InlineField label="Filter datatypes" labelWidth={labelWidth}>
+            <MultiSelect
+              value={props.state.Datatypes}
+              placeholder="all datatypes"
+              options={datatypeOptions}
+              onChange={onChangeDatatypes}
+              isClearable
+            />
+          </InlineField>
         </InlineFieldRow>
       )}
       {!props.hideTagFilter && (

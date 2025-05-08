@@ -7,6 +7,7 @@ import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
 import { getChildAssets, matchedAssets, tagsToQueryTags, valueFiltersToQueryTags } from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
+import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -23,7 +24,7 @@ export const Assets = (props: Props): JSX.Element => {
   const [assets, setAssets] = useState<Asset[]>([])
   const [assetProperties, setAssetProperties] = useState<AssetProperty[]>([])
 
-  const fetchAssetsAndProperties = useCallback(async() => {
+  const fetchAssetsAndProperties = useCallback(async () => {
     const assets = await props.datasource.getAssets()
     setAssets(assets)
     const assetProperties = await props.datasource.getAssetProperties()
@@ -32,13 +33,13 @@ export const Assets = (props: Props): JSX.Element => {
 
   useEffect(() => {
     if (loading) {
-      (async () => {
+      ;(async () => {
         await fetchAssetsAndProperties()
         setLoading(false)
       })()
     }
   }, [loading, fetchAssetsAndProperties])
-  
+
   const assetOptions = getChildAssets(null, assets, assetProperties).concat(
     props.templateVariables.map((e) => {
       return { value: e.value, label: e.label } as CascaderOption
@@ -185,6 +186,7 @@ export const Assets = (props: Props): JSX.Element => {
             getTagValueOptions={getTagValueOptions}
             onChange={handleChangeMeasurementQueryOptions}
             onChangeSeriesLimit={props.onChangeSeriesLimit}
+            hideDatatypeFilter={!isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0')}
           />
         </>
       )}

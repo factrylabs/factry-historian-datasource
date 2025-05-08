@@ -14,6 +14,7 @@ type MeasurementQueryOptions struct {
 	MetadataAsLabels       bool
 	ChangesOnly            bool
 	ValueFilters           []ValueFilter
+	Datatypes              []string
 }
 
 // ValueFilter is used to filter the values returned by the historian
