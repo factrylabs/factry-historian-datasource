@@ -99,6 +99,7 @@ export interface MeasurementQueryOptions {
   Limit?: number
   ValueFilters?: ValueFilter[]
   ChangesOnly?: boolean
+  Datatypes?: string[]
 }
 
 export interface ValueFilter {
@@ -145,6 +146,7 @@ export interface MeasurementFilter extends ResourceFilter {
   CollectorUUID?: string
   AssetUUID?: string
   Statuses?: string[]
+  Datatypes?: string[]
 }
 
 export interface AssetFilter extends ResourceFilter {

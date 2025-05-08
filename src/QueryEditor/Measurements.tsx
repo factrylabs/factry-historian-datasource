@@ -14,6 +14,7 @@ import {
   MeasurementQueryOptions,
   TimeseriesDatabase,
 } from 'types'
+import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: MeasurementQuery
@@ -200,6 +201,7 @@ export const Measurements = (props: Props): React.JSX.Element => {
             getTagValueOptions={getTagValueOptions}
             onChange={onChangeMeasurementQueryOptions}
             onChangeSeriesLimit={props.onChangeSeriesLimit}
+            hideDatatypeFilter={!isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.0.0')}
           />
         </>
       )}
