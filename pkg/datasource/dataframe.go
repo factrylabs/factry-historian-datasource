@@ -392,6 +392,9 @@ func deleteFirstRow(frames data.Frames) data.Frames {
 func addMetaData(frames data.Frames, useEngineeringSpecs bool) data.Frames {
 	for _, frame := range frames {
 		setFieldConfig(frame, useEngineeringSpecs)
+		if frame.Meta != nil {
+			frame.Meta.Type = data.FrameTypeTimeSeriesMulti
+		}
 	}
 	return frames
 }
