@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 
 import { InlineField, InlineFieldRow } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { EventTypeFilter } from 'types'
+import { EventTypeFilter, fieldWidth, labelWidth } from 'types'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 import { useDebounce } from 'QueryEditor/util'
 
@@ -32,10 +32,10 @@ export function EventTypeFilterRow(props: {
         <InlineField
           label={'Filter event type'}
           aria-label={'Filter event type'}
-          labelWidth={20}
+          labelWidth={labelWidth}
           tooltip={<div>Searches database by name, to use a regex surround pattern with /</div>}
         >
-          <MaybeRegexInput onChange={onKeywordChange} initialValue={keyword} />
+          <MaybeRegexInput onChange={onKeywordChange} initialValue={keyword} width={fieldWidth} />
         </InlineField>
       </InlineFieldRow>
     </>

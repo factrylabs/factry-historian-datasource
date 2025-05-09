@@ -8,7 +8,15 @@ import { MeasurementFilterRow } from './MeasurementFilter'
 import { AssetFilterRow } from './AssetFilter'
 import { AssetPropertyFilterRow } from './AssetPropertyFilter'
 import { DatabaseFilterRow } from './DatabaseFilter'
-import { HistorianDataSourceOptions, HistorianInfo, Query, VariableQuery, VariableQueryType } from 'types'
+import {
+  fieldWidth,
+  HistorianDataSourceOptions,
+  HistorianInfo,
+  labelWidth,
+  Query,
+  VariableQuery,
+  VariableQueryType,
+} from 'types'
 import { EventTypePropertyFilterRow } from './EventTypePropertyFilter'
 import { EventTypeFilterRow } from './EventTypeFilter'
 import { PropertyValuesFilterRow } from './PropertyValuesFilter'
@@ -64,7 +72,7 @@ export function VariableQueryEditor(
       <InlineFieldRow>
         <InlineField
           label="Query type"
-          labelWidth={20}
+          labelWidth={labelWidth}
           tooltip={
             <div>The Factry Historian data source plugin provides the following query types for template variables</div>
           }
@@ -72,7 +80,7 @@ export function VariableQueryEditor(
           <Select
             placeholder="Select query type"
             aria-label="Query type"
-            width={25}
+            width={fieldWidth}
             options={queryTypeOptions()}
             onChange={(value) => {
               if (value.value! === VariableQueryType.MeasurementQuery) {
@@ -143,7 +151,7 @@ export function VariableQueryEditor(
           />
         </InlineField>
       </InlineFieldRow>
-
+      <br />
       {props.query.type === VariableQueryType.MeasurementQuery && (
         <MeasurementFilterRow
           datasource={props.datasource}
