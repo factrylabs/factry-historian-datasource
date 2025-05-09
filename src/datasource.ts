@@ -92,6 +92,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             measurementQuery.Measurements = measurementQuery.Measurements?.flatMap((m) =>
               this.multiSelectReplace(m, request.scopedVars)
             )
+            if (measurementQuery.IsRegex && measurementQuery.Regex) {
+              measurementQuery.Regex = this.templateSrv.replace(measurementQuery.Regex, request.scopedVars)
+            }
             measurementQuery.Options = this.templateReplaceQueryOptions(measurementQuery.Options, request.scopedVars)
             measurementQuery.Options.ValueFilters = measurementQuery.Options.ValueFilters?.filter(
               (e) => e.Value !== 'enter a value'

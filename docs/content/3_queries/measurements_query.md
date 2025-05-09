@@ -28,6 +28,7 @@ There are a couple of ways to select measurements:
 - Use a dashboard variable (can be done in combination with manually searching and selecting measurements)
 
 Or enable `Use regular expression` and enter a regular expression. The amount of measurements selected by the regular expression might be limited by the [measurement limit](#measurement-limit).
+Dashboard variables can also be used here but it's recommended to use the `${varname}` syntax instead of `$varname` to be able to interpolate a variable in the middle of an expression.
 
 ### Aggregation options
 

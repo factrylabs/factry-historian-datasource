@@ -2,12 +2,12 @@ import React, { ChangeEvent, useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import {
   AsyncMultiSelect,
+  AutoSizeInput,
   Checkbox,
   HorizontalGroup,
   Icon,
   InlineField,
   InlineFieldRow,
-  Input,
   Tooltip,
   VerticalGroup,
 } from '@grafana/ui'
@@ -148,7 +148,7 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
                 show={regexError !== undefined}
                 interactive={false}
               >
-                <Input value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex} />
+                <AutoSizeInput value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex}  />
               </Tooltip>
             )}
             <Checkbox label="Use regular expression" value={props.query.IsRegex} onChange={onChangeIsRegex} />
