@@ -12,6 +12,7 @@ services:
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
       GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: factry-historian-datasource
+      GF_FEATURE_TOGGLES_ENABLE: 'sqlExpressions'
     build:
       context: ./.config
       args:
