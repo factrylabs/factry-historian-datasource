@@ -1,10 +1,21 @@
 import React, { ChangeEvent, useState, useEffect } from 'react'
 import { SelectableValue } from '@grafana/data'
-import { CollapsableSection, InlineField, InlineFieldRow, InlineLabel, InlineSwitch, Input, Select } from '@grafana/ui'
+import {
+  Checkbox,
+  ControlledCollapse,
+  HorizontalGroup,
+  InlineField,
+  InlineFieldRow,
+  InlineLabel,
+  InlineSwitch,
+  Input,
+  Select,
+  VerticalGroup,
+} from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
 import { getAggregationsForVersionAndDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
-import { Aggregation, Attributes, labelWidth, MeasurementQueryOptions, ValueFilter } from 'types'
+import { Aggregation, Attributes, fieldWidth, labelWidth, MeasurementQueryOptions, ValueFilter } from 'types'
 import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
@@ -112,6 +123,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
       aggregation.Period = selected.value
     } else {
       delete aggregation.Period
+      delete aggregation.Fill
     }
     props.onChange({ ...props.state, Aggregation: aggregation })
   }
@@ -179,37 +191,65 @@ export const QueryOptions = (props: Props): JSX.Element => {
           labelWidth={labelWidth}
           tooltip="Specify an aggregation, leave empty to query raw data"
         >
-          <Select
-            value={props.state.Aggregation?.Name}
-            placeholder="select an aggregation"
-            isClearable
-            options={getAggregationOptions(props.datatypes, props.state)}
-            onChange={onAggregationChange}
-          />
+          <VerticalGroup spacing="xs">
+            <HorizontalGroup spacing="xs">
+              <InlineField>
+                <Select
+                  value={props.state.Aggregation?.Name}
+                  placeholder="select an aggregation"
+                  isClearable
+                  options={getAggregationOptions(props.datatypes, props.state)}
+                  onChange={onAggregationChange}
+                  width={fieldWidth}
+                />
+              </InlineField>
+              {!props.hideInterval && props.state.Aggregation?.Name && (
+                <InlineField>
+                  <Select
+                    placeholder="period"
+                    value={props.state.Aggregation?.Period}
+                    options={periods.concat(props.templateVariables)}
+                    allowCustomValue
+                    onChange={onPeriodChange}
+                    onCreateOption={onCreatePeriod}
+                    isClearable
+                    width={fieldWidth}
+                  />
+                </InlineField>
+              )}
+              {!props.hideFill && props.state.Aggregation?.Period && (
+                <InlineField>
+                  <Select
+                    value={props.state.Aggregation?.Fill}
+                    placeholder="Fill type"
+                    options={getFillTypes().concat(props.templateVariables)}
+                    onChange={onFillChange}
+                    isClearable
+                    width={fieldWidth}
+                  />
+                </InlineField>
+              )}
+            </HorizontalGroup>
+            {props.state.Aggregation?.Fill && (
+              <HorizontalGroup>
+                <InlineField>
+                  <Checkbox
+                    label="Fill empty initial intervals"
+                    value={props.state.FillInitialEmptyValues}
+                    onChange={onChangeFillInitialEmptyValues}
+                  />
+                </InlineField>
+                <InlineField>
+                  <Checkbox
+                    label="Include last known point"
+                    value={props.state.IncludeLastKnownPoint}
+                    onChange={onChangeIncludeLastKnownPoint}
+                  />
+                </InlineField>
+              </HorizontalGroup>
+            )}
+          </VerticalGroup>
         </InlineField>
-        {!props.hideInterval && props.state.Aggregation?.Name && (
-          <InlineField>
-            <Select
-              value={props.state.Aggregation?.Period}
-              options={periods.concat(props.templateVariables)}
-              allowCustomValue
-              onChange={onPeriodChange}
-              onCreateOption={onCreatePeriod}
-              isClearable
-            />
-          </InlineField>
-        )}
-        {!props.hideFill && props.state.Aggregation?.Name && (
-          <InlineField>
-            <Select
-              value={props.state.Aggregation?.Fill}
-              placeholder="(optional) select a fill type"
-              options={getFillTypes().concat(props.templateVariables)}
-              onChange={onFillChange}
-              isClearable
-            />
-          </InlineField>
-        )}
       </InlineFieldRow>
       {!props.hideGroupBy && (
         <InlineFieldRow>
@@ -259,66 +299,51 @@ export const QueryOptions = (props: Props): JSX.Element => {
         </InlineFieldRow>
       )}
       {!props.hideAdvancedOptions && (
-        <CollapsableSection label="Advanced options" isOpen={false}>
-          <InlineFieldRow>
-            <InlineField
-              label="Include last known point"
-              tooltip="Includes the last known point before the selected time range"
-              labelWidth={labelWidth}
-            >
-              <InlineSwitch value={props.state.IncludeLastKnownPoint} onChange={onChangeIncludeLastKnownPoint} />
-            </InlineField>
-          </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField
-              label="Fill empty initial intervals"
-              labelWidth={labelWidth}
-              disabled={props.state.ChangesOnly}
-            >
-              <InlineSwitch value={props.state.FillInitialEmptyValues} onChange={onChangeFillInitialEmptyValues} />
-            </InlineField>
-          </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField label="Changes only" labelWidth={labelWidth}>
-              <InlineSwitch value={props.state.ChangesOnly} onChange={onChangeChangesOnly} />
-            </InlineField>
-          </InlineFieldRow>
-          {!props.appIsAlertingType && (
+        <>
+          <br />
+          <ControlledCollapse label="Advanced options" isOpen={false}>
             <InlineFieldRow>
-              <InlineField label="Use engineering specs" labelWidth={labelWidth}>
-                <InlineSwitch value={props.state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
+              <InlineField label="Changes only" labelWidth={labelWidth}>
+                <InlineSwitch value={props.state.ChangesOnly} onChange={onChangeChangesOnly} />
               </InlineField>
             </InlineFieldRow>
-          )}
-          <InlineFieldRow>
-            <InlineField label="Display database name" labelWidth={labelWidth}>
-              <InlineSwitch value={props.state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
-            </InlineField>
-          </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField label="Display description" labelWidth={labelWidth}>
-              <InlineSwitch value={props.state.DisplayDescription} onChange={onChangeDisplayDescription} />
-            </InlineField>
-          </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField
-              label="Add metadata as labels"
-              labelWidth={labelWidth}
-              tooltip="Adds metadata such as MeasurementUUID and DatabaseUUID as labels to the query result"
-            >
-              <InlineSwitch value={props.state.MetadataAsLabels} onChange={onChangeMetadataAsLabels} />
-            </InlineField>
-          </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField
-              label="Measurement limit"
-              tooltip="The maximum amount of measurement series a query can return"
-              labelWidth={labelWidth}
-            >
-              <Input value={seriesLimit} type="number" min={0} onChange={onChangeSeriesLimit} />
-            </InlineField>
-          </InlineFieldRow>
-        </CollapsableSection>
+            {!props.appIsAlertingType && (
+              <InlineFieldRow>
+                <InlineField label="Use engineering specs" labelWidth={labelWidth}>
+                  <InlineSwitch value={props.state.UseEngineeringSpecs} onChange={onChangeUseEngineeringSpecs} />
+                </InlineField>
+              </InlineFieldRow>
+            )}
+            <InlineFieldRow>
+              <InlineField label="Display database name" labelWidth={labelWidth}>
+                <InlineSwitch value={props.state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField label="Display description" labelWidth={labelWidth}>
+                <InlineSwitch value={props.state.DisplayDescription} onChange={onChangeDisplayDescription} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Add metadata as labels"
+                labelWidth={labelWidth}
+                tooltip="Adds metadata such as MeasurementUUID and DatabaseUUID as labels to the query result"
+              >
+                <InlineSwitch value={props.state.MetadataAsLabels} onChange={onChangeMetadataAsLabels} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Measurement limit"
+                tooltip="The maximum amount of measurement series a query can return"
+                labelWidth={labelWidth}
+              >
+                <Input value={seriesLimit} type="number" min={0} onChange={onChangeSeriesLimit} />
+              </InlineField>
+            </InlineFieldRow>
+          </ControlledCollapse>
+        </>
       )}
     </>
   )
