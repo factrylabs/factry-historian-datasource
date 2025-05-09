@@ -3,8 +3,8 @@ import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { AsyncMultiSelect, InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { EventTypeFilter, EventTypePropertiesFilter, HistorianInfo, PropertyType, labelWidth } from 'types'
-import { isSupportedPrototypeType } from 'QueryEditor/util'
+import { EventTypeFilter, EventTypePropertiesFilter, HistorianInfo, PropertyType, fieldWidth, labelWidth } from 'types'
+import { isSupportedPropertyType } from 'QueryEditor/util'
 
 export function EventTypePropertyFilterRow(props: {
   datasource: DataSource
@@ -58,7 +58,7 @@ export function EventTypePropertyFilterRow(props: {
         <InlineField label={'Filter by event types'} aria-label={'Filter by event types'} labelWidth={labelWidth}>
           <AsyncMultiSelect
             placeholder="Select event type(s)"
-            width={25}
+            width={fieldWidth}
             onChange={(value) => onEventTypesChange(value)}
             defaultOptions
             loadOptions={loadEventTypeOptions}
@@ -70,10 +70,10 @@ export function EventTypePropertyFilterRow(props: {
         <InlineField label={'Property type'} aria-label={'Property type'} labelWidth={labelWidth}>
           <MultiSelect
             placeholder="Select property type"
-            width={25}
+            width={fieldWidth}
             onChange={(value) => onTypeChange(value)}
             options={Object.entries(PropertyType)
-              .filter(([_, value]) => isSupportedPrototypeType(value, props.historianInfo?.Version ?? ''))
+              .filter(([_, value]) => isSupportedPropertyType(value, props.historianInfo?.Version ?? ''))
               .map(([key, value]) => {
                 return { label: key, value: value as string }
               })}

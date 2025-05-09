@@ -6,6 +6,7 @@ export interface MaybeRegexInputProps {
   onChange: (val: string, valid: boolean) => void
   initialValue?: string
   placeHolder?: string
+  width?: number
 }
 
 export function MaybeRegexInput(props: MaybeRegexInputProps) {
@@ -37,7 +38,7 @@ export function MaybeRegexInput(props: MaybeRegexInputProps) {
       show={error !== undefined}
       interactive={false}
     >
-      <Input value={props.initialValue} onChange={(e) => onChange(e)} />
+      <Input value={props.initialValue} onChange={(e) => onChange(e)} width={props.width} />
     </Tooltip>
   )
 }

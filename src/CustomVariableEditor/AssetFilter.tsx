@@ -2,7 +2,7 @@ import React, { ChangeEvent, useState } from 'react'
 
 import { AsyncMultiSelect, InlineField, InlineFieldRow, InlineSwitch } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { AssetFilter } from 'types'
+import { AssetFilter, fieldWidth, labelWidth } from 'types'
 import { SelectableValue } from '@grafana/data'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 import { useDebounce } from 'QueryEditor/util'
@@ -78,20 +78,21 @@ export function AssetFilterRow(props: {
         <InlineField
           label={'Filter by asset path'}
           aria-label={'Filter by asset path'}
-          labelWidth={20}
+          labelWidth={labelWidth}
           tooltip={<div>Searches asset by path, to use a regex surround pattern with /</div>}
         >
-          <MaybeRegexInput onChange={onPathChange} initialValue={path} />
+          <MaybeRegexInput onChange={onPathChange} initialValue={path} width={fieldWidth} />
         </InlineField>
       </InlineFieldRow>
       <InlineFieldRow>
         <InlineField
           label={'Parent assets'}
           aria-label={'Parent assets'}
-          labelWidth={20}
+          labelWidth={labelWidth}
           tooltip={<div>Searches asset by parent assets</div>}
         >
           <AsyncMultiSelect
+            width={fieldWidth}
             placeholder="Select parent asset(s)"
             onChange={(value) => onParentAssetsChange(value)}
             defaultOptions
@@ -99,7 +100,7 @@ export function AssetFilterRow(props: {
             value={parentAssets}
           />
         </InlineField>
-        <InlineField label={'Use asset path'} tooltip={'Use asset path as display value'} labelWidth={20}>
+        <InlineField label={'Use asset path'} tooltip={'Use asset path as display value'} labelWidth={labelWidth}>
           <InlineSwitch value={props.initialValue?.UseAssetPath} onChange={onUseAssetPathChange} />
         </InlineField>
       </InlineFieldRow>
