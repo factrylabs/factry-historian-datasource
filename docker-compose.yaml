@@ -26,6 +26,8 @@ services:
       - ./provisioning:/etc/grafana/provisioning
       - .:/root/factry-historian-datasource
       - grafana-data:/var/lib/grafana
+      - go-mod:/root/go/pkg/mod
 volumes:
   grafana-data:
     driver: local
+  go-mod:
