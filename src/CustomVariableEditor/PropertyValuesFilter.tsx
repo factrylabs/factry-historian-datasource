@@ -2,13 +2,13 @@ import React, { ChangeEvent, useCallback, useEffect, useState } from 'react'
 
 import { DataSource } from 'datasource'
 import {
-  EventPropertyFilter,
+  EventQuery,
   EventTypePropertiesValuesFilter,
   EventTypeProperty,
   HistorianInfo,
   PropertyType,
   TimeRange,
-  labelWidth
+  labelWidth,
 } from 'types'
 import { SelectableValue } from '@grafana/data'
 import { EventFilter } from 'QueryEditor/EventFilter'
@@ -39,29 +39,8 @@ export function PropertyValuesFilterRow(props: {
     }
   }, [loading, fetchAll])
 
-  const onChangeAssets = (assets: string[]) => {
-    props.onChange({
-      ...props.initialValue,
-      EventFilter: {
-        ...props.initialValue?.EventFilter!,
-        Assets: assets,
-      },
-      HistorianInfo: props.historianInfo,
-    })
-  }
-
-  const onChangeEventTypes = (eventTypes: string[]) => {
-    props.onChange({
-      ...props.initialValue,
-      EventFilter: {
-        ...props.initialValue?.EventFilter!,
-        EventTypes: eventTypes,
-      },
-      HistorianInfo: props.historianInfo,
-    })
-  }
-  const onChangeProperties = (properties: string[]) => {
-    const property = properties.length ? properties[0] : ''
+  const onChangeEventFilter = (query: EventQuery) => {
+    const property = query.Properties?.length ? query.Properties[0] : ''
     const selectedProperty = props.datasource.replace(property, props.initialValue?.ScopedVars)
     const eventTypeProperty = eventTypeProperties.find(
       (e) =>
@@ -73,43 +52,10 @@ export function PropertyValuesFilterRow(props: {
       ...props.initialValue,
       EventFilter: {
         ...props.initialValue?.EventFilter!,
-        Properties: properties,
+        ...query,
       },
       HistorianInfo: props.historianInfo,
       EventTypePropertyUUID: eventTypeProperty?.UUID,
-    })
-  }
-
-  const onChangeStatuses = (statuses: string[]) => {
-    props.onChange({
-      ...props.initialValue,
-      EventFilter: {
-        ...props.initialValue?.EventFilter!,
-        Statuses: statuses,
-      },
-      HistorianInfo: props.historianInfo,
-    })
-  }
-
-  const onChangeQueryType = (queryType: PropertyType) => {
-    props.onChange({
-      ...props.initialValue,
-      EventFilter: {
-        ...props.initialValue?.EventFilter!,
-        Type: queryType,
-      },
-      HistorianInfo: props.historianInfo,
-    })
-  }
-
-  const onChangeEventPropertyFilter = (propertyFilter: EventPropertyFilter[]) => {
-    props.onChange({
-      ...props.initialValue,
-      EventFilter: {
-        ...props.initialValue?.EventFilter!,
-        PropertyFilter: propertyFilter,
-      },
-      HistorianInfo: props.historianInfo,
     })
   }
 
@@ -144,12 +90,7 @@ export function PropertyValuesFilterRow(props: {
         query={props.initialValue?.EventFilter}
         isAnnotationQuery={false}
         multiSelectProperties={false}
-        onChangeAssets={onChangeAssets}
-        onChangeEventPropertyFilter={onChangeEventPropertyFilter}
-        onChangeEventTypes={onChangeEventTypes}
-        onChangeProperties={onChangeProperties}
-        onChangeStatuses={onChangeStatuses}
-        onChangeQueryType={onChangeQueryType}
+        onChangeQuery={onChangeEventFilter}
       />
 
       <InlineFieldRow>
@@ -164,7 +105,12 @@ export function PropertyValuesFilterRow(props: {
         </InlineField>
       </InlineFieldRow>
       {props.initialValue?.EventFilter.OverrideTimeRange && (
-        <DateRangePicker override={props.initialValue?.EventFilter.OverrideTimeRange} dateTimeRange={props.initialValue?.EventFilter.TimeRange} onChange={onChangeTimeRange} datasource={props.datasource} />
+        <DateRangePicker
+          override={props.initialValue?.EventFilter.OverrideTimeRange}
+          dateTimeRange={props.initialValue?.EventFilter.TimeRange}
+          onChange={onChangeTimeRange}
+          datasource={props.datasource}
+        />
       )}
     </>
   )

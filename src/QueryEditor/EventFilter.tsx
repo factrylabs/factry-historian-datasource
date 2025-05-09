@@ -26,12 +26,7 @@ export interface Props {
   datasource: DataSource
   isAnnotationQuery?: boolean
   multiSelectProperties?: boolean
-  onChangeAssets: (assets: string[]) => void
-  onChangeEventTypes: (eventTypes: string[]) => void
-  onChangeStatuses: (statuses: string[]) => void
-  onChangeQueryType: (queryType: PropertyType) => void
-  onChangeProperties: (properties: string[]) => void
-  onChangeEventPropertyFilter: (propertyFilter: EventPropertyFilter[]) => void
+  onChangeQuery: (query: EventQuery) => void
 }
 
 export const EventFilter = (props: Props): JSX.Element => {
@@ -67,18 +62,6 @@ export const EventFilter = (props: Props): JSX.Element => {
     }
   }, [loading, fetchAll])
 
-  const onSelectEventTypes = (items: Array<SelectableValue<string>>): void => {
-    const selectedEventTypes = items.map((e) => {
-      const eventType = eventTypes.find((et) => et.Name === e.value)
-      if (eventType) {
-        return eventType.UUID
-      }
-
-      return e.value || ''
-    })
-    props.onChangeEventTypes(selectedEventTypes)
-  }
-
   const getSelectedAssets = (selected: string | undefined, assets: Asset[]): Asset[] => {
     const replacedAssets = props.datasource.multiSelectReplace(selected, {})
     return matchedAssets(replacedAssets, assets)
@@ -104,20 +87,83 @@ export const EventFilter = (props: Props): JSX.Element => {
       )
   }
 
+  const filterEventTypes = (eventTypes: string[], asset: string): string[] => {
+    const selectedAssets = getSelectedAssets(asset, assets)
+    return eventTypes.filter((et) =>
+      eventConfigurations.some((ec) => selectedAssets.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === et)
+    )
+  }
+
+  const filterProperties = (properties: string[], eventTypes: string[], includeParent: boolean): string[] => {
+    const availableProps = availableProperties(eventTypes, includeParent).map((o) => o.value as string)
+    return properties.filter((p) => availableProps.includes(p))
+  }
+
+  const onSelectEventTypes = (items: Array<SelectableValue<string>>): void => {
+    const selectedEventTypes = items.map((e) => {
+      const eventType = eventTypes.find((et) => et.Name === e.value)
+      if (eventType) {
+        return eventType.UUID
+      }
+      return e.value || ''
+    })
+
+    const filteredEventTypes = filterEventTypes(
+      selectedEventTypes,
+      props.query.Assets?.length ? props.query.Assets[0] : ''
+    )
+    const filteredProperties = filterProperties(
+      props.query.Properties ?? [],
+      filteredEventTypes,
+      props.query.IncludeParentInfo ?? false
+    )
+
+    props.onChangeQuery({
+      ...props.query,
+      EventTypes: filteredEventTypes,
+      Properties: filteredProperties,
+    })
+  }
+
   const onSelectStatuses = (items: Array<SelectableValue<string>>): void => {
     const statuses = items.map((e) => {
       return e.value || ''
     })
-    props.onChangeStatuses(statuses)
+
+    props.onChangeQuery({
+      ...props.query,
+      Statuses: statuses,
+    })
   }
 
   const onAssetChange = (value: string): void => {
-    props.onChangeAssets([value])
+    const filteredEventTypes = filterEventTypes(props.query.EventTypes ?? [], value)
+    const filteredProperties = filterProperties(
+      props.query.Properties ?? [],
+      filteredEventTypes,
+      props.query.IncludeParentInfo ?? false
+    )
+    props.onChangeQuery({
+      ...props.query,
+      Assets: [value],
+      EventTypes: filteredEventTypes,
+      Properties: filteredProperties,
+    })
   }
 
   const onChangeQueryType = (item: SelectableValue<string>): void => {
     const queryType: PropertyType = item.value ? (item.value as PropertyType) : PropertyType.Simple
-    props.onChangeQueryType(queryType)
+
+    const updatedQuery = {
+      ...props.query,
+      Type: queryType,
+      Properties: filterProperties(
+        props.query.Properties ?? [],
+        props.query.EventTypes ?? [],
+        props.query.IncludeParentInfo ?? false
+      ),
+    }
+    props.onChangeQuery(updatedQuery)
   }
 
   const handleEventPropertyFilterChange = (updatedTags: QueryTag[]): void => {
@@ -137,7 +183,10 @@ export const EventFilter = (props: Props): JSX.Element => {
       }
       propertyFilter.push(filter)
     })
-    props.onChangeEventPropertyFilter(propertyFilter)
+    props.onChangeQuery({
+      ...props.query,
+      PropertyFilter: propertyFilter,
+    })
   }
 
   const getDatatype = (property: string, isParent: boolean): PropertyDatatype => {
@@ -240,11 +289,17 @@ export const EventFilter = (props: Props): JSX.Element => {
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
     const properties = items.map((e) => e.value || '')
-    props.onChangeProperties(properties)
+    props.onChangeQuery({
+      ...props.query,
+      Properties: properties,
+    })
   }
 
   const onSelectProperty = (item: SelectableValue<string>): void => {
-    props.onChangeProperties([item.value || ''])
+    props.onChangeQuery({
+      ...props.query,
+      Properties: [item.value || ''],
+    })
   }
 
   const availablePropertyValues = (key: string): string[] => {
@@ -312,6 +367,7 @@ export const EventFilter = (props: Props): JSX.Element => {
                 options={assetOptions}
                 displayAllSelectedLevels
                 onSelect={onAssetChange}
+                onOpen={fetchAll}
                 separator="\\"
               />
             </InlineField>

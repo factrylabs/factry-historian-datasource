@@ -2,23 +2,10 @@ import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 
 import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input } from '@grafana/ui'
 import { DateTime } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
-import {
-  defaultQueryOptions,
-  matchedAssets,
-  tagsToQueryTags,
-  useDebounce,
-} from './util'
+import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
-import {
-  Asset,
-  EventPropertyFilter,
-  EventQuery,
-  labelWidth,
-  MeasurementQueryOptions,
-  PropertyType,
-  TimeRange,
-} from 'types'
+import { Asset, EventQuery, labelWidth, MeasurementQueryOptions, PropertyType, TimeRange } from 'types'
 import { EventFilter } from './EventFilter'
 import { DateRangePicker } from 'components/util/DateRangePicker'
 
@@ -65,23 +52,6 @@ export const Events = (props: Props): JSX.Element => {
     return matchedAssets(replacedAssets, assets)
   }
 
-  const onChangeAssets = (assets: string[]) => {
-    props.onChangeEventQuery({ ...props.query, Assets: assets })
-  }
-
-  const onChangeEventTypes = (eventTypes: string[]) => {
-    props.onChangeEventQuery({ ...props.query, EventTypes: eventTypes })
-  }
-
-  const onChangeStatuses = (statuses: string[]) => {
-    props.onChangeEventQuery({ ...props.query, Statuses: statuses })
-  }
-
-  const onChangeQueryType = (queryType: PropertyType) => {
-    const updatedQuery = { ...props.query, Type: queryType }
-    props.onChangeEventQuery(updatedQuery)
-  }
-
   const onChangeOverrideTimeRange = (event: ChangeEvent<HTMLInputElement>): void => {
     let updatedQuery = {
       ...props.query,
@@ -94,16 +64,6 @@ export const Events = (props: Props): JSX.Element => {
         to: props.range?.to.toString() || '',
       }
     }
-    props.onChangeEventQuery(updatedQuery)
-  }
-
-  const onChangeProperties = (properties: string[]) => {
-    const updatedQuery = { ...props.query, Properties: properties }
-    props.onChangeEventQuery(updatedQuery)
-  }
-
-  const onChangeEventPropertyFilter = (propertyFilter: EventPropertyFilter[]) => {
-    const updatedQuery = { ...props.query, PropertyFilter: propertyFilter }
     props.onChangeEventQuery(updatedQuery)
   }
 
@@ -141,6 +101,11 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeEventFilter = (query: EventQuery): void => {
+    const updatedQuery = { ...props.query, ...query }
+    props.onChangeEventQuery(updatedQuery)
+  }
+
   return (
     <>
       {!loading && (
@@ -151,12 +116,7 @@ export const Events = (props: Props): JSX.Element => {
               datasource={props.datasource}
               isAnnotationQuery={props.isAnnotationQuery}
               multiSelectProperties={true}
-              onChangeAssets={onChangeAssets}
-              onChangeEventTypes={onChangeEventTypes}
-              onChangeStatuses={onChangeStatuses}
-              onChangeQueryType={onChangeQueryType}
-              onChangeProperties={onChangeProperties}
-              onChangeEventPropertyFilter={onChangeEventPropertyFilter}
+              onChangeQuery={onChangeEventFilter}
             />
             <InlineFieldRow>
               <InlineField
