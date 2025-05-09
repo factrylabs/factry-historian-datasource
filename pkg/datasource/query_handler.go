@@ -7,6 +7,7 @@ import (
 	"maps"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,6 +119,10 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 			assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID.String())
 		}
 
+		for i, datatype := range assetMeasurementQuery.Options.Datatypes {
+			assetPropertyQuery.Add(fmt.Sprintf("Datatypes[%d]", i), datatype)
+		}
+
 		assetProperties, err = ds.API.GetAssetProperties(ctx, assetPropertyQuery.Encode())
 		if err != nil {
 			return nil, err
@@ -192,11 +197,6 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 	}
 
 	for _, measurement := range measurements {
-		if measurementUUID, err := uuid.Parse(measurement); err == nil {
-			parsedMeasurements = append(parsedMeasurements, measurementUUID.String())
-			continue
-		}
-
 		databaseUUIDs := []string{}
 		for _, databaseString := range measurementQuery.Databases {
 			if _, err := uuid.Parse(databaseString); err != nil {
@@ -210,12 +210,16 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 			}
 		}
 
-		databasesQuery := ""
+		measurementsQuery := url.Values{}
+		measurementsQuery.Set("Keyword", measurement)
+		measurementsQuery.Set("Limit", strconv.Itoa(seriesLimit))
 		for i, databaseUUID := range databaseUUIDs {
-			databasesQuery += fmt.Sprintf("&DatabaseUUIDs[%v]=%s", i, databaseUUID)
+			measurementsQuery.Set(fmt.Sprintf("DatabaseUUIDs[%v]", i), databaseUUID)
 		}
-		values, _ := url.ParseQuery(fmt.Sprintf("Keyword=%v&limit=%v%v", measurement, seriesLimit, databasesQuery))
-		res, err := ds.API.GetMeasurements(ctx, values.Encode())
+		for i, datatype := range measurementQuery.Options.Datatypes {
+			measurementsQuery.Set(fmt.Sprintf("Datatypes[%v]", i), datatype)
+		}
+		res, err := ds.API.GetMeasurements(ctx, measurementsQuery.Encode())
 		if err != nil {
 			return nil, err
 		}

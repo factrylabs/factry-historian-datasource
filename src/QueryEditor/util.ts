@@ -315,6 +315,7 @@ export function defaultQueryOptions(appIsAlertingType: boolean): MeasurementQuer
     DisplayDescription: false,
     MetadataAsLabels: true,
     ValueFilters: [],
+    Datatypes: [],
   }
 }
 
@@ -346,8 +347,8 @@ export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQue
   return measurementQuery
 }
 
-export function isSupportedPrototypeType(type: PropertyType, version: string): boolean {
-  if (type === PropertyType.PeriodicWithDimension && isFeatureEnabled(version, '7.2.0', true)) {
+export function isSupportedPropertyType(type: PropertyType, version: string): boolean {
+  if (type === PropertyType.PeriodicWithDimension && !isFeatureEnabled(version, '7.2.0', true)) {
     return false
   }
   return true

@@ -2,6 +2,7 @@ import { DataSourceJsonData, ScopedVars } from '@grafana/data'
 import { DataQuery } from '@grafana/schema'
 
 export const labelWidth = 25
+export const fieldWidth = 25
 /* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Attributes = Record<string, any>
@@ -98,6 +99,7 @@ export interface MeasurementQueryOptions {
   Limit?: number
   ValueFilters?: ValueFilter[]
   ChangesOnly?: boolean
+  Datatypes?: string[]
 }
 
 export interface ValueFilter {
@@ -144,6 +146,7 @@ export interface MeasurementFilter extends ResourceFilter {
   CollectorUUID?: string
   AssetUUID?: string
   Statuses?: string[]
+  Datatypes?: string[]
 }
 
 export interface AssetFilter extends ResourceFilter {

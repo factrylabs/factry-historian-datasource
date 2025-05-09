@@ -12,6 +12,7 @@ export interface DatabaseSelectProps {
   selectedDatabases: Array<SelectableValue<string>> | undefined
   setSelectedDatabases: React.Dispatch<React.SetStateAction<Array<SelectableValue<string>> | undefined>>
   templateVariables: Array<SelectableValue<string>>
+  width?: number
 }
 
 export function DatabaseSelect(props: DatabaseSelectProps) {
@@ -49,6 +50,7 @@ export function DatabaseSelect(props: DatabaseSelectProps) {
       defaultOptions
       loadOptions={loadDatabaseOptions}
       value={props.selectedDatabases}
+      width={props.width}
     />
   )
 }
