@@ -28,7 +28,7 @@ export function PropertyValuesFilterRow(props: {
 
   useEffect(() => {
     if (loading) {
-      (async () => {
+      ;(async () => {
         await fetchAll()
         setLoading(false)
       })()

@@ -18,7 +18,7 @@ import {
   PropertyType,
 } from 'types'
 import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
-import { getChildAssets, isSupportedPrototypeType, matchedAssets, propertyFilterToQueryTags } from './util'
+import { getChildAssets, isSupportedPropertyType, matchedAssets, propertyFilterToQueryTags } from './util'
 import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
@@ -60,7 +60,7 @@ export const EventFilter = (props: Props): JSX.Element => {
 
   useEffect(() => {
     if (loading) {
-      (async () => {
+      ;(async () => {
         await fetchAll()
         setLoading(false)
       })()
@@ -116,7 +116,7 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const onChangeQueryType = (item: SelectableValue<string>): void => {
-    const queryType: PropertyType = item.value ? item.value as PropertyType : PropertyType.Simple
+    const queryType: PropertyType = item.value ? (item.value as PropertyType) : PropertyType.Simple
     props.onChangeQueryType(queryType)
   }
 
@@ -135,7 +135,7 @@ export const EventFilter = (props: Props): JSX.Element => {
         Parent: isParent,
         ...(needsValue(tag.operator as KnownOperator) ? { Value: tag.value } : {}),
       }
-        propertyFilter.push(filter)
+      propertyFilter.push(filter)
     })
     props.onChangeEventPropertyFilter(propertyFilter)
   }
@@ -165,25 +165,14 @@ export const EventFilter = (props: Props): JSX.Element => {
     const durationFilterSupported = isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0', true)
     let tagKeyOptions: string[] = []
     if (durationFilterSupported) {
-      tagKeyOptions = [
-        'duration',
-      ]
+      tagKeyOptions = ['duration']
     }
-    tagKeyOptions = [
-      ...tagKeyOptions,
-      ...availableSimpleProperties(eventTypes)
-    ]
+    tagKeyOptions = [...tagKeyOptions, ...availableSimpleProperties(eventTypes)]
 
     if (durationFilterSupported) {
-      tagKeyOptions = [
-        ...tagKeyOptions,
-        'parent:duration',
-      ]
+      tagKeyOptions = [...tagKeyOptions, 'parent:duration']
     }
-    return [
-      ...tagKeyOptions,
-      ...availableSimpleProperties(eventTypes, true).map(k => `parent:${k}`),
-    ]
+    return [...tagKeyOptions, ...availableSimpleProperties(eventTypes, true).map((k) => `parent:${k}`)]
   }
 
   const availableSimpleProperties = (eventTypeSelectors: string[], onlyParentProperties = false): string[] => {
@@ -225,12 +214,8 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const getSelectedParentEventTypes = (eventTypeSelectors: string[]): string[] => {
-    const selectedEventTypes = eventTypes.filter((e) =>
-      eventTypeSelectors.some((et) => e.UUID === et)
-    )
-    const parentEventTypes = eventTypes.filter((e) =>
-      selectedEventTypes.some((et) => e.UUID === et.ParentUUID)
-    )
+    const selectedEventTypes = eventTypes.filter((e) => eventTypeSelectors.some((et) => e.UUID === et))
+    const parentEventTypes = eventTypes.filter((e) => selectedEventTypes.some((et) => e.UUID === et.ParentUUID))
     const parentEventTypeUUIDs = parentEventTypes.map((e) => e.UUID)
     return parentEventTypeUUIDs
   }
@@ -240,10 +225,7 @@ export const EventFilter = (props: Props): JSX.Element => {
     if (props.query.Type === PropertyType.Simple) {
       properties = availableSimpleProperties(eventTypes)
       if (includeParentInfo) {
-        properties = [
-          ...properties,
-          ...availableSimpleProperties(eventTypes, true).map((k) => `parent:${k}`),
-        ]
+        properties = [...properties, ...availableSimpleProperties(eventTypes, true).map((k) => `parent:${k}`)]
       }
     } else {
       properties = availablePeriodicProperties(eventTypes)
@@ -310,106 +292,95 @@ export const EventFilter = (props: Props): JSX.Element => {
     <>
       {!loading && (
         <>
-            <InlineFieldRow>
-              <InlineField
-                grow
-                labelWidth={labelWidth}
-                label="Query Type"
-                tooltip="Specify a property type to work with"
-              >
-                <Select
-                  options={Object.entries(PropertyType)
-                    .filter(([_, value]) =>
-                      isSupportedPrototypeType(value, props.datasource.historianInfo?.Version ?? '')
-                    )
-                    .filter(([_, value]) => !props.isAnnotationQuery || value === PropertyType.Simple)
-                    .map(([key, value]) => ({ label: key, value }))}
-                  value={props.query.Type}
-                  onChange={onChangeQueryType}
-                />
-              </InlineField>
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
-                <Cascader
-                  initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
-                  initialLabel={initialLabel()}
-                  options={assetOptions}
-                  displayAllSelectedLevels
-                  onSelect={onAssetChange}
-                  separator="\\"
-                />
-              </InlineField>
-            </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField grow labelWidth={labelWidth} label="Query Type" tooltip="Specify a property type to work with">
+              <Select
+                options={Object.entries(PropertyType)
+                  .filter(([_, value]) => isSupportedPropertyType(value, props.datasource.historianInfo?.Version ?? ''))
+                  .filter(([_, value]) => !props.isAnnotationQuery || value === PropertyType.Simple)
+                  .map(([key, value]) => ({ label: key, value }))}
+                value={props.query.Type}
+                onChange={onChangeQueryType}
+              />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField label="Assets" grow labelWidth={labelWidth} tooltip="Specify an asset to work with">
+              <Cascader
+                initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
+                initialLabel={initialLabel()}
+                options={assetOptions}
+                displayAllSelectedLevels
+                onSelect={onAssetChange}
+                separator="\\"
+              />
+            </InlineField>
+          </InlineFieldRow>
 
-            <InlineFieldRow>
-              <InlineField
-                label="Event types"
-                grow
-                labelWidth={labelWidth}
-                tooltip="Specify one or more event type to work with"
-              >
+          <InlineFieldRow>
+            <InlineField
+              label="Event types"
+              grow
+              labelWidth={labelWidth}
+              tooltip="Specify one or more event type to work with"
+            >
+              <MultiSelect
+                value={props.query.EventTypes}
+                options={availableEventTypes(props.query.Assets?.length ? props.query.Assets[0] : '')}
+                onChange={onSelectEventTypes}
+                onOpenMenu={fetchAll}
+              />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            {props.multiSelectProperties ? (
+              <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
                 <MultiSelect
-                  value={props.query.EventTypes}
-                  options={availableEventTypes(props.query.Assets?.length ? props.query.Assets[0] : '')}
-                  onChange={onSelectEventTypes}
+                  value={props.query.Properties}
+                  options={availableProperties(props.query.EventTypes ?? [], props.query.IncludeParentInfo ?? false)}
+                  onChange={onSelectProperties}
                   onOpenMenu={fetchAll}
                 />
               </InlineField>
-            </InlineFieldRow>
-            <InlineFieldRow>
-              {props.multiSelectProperties ? (
-                <InlineField label="Properties" grow labelWidth={labelWidth} tooltip="Specify the properties to include">
-                  <MultiSelect
-                    value={props.query.Properties}
-                    options={availableProperties(props.query.EventTypes ?? [], props.query.IncludeParentInfo ?? false)}
-                    onChange={onSelectProperties}
-                    onOpenMenu={fetchAll}
-                  />
-                </InlineField>
-              ) : (
-                <InlineField label="Property" grow labelWidth={labelWidth} tooltip="Specify the property to include">
-                  <Select
-                    value={
-                      props.query.Properties?.length ? props.query.Properties[0] : ''
-                    }
-                    options={availableProperties(props.query.EventTypes ?? [], false)}
-                    onChange={onSelectProperty}
-                  />
-                </InlineField>
-              )}
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField
-                label="Statuses"
-                grow
-                labelWidth={labelWidth}
-                tooltip="Specify one or more status to work with, selecting none will use all statuses"
-              >
-                <MultiSelect value={props.query.Statuses} options={availableStatuses()} onChange={onSelectStatuses} />
-              </InlineField>
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField
-                label="WHERE"
-                tooltip="Filters events based on property values (regular and parent)"
-                labelWidth={labelWidth}
-              >
-                <TagsSection
-                  tags={propertyFilterToQueryTags(props.query.PropertyFilter ?? [])}
-                  operators={getValueFilterOperators()}
-                  getTagKeyOptions={() =>
-                    Promise.resolve(getTagsKeyOptions(props.query.EventTypes ?? []))
-                  }
-                  getTagValueOptions={(key) => {
-                    const isParent = key.startsWith('parent:')
-                    const cleanKey = isParent ? key.replace('parent:', '') : key
-                    return Promise.resolve(availablePropertyValues(cleanKey))
-                  }}
-                  onChange={handleEventPropertyFilterChange}
+            ) : (
+              <InlineField label="Property" grow labelWidth={labelWidth} tooltip="Specify the property to include">
+                <Select
+                  value={props.query.Properties?.length ? props.query.Properties[0] : ''}
+                  options={availableProperties(props.query.EventTypes ?? [], false)}
+                  onChange={onSelectProperty}
                 />
               </InlineField>
-            </InlineFieldRow>
+            )}
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField
+              label="Statuses"
+              grow
+              labelWidth={labelWidth}
+              tooltip="Specify one or more status to work with, selecting none will use all statuses"
+            >
+              <MultiSelect value={props.query.Statuses} options={availableStatuses()} onChange={onSelectStatuses} />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField
+              label="WHERE"
+              tooltip="Filters events based on property values (regular and parent)"
+              labelWidth={labelWidth}
+            >
+              <TagsSection
+                tags={propertyFilterToQueryTags(props.query.PropertyFilter ?? [])}
+                operators={getValueFilterOperators()}
+                getTagKeyOptions={() => Promise.resolve(getTagsKeyOptions(props.query.EventTypes ?? []))}
+                getTagValueOptions={(key) => {
+                  const isParent = key.startsWith('parent:')
+                  const cleanKey = isParent ? key.replace('parent:', '') : key
+                  return Promise.resolve(availablePropertyValues(cleanKey))
+                }}
+                onChange={handleEventPropertyFilterChange}
+              />
+            </InlineField>
+          </InlineFieldRow>
         </>
       )}
     </>
