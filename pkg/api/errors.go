@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
@@ -16,7 +17,7 @@ type HttpError struct {
 func handleHistorianError(response *resty.Response) error {
 	var httpErr HttpError
 	if err := json.Unmarshal(response.Body(), &httpErr); err != nil {
-		return fmt.Errorf(string(response.Body()))
+		return errors.New(string(response.Body()))
 	}
 
 	if httpErr.Info == "" {

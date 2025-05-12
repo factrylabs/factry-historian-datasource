@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -15,7 +16,9 @@ import (
 )
 
 var (
-	HeaderAccept            = "Accept"
+	// HeaderAccept is the header used to specify the content type of the request
+	HeaderAccept = "Accept"
+	// MIMEApplicationProtobuf is the MIME type for Protobuf
 	MIMEApplicationProtobuf = "application/protobuf"
 )
 
@@ -29,11 +32,11 @@ func handleDataFramesResponse(response *resty.Response) (data.Frames, error) {
 		return nil, err
 	}
 
-	if dataResponse.Error != "" {
-		return nil, fmt.Errorf(dataResponse.Error)
+	if dataResponse.GetError() != "" {
+		return nil, errors.New(dataResponse.GetError())
 	}
 
-	frames, err := data.UnmarshalArrowFrames(dataResponse.Frames)
+	frames, err := data.UnmarshalArrowFrames(dataResponse.GetFrames())
 	if err != nil {
 		return nil, err
 	}
