@@ -3,28 +3,14 @@ package datasource
 import (
 	"context"
 	"encoding/json"
-	"net/url"
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
-	"github.com/grafana/grafana-plugin-sdk-go/backend/resource"
-)
-
-// ResourceTypes is a list of resource that can be queried
-const (
-	ResourceTypeAssets              = "assets"
-	ResourceTypeMeasurements        = "measurements"
-	ResourceTypeCollectors          = "collectors"
-	ResourceTypeDatabases           = "databases"
-	ResourceTypeAssetProperties     = "asset-properties"
-	ResourceTypeEventTypes          = "event-types"
-	ResourceTypeEventTypeProperties = "event-type-properties"
-	ResourceTypeEventConfigurations = "event-configurations"
-	ResourceTypeTagKeys             = "tag-keys"
-	ResourceTypeTagValues           = "tag-values"
-	ResourceTypeHistorianInfo       = "info"
-	ResourceTypeEventPropertyValues = "event-property-values"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
+	"github.com/pkg/errors"
 )
 
 // HistorianResourceQuery is a struct for a resource query
@@ -47,123 +33,126 @@ func GetResourceQuery(body []byte) (*HistorianResourceQuery, error) {
 	return &query, nil
 }
 
-// CallResource maps a resource call to the corresponding historian API call
+// CallResource is used to handle resource calls
 func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
-	url, err := url.Parse(req.URL)
+	return ds.resourceHandler.CallResource(ctx, req, sender)
+}
+
+func (historianDataSource *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHandler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /measurements", handleJSON(historianDataSource.handleMeasurements))
+	mux.HandleFunc("GET /measurements/{uuid}", handleJSON(historianDataSource.handleMeasurementsByUUID))
+	mux.HandleFunc("GET /collectors", handleJSON(historianDataSource.handleCollectors))
+	mux.HandleFunc("GET /databases", handleJSON(historianDataSource.handleDatabases))
+	mux.HandleFunc("GET /assets", handleJSON(historianDataSource.handleAssets))
+	mux.HandleFunc("GET /asset-properties", handleJSON(historianDataSource.handleAssetProperties))
+	mux.HandleFunc("GET /event-types", handleJSON(historianDataSource.handleEventTypes))
+	mux.HandleFunc("GET /event-type-properties", handleJSON(historianDataSource.handleEventTypeProperties))
+	mux.HandleFunc("GET /event-configurations", handleJSON(historianDataSource.handleEventConfigurations))
+	mux.HandleFunc("GET /tag-keys", handleJSON(historianDataSource.handleTagKeys))
+	mux.HandleFunc("GET /tag-values", handleJSON(historianDataSource.handleTagValues))
+	mux.HandleFunc("GET /info", handleJSON(historianDataSource.handleHistorianInfo))
+	mux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(historianDataSource.handleEventPropertyValues))
+	return httpadapter.New(mux)
+}
+
+func handleJSON(f func(_ http.ResponseWriter, req *http.Request) (interface{}, error)) http.HandlerFunc {
+	return func(rw http.ResponseWriter, req *http.Request) {
+		response, err := f(rw, req)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if response == nil {
+			http.Error(rw, "response is nil", http.StatusInternalServerError)
+			return
+		}
+
+		// Marshal the response to JSON
+		jsonResponse, err := json.Marshal(response)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// Set the content type and write the response
+		rw.Header().Set("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		if _, err := rw.Write(jsonResponse); err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (ds *HistorianDataSource) handleMeasurements(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetMeasurements(req.Context(), req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleMeasurementsByUUID(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	uuid := req.PathValue("uuid")
+	if uuid == "" {
+		return nil, errors.New("uuid is required")
+	}
+	return ds.API.GetMeasurement(req.Context(), uuid)
+}
+
+func (ds *HistorianDataSource) handleCollectors(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetCollectors(req.Context())
+}
+
+func (ds *HistorianDataSource) handleDatabases(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetTimeseriesDatabases(req.Context(), req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleAssets(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetAssets(req.Context(), req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleAssetProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetAssetProperties(req.Context(), req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleEventTypes(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetEventTypes(req.Context(), req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleEventTypeProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetEventTypeProperties(req.Context(), req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleEventConfigurations(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetEventConfigurations(req.Context())
+}
+
+func (ds *HistorianDataSource) handleTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	resourcePath := strings.Split(req.URL.Path, "/")
+	return handleGetTagKeys(req.Context(), ds.API, resourcePath, req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleTagValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	resourcePath := strings.Split(req.URL.Path, "/")
+	return handleGetTagValues(req.Context(), ds.API, resourcePath, req.URL.RawQuery)
+}
+
+func (ds *HistorianDataSource) handleHistorianInfo(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetInfo(req.Context())
+}
+
+func (ds *HistorianDataSource) handleEventPropertyValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	eventTypePropertyUUID := req.PathValue("uuid")
+	if eventTypePropertyUUID == "" {
+		return nil, fmt.Errorf("uuid is required")
+	}
+
+	request := schemas.EventPropertyValuesRequest{}
+	if err := ds.Decoder.Decode(&request, req.URL.Query()); err != nil {
+		return nil, err
+	}
+
+	o, err := ds.API.GetDistinctEventPropertyValues(req.Context(), eventTypePropertyUUID, request)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	resourcePath := strings.Split(req.Path, "/")
-	if len(resourcePath) == 0 {
-		return ErrorInvalidResourceCallQuery
-	}
-
-	switch resourcePath[0] {
-	case ResourceTypeMeasurements:
-		if len(resourcePath) == 2 {
-			o, err := ds.API.GetMeasurement(ctx, resourcePath[1])
-			if err != nil {
-				return err
-			}
-
-			return resource.SendJSON(sender, o)
-		} else {
-			o, err := ds.API.GetMeasurements(ctx, url.RawQuery)
-			if err != nil {
-				return err
-			}
-
-			return resource.SendJSON(sender, o)
-		}
-	case ResourceTypeCollectors:
-		o, err := ds.API.GetCollectors(ctx)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	case ResourceTypeDatabases:
-		o, err := ds.API.GetTimeseriesDatabases(ctx, url.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	case ResourceTypeAssets:
-		o, err := ds.API.GetAssets(ctx, url.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	case ResourceTypeAssetProperties:
-		o, err := ds.API.GetAssetProperties(ctx, url.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	case ResourceTypeEventTypes:
-		o, err := ds.API.GetEventTypes(ctx, url.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	case ResourceTypeEventTypeProperties:
-		o, err := ds.API.GetEventTypeProperties(ctx, url.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	case ResourceTypeEventConfigurations:
-		o, err := ds.API.GetEventConfigurations(ctx)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	case ResourceTypeTagKeys:
-		keys, err := handleGetTagKeys(ctx, ds.API, resourcePath, url.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, keys)
-	case ResourceTypeTagValues:
-		values, err := handleGetTagValues(ctx, ds.API, resourcePath, url.RawQuery)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, values)
-	case ResourceTypeHistorianInfo:
-		info, err := ds.API.GetInfo(ctx)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, info)
-	case ResourceTypeEventPropertyValues:
-		if len(resourcePath) != 2 {
-			return ErrorInvalidResourceCallQuery
-		}
-
-		eventTypePropertyUUID := resourcePath[1]
-		request := schemas.EventPropertyValuesRequest{}
-		if err := ds.Decoder.Decode(&request, url.Query()); err != nil {
-			return err
-		}
-
-		o, err := ds.API.GetDistinctEventPropertyValues(ctx, eventTypePropertyUUID, request)
-		if err != nil {
-			return err
-		}
-
-		return resource.SendJSON(sender, o)
-	}
-
-	return ErrorInvalidResourceCallQuery
+	return o, nil
 }

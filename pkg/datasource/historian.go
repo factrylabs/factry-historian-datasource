@@ -25,8 +25,9 @@ const (
 
 // HistorianDataSource ...
 type HistorianDataSource struct {
-	API     *api.API
-	Decoder *form.Decoder
+	API             *api.API
+	Decoder         *form.Decoder
+	resourceHandler backend.CallResourceHandler
 }
 
 // NewDataSource creates a new data source instance
@@ -43,6 +44,8 @@ func NewDataSource(_ context.Context, s backend.DataSourceInstanceSettings) (ins
 	if err != nil {
 		return nil, err
 	}
+
+	historianDataSource.resourceHandler = historianDataSource.initializeResourceRoutes()
 
 	return historianDataSource, nil
 }
