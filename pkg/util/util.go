@@ -21,6 +21,7 @@ func Unique[T comparable](arr []T) bool {
 
 // Model is an interface for objects with a UUID field
 type Model interface {
+	// GetUUID returns the UUID of the object
 	GetUUID() uuid.UUID
 }
 

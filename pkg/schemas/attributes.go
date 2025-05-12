@@ -104,7 +104,6 @@ func (a Attributes) Get(key string, object interface{}) error {
 
 // UnMarshal tries to parse an interface from the map
 func (a Attributes) UnMarshal(object interface{}) error {
-
 	jsonbody, err := json.Marshal(a)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling attributes: %v", err)

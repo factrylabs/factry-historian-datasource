@@ -210,7 +210,6 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 				}
 				periodicPropertyData[offset][identifier] = value
 			}
-
 		}
 
 		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]

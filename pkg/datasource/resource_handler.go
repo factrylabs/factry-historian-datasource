@@ -3,7 +3,6 @@ package datasource
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -38,21 +37,21 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 	return ds.resourceHandler.CallResource(ctx, req, sender)
 }
 
-func (historianDataSource *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHandler {
+func (ds *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHandler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /measurements", handleJSON(historianDataSource.handleMeasurements))
-	mux.HandleFunc("GET /measurements/{uuid}", handleJSON(historianDataSource.handleMeasurementsByUUID))
-	mux.HandleFunc("GET /collectors", handleJSON(historianDataSource.handleCollectors))
-	mux.HandleFunc("GET /databases", handleJSON(historianDataSource.handleDatabases))
-	mux.HandleFunc("GET /assets", handleJSON(historianDataSource.handleAssets))
-	mux.HandleFunc("GET /asset-properties", handleJSON(historianDataSource.handleAssetProperties))
-	mux.HandleFunc("GET /event-types", handleJSON(historianDataSource.handleEventTypes))
-	mux.HandleFunc("GET /event-type-properties", handleJSON(historianDataSource.handleEventTypeProperties))
-	mux.HandleFunc("GET /event-configurations", handleJSON(historianDataSource.handleEventConfigurations))
-	mux.HandleFunc("GET /tag-keys", handleJSON(historianDataSource.handleTagKeys))
-	mux.HandleFunc("GET /tag-values", handleJSON(historianDataSource.handleTagValues))
-	mux.HandleFunc("GET /info", handleJSON(historianDataSource.handleHistorianInfo))
-	mux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(historianDataSource.handleEventPropertyValues))
+	mux.HandleFunc("GET /measurements", handleJSON(ds.handleMeasurements))
+	mux.HandleFunc("GET /measurements/{uuid}", handleJSON(ds.handleMeasurementsByUUID))
+	mux.HandleFunc("GET /collectors", handleJSON(ds.handleCollectors))
+	mux.HandleFunc("GET /databases", handleJSON(ds.handleDatabases))
+	mux.HandleFunc("GET /assets", handleJSON(ds.handleAssets))
+	mux.HandleFunc("GET /asset-properties", handleJSON(ds.handleAssetProperties))
+	mux.HandleFunc("GET /event-types", handleJSON(ds.handleEventTypes))
+	mux.HandleFunc("GET /event-type-properties", handleJSON(ds.handleEventTypeProperties))
+	mux.HandleFunc("GET /event-configurations", handleJSON(ds.handleEventConfigurations))
+	mux.HandleFunc("GET /tag-keys", handleJSON(ds.handleTagKeys))
+	mux.HandleFunc("GET /tag-values", handleJSON(ds.handleTagValues))
+	mux.HandleFunc("GET /info", handleJSON(ds.handleHistorianInfo))
+	mux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(ds.handleEventPropertyValues))
 	return httpadapter.New(mux)
 }
 
@@ -80,7 +79,6 @@ func handleJSON(f func(_ http.ResponseWriter, req *http.Request) (interface{}, e
 		rw.WriteHeader(http.StatusOK)
 		if _, err := rw.Write(jsonResponse); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }
@@ -142,7 +140,7 @@ func (ds *HistorianDataSource) handleHistorianInfo(_ http.ResponseWriter, req *h
 func (ds *HistorianDataSource) handleEventPropertyValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	eventTypePropertyUUID := req.PathValue("uuid")
 	if eventTypePropertyUUID == "" {
-		return nil, fmt.Errorf("uuid is required")
+		return nil, errors.New("uuid is required")
 	}
 
 	request := schemas.EventPropertyValuesRequest{}
