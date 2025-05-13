@@ -75,7 +75,14 @@ All of the aggregation options options can also be controlled with a dashboard v
 
 - Select one of the available aggregations, or clear the field for raw data
 - Select the aggregation period
-- Optionally select a fill type
+- Optionally select a fill type  
+  When a fill type is selected, the options to select 'Fill empty initial intervals' and 'Include last known point' will be available.
+  - 'Fill empty initial intervals'  
+    Uses the last known point to fill any initial empty intervals before the first data point in the series.  
+    Does not include the actual last known point in the data, unless `Include last known point` is enabled too.
+  - 'Include last known point'  
+    This gives the last point before the time range of the query for the series with the `status = Good`, and the other tags that are filtered upon.
+    If another status is in the current time window, the last value for that status will be fetched too.
 
 ##### Group by (only for periodic queries)
 
@@ -97,18 +104,6 @@ The maximum amount of returned data points per series.
 #### Advanced options
 
 ![Advanced options](../../images/3_queries/advanced-options.png 'Advanced options')
-
-##### Include last known point (only for periodic queries)
-
-This gives the last point before the time range of the query for the series with the `status = Good`, and the other tags that are filtered upon.
-
-If another status is in the current time window, the last value for that status will be fetched too.
-
-##### Fill empty initial intervals (only for periodic queries)
-
-Uses the last known point to fill any initial empty intervals before the first data point in the series.
-
-Does not include the actual last known point in the data, unless `Include last known point` is enabled too.
 
 ##### Use engineering specs (only for periodic queries)
 
