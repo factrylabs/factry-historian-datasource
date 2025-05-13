@@ -188,7 +188,6 @@ export interface EventTypePropertiesFilter extends ResourceFilter {
 
 export interface EventTypePropertiesValuesFilter extends ResourceFilter {
   EventFilter: EventQuery
-  EventTypePropertyUUID?: string
   HistorianInfo?: HistorianInfo
   From?: string
   To?: string
