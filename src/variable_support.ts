@@ -199,12 +199,6 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           return of({ data: [] })
         }
 
-        if (filter.EventTypePropertyUUID) {
-          filter.EventTypePropertyUUID = this.dataAPI.multiSelectReplace(
-            filter.EventTypePropertyUUID,
-            request.scopedVars
-          )[0]
-        }
         if (filter.EventFilter?.Assets) {
           filter.EventFilter.Assets = filter.EventFilter.Assets.flatMap((e) =>
             this.dataAPI.multiSelectReplace(e, request.scopedVars)
@@ -247,14 +241,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         }
 
-        if (!filter.EventTypePropertyUUID) {
-          return of({ data: [] })
-        }
-
         return from(
           this.dataAPI.getDistinctEventPropertyValues({
             ScopedVars: request.scopedVars,
-            EventTypePropertyUUID: filter.EventTypePropertyUUID,
             EventFilter: filter.EventFilter!,
             HistorianInfo: filter.HistorianInfo,
             From: request.range.from.format(),

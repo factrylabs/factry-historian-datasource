@@ -3,9 +3,11 @@ package datasource
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -228,8 +230,8 @@ func (ds *HistorianDataSource) handleGetHistorianInfo(_ http.ResponseWriter, req
 }
 
 func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	eventTypePropertyUUID := req.PathValue("uuid")
-	if eventTypePropertyUUID == "" {
+	eventTypeProperty := req.PathValue("uuid")
+	if eventTypeProperty == "" {
 		return nil, errors.New("uuid is required")
 	}
 
@@ -238,7 +240,35 @@ func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWrite
 		return nil, err
 	}
 
-	o, err := ds.API.GetDistinctEventPropertyValues(req.Context(), eventTypePropertyUUID, request)
+	var eventTypePropertyUUID uuid.UUID
+	if parsedUUID, err := uuid.Parse(eventTypeProperty); err == nil {
+		eventTypePropertyUUID = parsedUUID
+	} else {
+		queryString := "Types[0]=" + request.Type + "&"
+		for i := range request.EventTypes {
+			queryString += fmt.Sprintf("EventTypeUUIDs[%v]=%s&", i, request.EventTypes[i])
+		}
+
+		eventTypeProperties, err := ds.API.GetEventTypeProperties(req.Context(), queryString)
+		if err != nil {
+			return nil, err
+		}
+		if len(eventTypeProperties) == 0 {
+			return nil, errors.New("event type property not found")
+		}
+		for _, eventTypeProperty := range eventTypeProperties {
+			if eventTypeProperty.Name != request.Properties[0] {
+				continue
+			}
+
+			eventTypePropertyUUID = eventTypeProperty.UUID
+		}
+		if eventTypePropertyUUID == uuid.Nil {
+			return nil, errors.New("event type property not found")
+		}
+	}
+
+	o, err := ds.API.GetDistinctEventPropertyValues(req.Context(), eventTypePropertyUUID.String(), request)
 	if err != nil {
 		return nil, err
 	}

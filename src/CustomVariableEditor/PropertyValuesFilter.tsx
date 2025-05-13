@@ -1,15 +1,7 @@
-import React, { ChangeEvent, useCallback, useEffect, useState } from 'react'
+import React, { ChangeEvent } from 'react'
 
 import { DataSource } from 'datasource'
-import {
-  EventQuery,
-  EventTypePropertiesValuesFilter,
-  EventTypeProperty,
-  HistorianInfo,
-  PropertyType,
-  TimeRange,
-  labelWidth,
-} from 'types'
+import { EventQuery, EventTypePropertiesValuesFilter, HistorianInfo, TimeRange, labelWidth } from 'types'
 import { SelectableValue } from '@grafana/data'
 import { EventFilter } from 'QueryEditor/EventFilter'
 import { InlineField, InlineFieldRow, InlineSwitch } from '@grafana/ui'
@@ -22,32 +14,7 @@ export function PropertyValuesFilterRow(props: {
   templateVariables: Array<SelectableValue<string>>
   historianInfo: HistorianInfo | undefined
 }) {
-  const [loading, setLoading] = useState(true)
-  const [eventTypeProperties, setEventTypeProperties] = useState<EventTypeProperty[]>([])
-
-  const fetchAll = useCallback(async () => {
-    const eventTypeProperties = await props.datasource.getEventTypeProperties()
-    setEventTypeProperties(eventTypeProperties)
-  }, [props.datasource])
-
-  useEffect(() => {
-    if (loading) {
-      ;(async () => {
-        await fetchAll()
-        setLoading(false)
-      })()
-    }
-  }, [loading, fetchAll])
-
   const onChangeEventFilter = (query: EventQuery) => {
-    const property = query.Properties?.length ? query.Properties[0] : ''
-    const selectedProperty = props.datasource.replace(property, props.initialValue?.ScopedVars)
-    const eventTypeProperty = eventTypeProperties.find(
-      (e) =>
-        (e.Name === selectedProperty || e.UUID === selectedProperty) &&
-        e.Type === PropertyType.Simple &&
-        props.initialValue?.EventFilter.EventTypes?.includes(e.EventTypeUUID)
-    )
     props.onChange({
       ...props.initialValue,
       EventFilter: {
@@ -55,7 +22,6 @@ export function PropertyValuesFilterRow(props: {
         ...query,
       },
       HistorianInfo: props.historianInfo,
-      EventTypePropertyUUID: eventTypeProperty?.UUID,
     })
   }
 
@@ -81,7 +47,7 @@ export function PropertyValuesFilterRow(props: {
     })
   }
 
-  return loading || !props.initialValue ? (
+  return !props.initialValue ? (
     <></>
   ) : (
     <>
