@@ -3,8 +3,19 @@ import React, { useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { AsyncMultiSelect, InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { EventTypeFilter, EventTypePropertiesFilter, HistorianInfo, PropertyType, fieldWidth, labelWidth } from 'types'
+import {
+  EventTypeFilter,
+  EventTypePropertiesFilter,
+  HistorianInfo,
+  PropertyDatatype,
+  PropertyType,
+  fieldWidth,
+  labelWidth,
+} from 'types'
 import { isSupportedPropertyType } from 'QueryEditor/util'
+import { isFeatureEnabled } from 'util/semver'
+
+const extraWidefieldWidth = fieldWidth + 10
 
 export function EventTypePropertyFilterRow(props: {
   datasource: DataSource
@@ -52,13 +63,22 @@ export function EventTypePropertyFilterRow(props: {
     })
   }
 
+  const onDatatypeChange = (items: Array<SelectableValue<string>> | undefined) => {
+    const datatypes = items?.map((e) => {
+      return e.value || ''
+    })
+    props.onChange({
+      ...props.initialValue,
+      Datatypes: datatypes,
+    })
+  }
   return (
     <>
       <InlineFieldRow>
         <InlineField label={'Filter by event types'} aria-label={'Filter by event types'} labelWidth={labelWidth}>
           <AsyncMultiSelect
             placeholder="Select event type(s)"
-            width={fieldWidth}
+            width={extraWidefieldWidth}
             onChange={(value) => onEventTypesChange(value)}
             defaultOptions
             loadOptions={loadEventTypeOptions}
@@ -70,7 +90,7 @@ export function EventTypePropertyFilterRow(props: {
         <InlineField label={'Property type'} aria-label={'Property type'} labelWidth={labelWidth}>
           <MultiSelect
             placeholder="Select property type"
-            width={fieldWidth}
+            width={extraWidefieldWidth}
             onChange={(value) => onTypeChange(value)}
             options={Object.entries(PropertyType)
               .filter(([_, value]) => isSupportedPropertyType(value, props.historianInfo?.Version ?? ''))
@@ -82,6 +102,22 @@ export function EventTypePropertyFilterRow(props: {
           />
         </InlineField>
       </InlineFieldRow>
+      {isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0') && (
+        <InlineFieldRow>
+          <InlineField label={'Datatype'} aria-label={'Datatype'} labelWidth={labelWidth}>
+            <MultiSelect
+              placeholder="Select property datatype"
+              width={extraWidefieldWidth}
+              onChange={(value) => onDatatypeChange(value)}
+              options={Object.entries(PropertyDatatype).map(([key, value]) => {
+                return { label: key, value: value as string }
+              })}
+              isClearable
+              value={props.initialValue?.Datatypes}
+            />
+          </InlineField>
+        </InlineFieldRow>
+      )}
     </>
   )
 }

@@ -183,6 +183,7 @@ export interface EventTypeFilter extends ResourceFilter {
 export interface EventTypePropertiesFilter extends ResourceFilter {
   EventTypeUUIDs?: string[]
   Types?: string[]
+  Datatypes?: string[]
 }
 
 export interface EventTypePropertiesValuesFilter extends ResourceFilter {
