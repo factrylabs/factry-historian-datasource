@@ -32,7 +32,7 @@ const (
 )
 
 // EventQueryResultToDataFrame converts a event query result to data frames
-func EventQueryResultToDataFrame(includeParentInfo bool, assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
+func EventQueryResultToDataFrame(includeParentInfo bool, multipleAssetsSelected bool, assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
 	dataFrames := data.Frames{}
 	groupedEvents := map[uuid.UUID][]schemas.Event{}
 	eventTypePropertiesForEventType := map[uuid.UUID][]schemas.EventTypeProperty{}
@@ -54,7 +54,7 @@ func EventQueryResultToDataFrame(includeParentInfo bool, assets []schemas.Asset,
 	}
 
 	for eventTypeUUID, groupedEvents := range groupedEvents {
-		dataFrames = append(dataFrames, dataFrameForEventType(includeParentInfo, assets, eventTypesByUUID[eventTypeUUID], selectedProperties, eventTypesByUUID, groupedEvents, eventTypePropertiesForEventType, assetPropertyFieldTypes, eventAssetPropertyFrames))
+		dataFrames = append(dataFrames, dataFrameForEventType(includeParentInfo, multipleAssetsSelected, assets, eventTypesByUUID[eventTypeUUID], selectedProperties, eventTypesByUUID, groupedEvents, eventTypePropertiesForEventType, assetPropertyFieldTypes, eventAssetPropertyFrames))
 	}
 
 	return dataFrames, nil
@@ -385,7 +385,7 @@ func fillFields(prefix string, fieldByColumn map[string]*data.Field, event *sche
 	}
 }
 
-func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, eventType schemas.EventType, selectedProperties map[string]struct{}, eventTypes map[uuid.UUID]schemas.EventType, events []schemas.Event, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
+func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, assets []schemas.Asset, eventType schemas.EventType, selectedProperties map[string]struct{}, eventTypes map[uuid.UUID]schemas.EventType, events []schemas.Event, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		uuidToAssetMap[asset.UUID] = asset
@@ -475,8 +475,15 @@ func dataFrameForEventType(includeParentInfo bool, assets []schemas.Asset, event
 			found := false
 			field := fieldByColumn[assetProperty]
 			for _, assetPropertyFrame := range assetPropertyFrames {
-				custom := assetPropertyFrame.Meta.Custom.(map[string]interface{})
-				name := custom["AssetProperty"].(string)
+				// custom := assetPropertyFrame.Meta.Custom.(map[string]interface{})
+				// assetPath := custom["AssetPath"].(string)
+				// name := custom["AssetProperty"].(string)
+				// fullName := fmt.Sprintf("%s.%s", assetPath, name)
+				name, ok := getAssetPropertyFieldName(assetPropertyFrame, multipleAssetsSelected)
+				if !ok {
+					continue
+				}
+
 				if assetProperty != name {
 					continue
 				}

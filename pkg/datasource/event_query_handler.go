@@ -111,7 +111,17 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	}
 
 	eventAssetPropertyFrames := make(map[uuid.UUID]data.Frames)
+	multipleAssetsSelected := len(assets) > 1
 	if eventQuery.QueryAssetProperties && eventQuery.Options != nil {
+		assetMeasurementQueryAssets := assets
+		if len(eventQuery.OverrideAssets) > 0 {
+			assetMeasurementQueryAssets, err = ds.API.GetFilteredAssets(ctx, eventQuery.OverrideAssets, historianInfo)
+			if err != nil {
+				return nil, err
+			}
+
+			multipleAssetsSelected = len(assetMeasurementQueryAssets) > 1
+		}
 		assetMeasurementQuery := schemas.AssetMeasurementQuery{
 			AssetProperties: eventQuery.AssetProperties,
 			Options:         *eventQuery.Options,
@@ -123,7 +133,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 
 		for i := range events {
 			var err error
-			frames, err := ds.handleEventAssetMeasurementQuery(ctx, eventQuery.Type, events[i], assetMeasurementQuery, assets, assetProperties, timeRange, interval, seriesLimit)
+			frames, err := ds.handleEventAssetMeasurementQuery(ctx, eventQuery.Type, events[i], assetMeasurementQuery, assetMeasurementQueryAssets, assetProperties, timeRange, interval, seriesLimit)
 			if err != nil {
 				return nil, err
 			}
@@ -144,8 +154,8 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 
 	switch eventQuery.Type {
 	case string(schemas.EventTypePropertyTypeSimple):
-		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames)
-		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
+		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames, multipleAssetsSelected)
+		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, multipleAssetsSelected, slices.Collect(maps.Values(assets)), events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
 		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false)
 	case string(schemas.EventTypePropertyTypePeriodicWithDimension):
@@ -164,7 +174,11 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 
 	for _, assetProperty := range assetProperties {
-		if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.Name) || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.UUID.String()) && assetProperty.AssetUUID == event.AssetUUID {
+		if _, ok := assets[assetProperty.AssetUUID]; !ok {
+			continue
+		}
+
+		if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.UUID.String()) || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.Name) {
 			if len(measurementUUIDs) >= seriesLimit {
 				if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
 					break
@@ -206,16 +220,14 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
 }
 
-func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Frames) map[string]data.FieldType {
+func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Frames, includeAssetPath bool) map[string]data.FieldType {
 	assetPropertyFieldTypes := map[string]data.FieldType{}
 	for _, frames := range eventAssetPropertyFrames {
 		for _, frame := range frames {
-			custom, ok := frame.Meta.Custom.(map[string]interface{})
+			name, ok := getAssetPropertyFieldName(frame, includeAssetPath)
 			if !ok {
 				continue
 			}
-
-			name := custom["AssetProperty"].(string)
 
 			fieldType, ok := assetPropertyFieldTypes[name]
 			if !ok {
@@ -229,4 +241,27 @@ func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Fram
 		}
 	}
 	return assetPropertyFieldTypes
+}
+
+func getAssetPropertyFieldName(frame *data.Frame, includeAssetPath bool) (string, bool) {
+	custom, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return "", false
+	}
+
+	name, ok := custom["AssetProperty"].(string)
+	if !ok {
+		return "", false
+	}
+
+	if !includeAssetPath {
+		return name, true
+	}
+
+	assetPath, ok := custom["AssetPath"].(string)
+	if !ok {
+		return "", false
+	}
+
+	return fmt.Sprintf("%s.%s", assetPath, name), true
 }

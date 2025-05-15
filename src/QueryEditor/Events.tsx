@@ -5,7 +5,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
-import { Asset, EventQuery, labelWidth, MeasurementQueryOptions, TimeRange } from 'types'
+import { Asset, AssetMeasurementQuery, EventQuery, labelWidth, TimeRange } from 'types'
 import { EventFilter } from './EventFilter'
 import { DateRangePicker } from 'components/util/DateRangePicker'
 
@@ -23,7 +23,11 @@ export interface Props {
 export const Events = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
-  const [limit, setLimit] = useDebounce<number>(props.query.Limit ?? 1000, 500, (value: number) => {
+  const [limit, setLimit] = useDebounce<number | undefined>(props.query.Limit, 500, (value: number | undefined) => {
+    if (value === props.query.Limit) {
+      return
+    }
+
     const updatedQuery = { ...props.query, Limit: value } as EventQuery
     props.onChangeEventQuery(updatedQuery)
   })
@@ -86,14 +90,14 @@ export const Events = (props: Props): JSX.Element => {
     setLimit(Number(event.target.value))
   }
 
-  const onChangeAssetProperties = (values: string[]): void => {
-    const updatedQuery = { ...props.query, AssetProperties: values }
-    props.onChangeEventQuery(updatedQuery)
-  }
-
-  const onChangeQueryOptions = (options: MeasurementQueryOptions): void => {
-    const updatedQuery = { ...props.query, Options: options }
-    props.onChangeEventQuery(updatedQuery)
+  const onChangeAssetMeasurementQuery = (query: AssetMeasurementQuery): void => {
+    const updateQuery = {
+      ...props.query,
+      OverrideAssets: query.Assets,
+      AssetProperties: query.AssetProperties,
+      Options: query.Options,
+    }
+    props.onChangeEventQuery(updateQuery)
   }
 
   const onChangeTimeRange = (value: TimeRange): void => {
@@ -104,6 +108,16 @@ export const Events = (props: Props): JSX.Element => {
   const onChangeEventFilter = (query: EventQuery): void => {
     const updatedQuery = { ...props.query, ...query }
     props.onChangeEventQuery(updatedQuery)
+  }
+
+  const selectedAsset = (assets: string[], overrideAssets: string[]): string => {
+    if (overrideAssets.length > 0) {
+      return overrideAssets[0]
+    }
+    if (assets.length > 0) {
+      return assets[0]
+    }
+    return ''
   }
 
   return (
@@ -139,7 +153,12 @@ export const Events = (props: Props): JSX.Element => {
               </InlineField>
             </InlineFieldRow>
             {props.query.OverrideTimeRange && (
-              <DateRangePicker override={props.query.OverrideTimeRange} dateTimeRange={props.query.TimeRange} onChange={onChangeTimeRange} datasource={props.datasource} />
+              <DateRangePicker
+                override={props.query.OverrideTimeRange}
+                dateTimeRange={props.query.TimeRange}
+                onChange={onChangeTimeRange}
+                datasource={props.datasource}
+              />
             )}
             <InlineFieldRow>
               <InlineField
@@ -164,12 +183,15 @@ export const Events = (props: Props): JSX.Element => {
                 seriesLimit={props.seriesLimit}
                 queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
                 selectedAssetProperties={props.query.AssetProperties ?? []}
-                selectedAssets={getSelectedAssets(props.query.Assets.length ? props.query.Assets[0] : '', assets)}
+                overrideAssets={props.query.OverrideAssets ?? []}
+                selectedAssets={getSelectedAssets(
+                  selectedAsset(props.query.Assets, props.query.OverrideAssets),
+                  assets
+                )}
                 templateVariables={templateVariables}
                 tags={tagsToQueryTags(props.query.Options?.Tags)}
                 queryType={props.query.Type}
-                onChangeAssetProperties={onChangeAssetProperties}
-                onChangeQueryOptions={onChangeQueryOptions}
+                onChangeAssetMeasurementQuery={onChangeAssetMeasurementQuery}
                 onChangeSeriesLimit={props.onChangeSeriesLimit}
                 onOpenMenu={fetchAll}
               />
