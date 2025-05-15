@@ -57,9 +57,13 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       EventTypes: [] as string[],
       Properties: [] as string[],
       QueryAssetProperties: false,
+      OverrideAssets: [] as string[],
       Limit: 1000,
       OverrideTimeRange: false,
-      TimeRange: { from: dateTime(this.props.range?.from).toISOString(), to: dateTime(this.props.range?.to).toISOString() } as TimeRange,
+      TimeRange: {
+        from: dateTime(this.props.range?.from).toISOString(),
+        to: dateTime(this.props.range?.to).toISOString(),
+      } as TimeRange,
     },
     rawQuery: {
       Query: '',
@@ -214,7 +218,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     const tabs = [
       {
         title: 'Assets',
-        content: (
+        content: this.props.query.queryType === 'AssetMeasurementQuery' && (
           <Assets
             query={this.props.query.query as AssetMeasurementQuery}
             seriesLimit={this.props.query.seriesLimit}
@@ -228,7 +232,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       },
       {
         title: 'Measurements',
-        content: (
+        content: this.props.query.queryType === 'MeasurementQuery' && (
           <Measurements
             query={this.props.query.query as MeasurementQuery}
             seriesLimit={this.props.query.seriesLimit}
@@ -242,7 +246,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       },
       {
         title: 'Events',
-        content: (
+        content: this.props.query.queryType === 'EventQuery' && (
           <Events
             range={this.props.range}
             query={this.props.query.query as EventQuery}
@@ -256,7 +260,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       },
       {
         title: 'Raw',
-        content: (
+        content: this.props.query.queryType === 'RawQuery' && (
           <RawQueryEditor
             query={this.props.query.query as RawQuery}
             datasource={this.props.datasource}

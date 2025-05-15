@@ -112,6 +112,13 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 
 	eventAssetPropertyFrames := make(map[uuid.UUID]data.Frames)
 	if eventQuery.QueryAssetProperties && eventQuery.Options != nil {
+		assetMeasurementQueryAssets := assets
+		if len(eventQuery.OverrideAssets) > 0 {
+			assetMeasurementQueryAssets, err = ds.API.GetFilteredAssets(ctx, eventQuery.OverrideAssets, historianInfo)
+			if err != nil {
+				return nil, err
+			}
+		}
 		assetMeasurementQuery := schemas.AssetMeasurementQuery{
 			AssetProperties: eventQuery.AssetProperties,
 			Options:         *eventQuery.Options,
@@ -123,7 +130,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 
 		for i := range events {
 			var err error
-			frames, err := ds.handleEventAssetMeasurementQuery(ctx, eventQuery.Type, events[i], assetMeasurementQuery, assets, assetProperties, timeRange, interval, seriesLimit)
+			frames, err := ds.handleEventAssetMeasurementQuery(ctx, eventQuery.Type, events[i], assetMeasurementQuery, assetMeasurementQueryAssets, assetProperties, timeRange, interval, seriesLimit)
 			if err != nil {
 				return nil, err
 			}
@@ -164,7 +171,11 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 
 	for _, assetProperty := range assetProperties {
-		if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.Name) || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.UUID.String()) && assetProperty.AssetUUID == event.AssetUUID {
+		if _, ok := assets[assetProperty.AssetUUID]; !ok {
+			continue
+		}
+
+		if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.UUID.String()) || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.Name) {
 			if len(measurementUUIDs) >= seriesLimit {
 				if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
 					break
