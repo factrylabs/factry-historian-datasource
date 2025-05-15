@@ -5,7 +5,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
-import { Asset, EventQuery, labelWidth, MeasurementQueryOptions, PropertyType, TimeRange } from 'types'
+import { Asset, EventQuery, labelWidth, MeasurementQueryOptions, TimeRange } from 'types'
 import { EventFilter } from './EventFilter'
 import { DateRangePicker } from 'components/util/DateRangePicker'
 
@@ -24,7 +24,7 @@ export const Events = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
   const [limit, setLimit] = useDebounce<number>(props.query.Limit ?? 1000, 500, (value: number) => {
-    const updatedQuery = { ...props.query, Limit: value, Type: PropertyType.Simple } as EventQuery
+    const updatedQuery = { ...props.query, Limit: value } as EventQuery
     props.onChangeEventQuery(updatedQuery)
   })
   const templateVariables = getTemplateSrv()
