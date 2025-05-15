@@ -244,6 +244,9 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 			case data.FieldTypeNullableBool:
 				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*bool{})
 			}
+			identifier.Field.Config = &data.FieldConfig{
+				Unit: valueField.Config.Unit,
+			}
 			columns = append(columns, identifier)
 
 			for k := 0; k < timeField.Len(); k++ {
