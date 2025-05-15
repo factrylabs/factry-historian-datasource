@@ -384,7 +384,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   async getTagKeysForMeasurement(measurement: string): Promise<string[]> {
-    return this.getResource(`tag-keys/${measurement}`)
+    return this.getResource(`measurements/${measurement}/tags`)
   }
 
   async getTagKeysForMeasurements(filter: MeasurementFilter): Promise<string[]> {
@@ -395,11 +395,11 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     const params: Record<string, unknown> = {
       ...f,
     }
-    return this.getResource(`tag-keys`, params)
+    return this.getResource(`tags`, params)
   }
 
   async getTagValuesForMeasurement(measurement: string, key: string): Promise<string[]> {
-    return this.getResource(`tag-values/${measurement}/${key}`)
+    return this.getResource(`measurements/${measurement}/tags/${key}`)
   }
 
   async getTagValuesForMeasurements(filter: MeasurementFilter, key: string): Promise<string[]> {
@@ -410,7 +410,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     const params: Record<string, unknown> = {
       ...f,
     }
-    return this.getResource(`tag-values/${key}`, params)
+    return this.getResource(`tags/${key}`, params)
   }
 
   async getDistinctEventPropertyValues(filter: EventTypePropertiesValuesFilter): Promise<string[]> {
