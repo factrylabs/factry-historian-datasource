@@ -32,7 +32,7 @@ export interface CascaderProps extends Themeable2 {
   displayAllSelectedLevels?: boolean
   onBlur?: () => void
   // When cascader is opened
-  onOpen?: () => void;
+  onOpen?: () => void
   /** When mounted focus automatically on the input */
   autoFocus?: boolean
   /** Keep the dropdown open all the time, useful in case whole cascader visibility is controlled by the parent */
@@ -266,7 +266,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   render() {
     const { placeholder, width, changeOnSelect, options } = this.props
     const { focusCascade, rcValue, activeLabel, activeSuggestion, filteredSuggestions, showSuggestions } = this.state
-    const { theme } = this.props;
+    const { theme } = this.props
     const styles = getCascaderStyles(theme)
 
     this.getSearchableOptions(options)
@@ -282,6 +282,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
           expandIcon={null}
           open={focusCascade}
           dropdownClassName={styles.dropdown}
+          allowClear
         >
           <div className={disableDivFocus}>
             <Input
@@ -315,4 +316,4 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     )
   }
 }
-export default withTheme2(Cascader);
+export default withTheme2(Cascader)

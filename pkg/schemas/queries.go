@@ -60,6 +60,7 @@ type EventQuery struct {
 	PropertyFilter       []EventPropertyValueFilter
 	IncludeParentInfo    bool
 	QueryAssetProperties bool
+	OverrideAssets       []string
 	AssetProperties      []string
 	Options              *MeasurementQueryOptions
 	Limit                int
