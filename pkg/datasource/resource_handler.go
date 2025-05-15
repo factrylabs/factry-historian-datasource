@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
+	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/pkg/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 // HistorianResourceQuery is a struct for a resource query
@@ -39,55 +40,45 @@ func (ds *HistorianDataSource) CallResource(ctx context.Context, req *backend.Ca
 
 func (ds *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHandler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /measurements", handleJSON(ds.handleMeasurements))
-	mux.HandleFunc("GET /measurements/{uuid}", handleJSON(ds.handleMeasurementsByUUID))
-	mux.HandleFunc("GET /collectors", handleJSON(ds.handleCollectors))
-	mux.HandleFunc("GET /databases", handleJSON(ds.handleDatabases))
-	mux.HandleFunc("GET /assets", handleJSON(ds.handleAssets))
-	mux.HandleFunc("GET /asset-properties", handleJSON(ds.handleAssetProperties))
-	mux.HandleFunc("GET /event-types", handleJSON(ds.handleEventTypes))
-	mux.HandleFunc("GET /event-type-properties", handleJSON(ds.handleEventTypeProperties))
-	mux.HandleFunc("GET /event-configurations", handleJSON(ds.handleEventConfigurations))
-	mux.HandleFunc("GET /tag-keys", handleJSON(ds.handleTagKeys))
-	mux.HandleFunc("GET /tag-values", handleJSON(ds.handleTagValues))
-	mux.HandleFunc("GET /info", handleJSON(ds.handleHistorianInfo))
-	mux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(ds.handleEventPropertyValues))
+	mux.HandleFunc("GET /measurements", handleJSON(ds.handleGetMeasurements))
+	mux.HandleFunc("GET /measurements/{uuid}", handleJSON(ds.handleGetMeasurementByUUID))
+	mux.HandleFunc("GET /measurements/{uuid}/tags", handleJSON(ds.handleGetTagKeysForMeasurement))
+	mux.HandleFunc("GET /measurements/{uuid}/tags/{tagKey}", handleJSON(ds.handleGetTagValueForMeasurementAndTagKey))
+
+	mux.HandleFunc("GET /collectors", handleJSON(ds.handleGetCollectors))
+
+	mux.HandleFunc("GET /databases", handleJSON(ds.handleGetDatabases))
+
+	mux.HandleFunc("GET /assets", handleJSON(ds.handleGetAssets))
+
+	mux.HandleFunc("GET /asset-properties", handleJSON(ds.handleGetAssetProperties))
+
+	mux.HandleFunc("GET /event-types", handleJSON(ds.handleGetEventTypes))
+
+	mux.HandleFunc("GET /event-type-properties", handleJSON(ds.handleGetEventTypeProperties))
+
+	mux.HandleFunc("GET /event-configurations", handleJSON(ds.handleGetEventConfigurations))
+
+	mux.HandleFunc("GET /tags", handleJSON(ds.handleGetTagKeys))
+	mux.HandleFunc("GET /tags/{tagKey}", handleJSON(ds.handleGetTagValues))
+
+	mux.HandleFunc("GET /info", handleJSON(ds.handleGetHistorianInfo))
+
+	mux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(ds.handleGetEventPropertyValues))
+
+	mux.HandleFunc("/", handleJSON(ds.fallBackHandler))
 	return httpadapter.New(mux)
 }
 
-func handleJSON(f func(_ http.ResponseWriter, req *http.Request) (interface{}, error)) http.HandlerFunc {
-	return func(rw http.ResponseWriter, req *http.Request) {
-		response, err := f(rw, req)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if response == nil {
-			http.Error(rw, "response is nil", http.StatusInternalServerError)
-			return
-		}
-
-		// Marshal the response to JSON
-		jsonResponse, err := json.Marshal(response)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		// Set the content type and write the response
-		rw.Header().Set("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
-		if _, err := rw.Write(jsonResponse); err != nil {
-			http.Error(rw, err.Error(), http.StatusInternalServerError)
-		}
-	}
+func (*HistorianDataSource) fallBackHandler(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return nil, errors.Errorf("resource %s %s not found", req.Method, req.URL.Path)
 }
 
-func (ds *HistorianDataSource) handleMeasurements(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetMeasurements(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetMeasurements(req.Context(), req.URL.RawQuery)
 }
 
-func (ds *HistorianDataSource) handleMeasurementsByUUID(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetMeasurementByUUID(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	uuid := req.PathValue("uuid")
 	if uuid == "" {
 		return nil, errors.New("uuid is required")
@@ -95,49 +86,148 @@ func (ds *HistorianDataSource) handleMeasurementsByUUID(_ http.ResponseWriter, r
 	return ds.API.GetMeasurement(req.Context(), uuid)
 }
 
-func (ds *HistorianDataSource) handleCollectors(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetCollectors(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetCollectors(req.Context())
 }
 
-func (ds *HistorianDataSource) handleDatabases(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetDatabases(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetTimeseriesDatabases(req.Context(), req.URL.RawQuery)
 }
 
-func (ds *HistorianDataSource) handleAssets(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetAssets(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetAssets(req.Context(), req.URL.RawQuery)
 }
 
-func (ds *HistorianDataSource) handleAssetProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetAssetProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetAssetProperties(req.Context(), req.URL.RawQuery)
 }
 
-func (ds *HistorianDataSource) handleEventTypes(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetEventTypes(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetEventTypes(req.Context(), req.URL.RawQuery)
 }
 
-func (ds *HistorianDataSource) handleEventTypeProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetEventTypeProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetEventTypeProperties(req.Context(), req.URL.RawQuery)
 }
 
-func (ds *HistorianDataSource) handleEventConfigurations(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetEventConfigurations(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetEventConfigurations(req.Context())
 }
 
-func (ds *HistorianDataSource) handleTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	resourcePath := strings.Split(req.URL.Path, "/")
-	return handleGetTagKeys(req.Context(), ds.API, resourcePath, req.URL.RawQuery)
+func (ds *HistorianDataSource) handleGetTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	measurements, err := ds.API.GetMeasurements(req.Context(), req.URL.RawQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	frames := data.Frames{}
+
+	errGroup, ctx := errgroup.WithContext(req.Context())
+	errGroup.SetLimit(10)
+	resultsChan := make(chan data.Frames, len(measurements))
+
+	for i := range measurements {
+		measurement := measurements[i]
+		errGroup.Go(func() error {
+			result, err := ds.API.GetTagKeys(ctx, measurement.UUID.String())
+			if err != nil {
+				return err
+			}
+
+			resultsChan <- result
+			return nil
+		})
+	}
+
+	if err := errGroup.Wait(); err != nil {
+		return nil, err
+	}
+	close(resultsChan)
+
+	for result := range resultsChan {
+		frames = mergeFrames(frames, result)
+	}
+
+	return getStringSetFromFrames(frames, "tagKey"), nil
 }
 
-func (ds *HistorianDataSource) handleTagValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	resourcePath := strings.Split(req.URL.Path, "/")
-	return handleGetTagValues(req.Context(), ds.API, resourcePath, req.URL.RawQuery)
+func (ds *HistorianDataSource) handleGetTagKeysForMeasurement(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	measurementUUID := req.PathValue("uuid")
+	if measurementUUID == "" {
+		return nil, errors.New("uuid is required")
+	}
+
+	frames, err := ds.API.GetTagKeys(req.Context(), measurementUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	return getStringSetFromFrames(frames, "tagKey"), nil
 }
 
-func (ds *HistorianDataSource) handleHistorianInfo(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetTagValueForMeasurementAndTagKey(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	measurementUUID := req.PathValue("uuid")
+	if measurementUUID == "" {
+		return nil, errors.New("uuid is required")
+	}
+	tagKey := req.PathValue("tagKey")
+	if tagKey == "" {
+		return nil, errors.New("tagKey is required")
+	}
+	frames, err := ds.API.GetTagValues(req.Context(), measurementUUID, tagKey)
+	if err != nil {
+		return nil, err
+	}
+	return getStringSetFromFrames(frames, "value"), nil
+}
+
+func (ds *HistorianDataSource) handleGetTagValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	// if no measurement in the path use the query parameters to get the measurements
+	measurements, err := ds.API.GetMeasurements(req.Context(), req.URL.RawQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	frames := data.Frames{}
+	key := req.PathValue("tagKey")
+	if key == "" {
+		return nil, errors.New("tagKey is required")
+	}
+
+	errGroup, ctx := errgroup.WithContext(req.Context())
+	errGroup.SetLimit(10)
+	resultsChan := make(chan data.Frames, len(measurements))
+
+	for i := range measurements {
+		measurement := measurements[i]
+		errGroup.Go(func() error {
+			result, err := ds.API.GetTagValues(ctx, measurement.UUID.String(), key)
+			if err != nil {
+				return err
+			}
+			resultsChan <- result
+
+			return nil
+		})
+	}
+
+	if err := errGroup.Wait(); err != nil {
+		return nil, err
+	}
+	close(resultsChan)
+
+	for result := range resultsChan {
+		frames = mergeFrames(frames, result)
+	}
+
+	return getStringSetFromFrames(frames, "value"), nil
+}
+
+func (ds *HistorianDataSource) handleGetHistorianInfo(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetInfo(req.Context())
 }
 
-func (ds *HistorianDataSource) handleEventPropertyValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	eventTypePropertyUUID := req.PathValue("uuid")
 	if eventTypePropertyUUID == "" {
 		return nil, errors.New("uuid is required")
