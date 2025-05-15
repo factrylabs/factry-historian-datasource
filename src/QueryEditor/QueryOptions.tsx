@@ -252,24 +252,23 @@ export const QueryOptions = (props: Props): JSX.Element => {
                 </InlineField>
               )}
             </HorizontalGroup>
-            {props.state.Aggregation?.Fill && (
-              <HorizontalGroup>
-                <InlineField>
-                  <Checkbox
-                    label="Fill empty initial intervals"
-                    value={props.state.FillInitialEmptyValues}
-                    onChange={onChangeFillInitialEmptyValues}
-                  />
-                </InlineField>
-                <InlineField>
-                  <Checkbox
-                    label="Include last known point"
-                    value={props.state.IncludeLastKnownPoint}
-                    onChange={onChangeIncludeLastKnownPoint}
-                  />
-                </InlineField>
-              </HorizontalGroup>
-            )}
+
+            <HorizontalGroup>
+              <InlineField>
+                <Checkbox
+                  label="Fill empty initial intervals"
+                  value={props.state.FillInitialEmptyValues}
+                  onChange={onChangeFillInitialEmptyValues}
+                />
+              </InlineField>
+              <InlineField>
+                <Checkbox
+                  label="Include last known point"
+                  value={props.state.IncludeLastKnownPoint}
+                  onChange={onChangeIncludeLastKnownPoint}
+                />
+              </InlineField>
+            </HorizontalGroup>
           </VerticalGroup>
         </InlineField>
       </InlineFieldRow>
