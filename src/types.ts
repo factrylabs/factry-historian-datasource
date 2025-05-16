@@ -130,6 +130,7 @@ export interface EventQuery {
   Properties?: string[]
   PropertyFilter: EventPropertyFilter[]
   QueryAssetProperties: boolean
+  OverrideAssets: string[]
   AssetProperties?: string[]
   Options?: MeasurementQueryOptions
   IncludeParentInfo?: boolean

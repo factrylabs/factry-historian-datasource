@@ -41,6 +41,7 @@ export interface Props {
   hideTagFilter?: boolean
   hideAdvancedOptions?: boolean
   hideDatatypeFilter?: boolean
+  aggregationRequired?: boolean
   templateVariables: Array<SelectableValue<string>>
   historianVersion: string
   getTagKeyOptions?: () => Promise<string[]>
@@ -211,7 +212,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
         <InlineField
           label="Aggregation"
           labelWidth={labelWidth}
-          tooltip="Specify an aggregation, leave empty to query raw data"
+          tooltip={`Specify an aggregation${props.aggregationRequired ? '' : ', leave empty to query raw data'}`}
         >
           <VerticalGroup spacing="xs">
             <HorizontalGroup spacing="xs">
@@ -219,7 +220,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
                 <Select
                   value={props.state.Aggregation?.Name}
                   placeholder="select an aggregation"
-                  isClearable
+                  isClearable={!props.aggregationRequired}
                   options={getAggregationOptions(props.datatypes, props.state)}
                   onChange={onAggregationChange}
                   width={fieldWidth}
