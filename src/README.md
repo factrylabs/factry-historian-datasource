@@ -1,12 +1,20 @@
 # Factry Historian Datasource
 
-[Grafana](https://grafana.com) datasource for [Factry Historian](https://factry.io).
+The Factry Historian datasource plugin for [Grafana](https://grafana.com) allows you to seamlessly visualize time-series and event data collected and stored by [Factry Historian](https://www.factry.io/historian). Connect your Historian instance and start building dashboards with your industrial data in minutes.
+
+> ⚡ New to Factry Historian?
+If you don’t have Factry Historian running yet, no problem! You can quickly trial the software using a [ready-to-run docker-compose setup](https://github.com/factrylabs/historian). It spins up a local Historian instance with a 2-hour runtime limit, perfect for testing the Grafana datasource and exploring your data without installing anything permanently.
 
 ⚠️ *Warning:* Before upgrading this datasource, make sure to read the [release notes](https://docs.factry.cloud/docs/grafana-datasource/latest/1_release_notes) to understand any breaking changes or required migration steps.
 
-## Introduction
+## Features
 
-Empower anyone to analyze industrial process and event data with Grafana. The Grafana Data Source for Factry Historian makes it easy for users to browse assets, trend time-series and event data such as batches or shifts – with zero technical skills required.
+- Query historical data using the asset tree defined in Factry Historian
+- Query historical data using measurements from Factry Historian
+- Autoload units of Measurement, Y-axis scaling and HI/LO boundaries
+- Query Events from Factry Historian (e.g. batches, CIP cycles)
+- Annotate trends with Event data from Factry Historian
+- Use assets, measurements and events from Factry Historian as variables to build dynamic dashboards
 
 ## Typical use cases
 
@@ -15,36 +23,39 @@ Empower anyone to analyze industrial process and event data with Grafana. The Gr
 - Overlaying of events (e.g. golden batch analysis)
 - Ad-hoc overlaying of time-series data on top of events
 
-## Features
+## Getting Started
 
-- Query historical data using the asset tree defined in Factry Historian
-- Query historical data using measurements from Factry Historian
-- Autoload Units of Measurement, Y-axis scaling and HI/LO boundaries
-- Query Events from Factry Historian (e.g. batches, CIP cycles)
-- Annotate trends with Event data from Factry Historian
-- Use assets, measurements and events from Factry Historian as variables to build dynamic dashboards
+### 1. Install Factry Historian
+If you don't have a licensed version of Factry Historian, you can try it for yourself with a trial. Go to https://github.com/factrylabs/historian to download your copy and run it locally.
 
-## Installation
+### 2. Install the Factry Historian datasource plugin
 
-> A full step-by-step guide can be found in the ['Installing Factry Historian Datasource' Tutorial](https://docs.factry.cloud/docs/historian/latest/13_tutorials/installing-factry-historian-datasource/#adding-a-connection).
+Install the datasource in Grafana by navigating to `Home > Administration > Plugins and data > Plugins` and searching for "Factry" there.
 
-Install using the grafana-cli or by cloning the repository directly into the Grafana plugins directory.
+Alternatively, you can install it using the grafana-cli or by cloning the repository directly into the Grafana plugins directory.
 
 ```bash
 grafana-cli plugins install factry-historian-datasource
 ```
 
-### Configuration
+### 3. Configure the datasource
 
-Create a new instance of the data source from the Grafana Data Sources administration page. And configure the necessary settings.
+Create a new instance of the data source from the Grafana Data Sources administration page and configure the necessary settings.
 
 ![Datasource_configuration](https://raw.githubusercontent.com/factrylabs/factry-historian-datasource/main/src/img/datasource_configuration.png)
 
-- URL: The URL of the Factry Historian API.
-- Token: The API token to authenticate with the Factry Historian API.
-- Organization: The UUID of the organization to query data from.
-- Default tab: The default tab to show when opening the query editor.
+- URL: The URL of the Factry Historian API (e.g. http://localhost:8000 or http://historian:8000 when running in Docker)
+- Token: The API token to authenticate with the Factry Historian API
+- Organization: The UUID of the organization to query data from
+- Default tab: The default tab to show when opening the query editor
+
+> A full step-by-step guide can be found in the ['Installing Factry Historian Datasource' Tutorial](https://docs.factry.cloud/docs/historian/latest/13_tutorials/installing-factry-historian-datasource/#adding-a-connection).
 
 ## Documentation
 
 Full documentation can be found at the Factry documentation site: [https://docs.factry.cloud/docs/grafana-datasource](https://docs.factry.cloud/docs/grafana-datasource/latest)
+
+## Questions?
+
+For help, visit:
+**Factry Community**  https://www.reddit.com/r/Factry/
