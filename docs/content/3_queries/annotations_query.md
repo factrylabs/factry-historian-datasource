@@ -56,8 +56,6 @@ If enabled, you can query asset properties on the selected asset(s), like you wo
 
 #### Asset property selection
 
-TODO why does it allow custom values?
-
 All the unique asset properties for the selected asset(s) will be available, to select them:
 
 - Select the desired asset properties from the dropdown menu
