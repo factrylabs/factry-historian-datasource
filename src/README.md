@@ -5,7 +5,7 @@ The Factry Historian datasource plugin for [Grafana](https://grafana.com) allows
 > ⚡ New to Factry Historian?
 If you don’t have Factry Historian running yet, no problem! You can quickly trial the software using a [ready-to-run docker-compose setup](https://github.com/factrylabs/historian). It spins up a local Historian instance with a 2-hour runtime limit, perfect for testing the Grafana datasource and exploring your data without installing anything permanently.
 
-⚠️ *Warning:* Before upgrading this datasource, make sure to read the [release notes](https://docs.factry.cloud/docs/grafana-datasource/latest/1_release_notes) to understand any breaking changes or required migration steps.
+⚠️ *Warning:* Before upgrading this datasource, make sure to read the [release notes](https://docs.factry.cloud/docs/grafana-datasource/latest/1_release_notes) to understand any breaking changes or required migration steps. For every new release we will support at least the two latest major versions of Grafana.
 
 ## Features
 
