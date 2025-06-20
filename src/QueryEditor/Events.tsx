@@ -185,11 +185,15 @@ export const Events = (props: Props): JSX.Element => {
                 seriesLimit={props.seriesLimit}
                 queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
                 selectedAssetProperties={props.query.AssetProperties ?? []}
+<<<<<<< Updated upstream
                 overrideAssets={props.query.OverrideAssets ?? []}
                 selectedAssets={getSelectedAssets(
                   selectedAsset(props.query.Assets, props.query.OverrideAssets),
                   assets
                 )}
+=======
+                selectedAssets={getSelectedAssets(props.query.Assets?.length ? props.query.Assets[0] : '', assets)}
+>>>>>>> Stashed changes
                 templateVariables={templateVariables}
                 tags={tagsToQueryTags(props.query.Options?.Tags)}
                 queryType={props.query.Type}
