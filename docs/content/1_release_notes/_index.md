@@ -21,11 +21,12 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
-## v2.4.0
+## v2.3.0
 
 ### Changes
 
 - Changed minimum Grafana version to 10.4.0
+- Added support for time weighted average aggregation for historian version v7.3.0 and later.
 - If no asset properties are selected in the assets query editor or in the events query editor, the query will now return data for all asset properties instead of no asset properties
 - Changed default unit for event duration column to use `dtdhms` format
 - Refresh data from Factry Historian when opening a selection field instead of only on dashboard load
@@ -52,15 +53,6 @@ This is the compatibility matrix for version listed on this page. If you have do
 - Don't show an error if the query returns no results
 - Fixed UoM not being set for asset properties in event queries
 - Fixed the use of dashboard variables in event property values variable queries
-
-## v2.3.0
-
-### Changes
-
-- Added support for time weighted average aggregation for historian version v7.3.0 and later.
-
-### Bug Fixes
-
 - Fixed a potential panicy race condition in the query handler that could be triggered by executing multiple queries.
 
 ## v2.2.0
