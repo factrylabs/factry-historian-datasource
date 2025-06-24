@@ -4,10 +4,34 @@
 
 ### Changes
 
+- Changed minimum Grafana version to 10.4.0
 - Added support for time weighted average aggregation for historian version v7.3.0 and later.
+- If no asset properties are selected in the assets query editor or in the events query editor, the query will now return data for all asset properties instead of no asset properties
+- Changed default unit for event duration column to use `dtdhms` format
+- Refresh data from Factry Historian when opening a selection field instead of only on dashboard load
+- Added keyword and datatype filter for asset property variable query editor
+- Debounce keyword searches in variable query editors to reduce query load
+- Show asset path in asset property variable query editor to help distinguish between properties on assets with the same name but different paths
+- Added a configurable limit to the events query editor to limit the amount of events returned, default is 1000, 0 means no limit
+- Allow to select which parent event properties to include in the result and allow to filter on them
+- Added event duration filter to the event query editor, also works with parent events
+- Allow use of dashboard variables in measurement regex queries
+- Moved settings related to aggregations and grouped them together
+- Added filtering on datatypes for measurement, asset property and event type property queries
+- Added an `Override time range` option to the event query editor
+- Enabled support for sql expressions
+- Filter out selected event types and asset properties when changing the selected assets
+- Add the option to override assets to select asset properties on in the event query editor
 
-### Bug Fixes
+### Bug fixes
 
+- Fixed multi value filter for the event property values query
+- Updating the selected databases in a measurement query will now correctly update the available measurements
+- Fixed the display name for raw queries
+- Fixed an issue when selecting parent event properties in the event query editor
+- Don't show an error if the query returns no results
+- Fixed UoM not being set for asset properties in event queries
+- Fixed the use of dashboard variables in event property values variable queries
 - Fixed a potential panicy race condition in the query handler that could be triggered by executing multiple queries.
 
 ## v2.2.0
