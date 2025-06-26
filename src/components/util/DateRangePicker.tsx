@@ -1,33 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { DateTimePicker, Button, Input, InlineFieldRow, InlineField } from '@grafana/ui'
-import { DateTime, dateTime, TIME_FORMAT } from '@grafana/data'
+import { DateTimePicker, Button, Input, InlineFieldRow, InlineField, useStyles2 } from '@grafana/ui'
+import { DateTime, dateTime, GrafanaTheme2, TIME_FORMAT } from '@grafana/data'
 import { TimeRange, labelWidth, } from 'types'
-import { css, Global } from '@emotion/react'
 import { DataSource } from 'datasource'
+import { css } from '@emotion/css'
 
 // Using grafana date picker but faking our own input since the 9+ version doesn't accept empty values.
 // @todo Use the new date picker when we set grafana v11.4 as the mimimum version
-const globalStyles = css`
-  .date-range-field {
-    display: flex;
-    flex-direction: row;
-  }
-  .date-range-field div[data-testid="date-time-picker"] {
-    width: 2.5rem;
-  }
-  .date-range-field div[data-testid="date-time-picker"] div[data-testid="input-wrapper"] div:first-child {
-    visibility: hidden;
-    width: 0;
-    margin-left: -1px;
-  }
-  .date-range-picker label {
-    display: block;
-    text-align: right;
-  }
-  .date-range-picker button {
-    height: 32px;
-  }
-`
 
 interface Props {
   datasource: DataSource
@@ -40,6 +19,7 @@ export const DateRangePicker: React.FC<Props> = ({ datasource, dateTimeRange, ov
   const [currentRange, setCurrentRange] = useState<TimeRange>(dateTimeRange)
   const [fromInput, setFromInput] = useState(currentRange.from ?? '')
   const [toInput, setToInput] = useState(currentRange.to ?? '')
+  const styles = useStyles2(getStyles)
 
   useEffect(() => {
     if (dateTimeRange.from) {
@@ -133,11 +113,10 @@ export const DateRangePicker: React.FC<Props> = ({ datasource, dateTimeRange, ov
 
   return (
     <>
-      <Global styles={globalStyles} />
-      <InlineFieldRow className="date-range-picker">
+      <InlineFieldRow className={styles.dateRangePicker}>
         <InlineField label="From" labelWidth={labelWidth}>
-          <div className="date-range-picker">
-            <div className="date-range-field">
+          <div className={styles.dateRangePicker}>
+            <div className={styles.dateRangeField}>
               <Input
                 value={fromInput}
                 disabled={!override}
@@ -161,11 +140,11 @@ export const DateRangePicker: React.FC<Props> = ({ datasource, dateTimeRange, ov
           </div>
         </InlineField>
       </InlineFieldRow>
-      <InlineFieldRow className="date-range-picker">
+      <InlineFieldRow className={styles.dateRangePicker}>
         <InlineField label="To" labelWidth={labelWidth}>
-          <div className="date-range-picker">
+          <div className={styles.dateRangePicker}>
 
-            <div className="date-range-field">
+            <div className={styles.dateRangeField}>
               <Input
                 value={toInput}
                 disabled={!override}
@@ -191,3 +170,27 @@ export const DateRangePicker: React.FC<Props> = ({ datasource, dateTimeRange, ov
     </>
   )
 }
+
+const getStyles = (_: GrafanaTheme2) => ({
+  dateRangeField: css({
+    display: 'flex',
+    flexDirection: 'row',
+    'div[data-testid="date-time-picker"]': {
+      width: '2.5rem',
+    },
+    'div[data-testid="date-time-picker"] div[data-testid="input-wrapper"] div:first-child': {
+      visibility: 'hidden',
+      width: 0,
+      marginLeft: '-1px',
+    },
+  }),
+  dateRangePicker: css({
+    'label': {
+      display: 'block',
+      textAlign: 'right',
+    },
+    'button': {
+      height: '32px',
+    },
+  }),
+});
