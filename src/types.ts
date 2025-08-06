@@ -194,6 +194,14 @@ export interface EventTypePropertiesValuesFilter extends ResourceFilter {
   To?: string
 }
 
+/**
+ * @deprecated This interface represents an outdated filter format.
+ * Use EventTypePropertiesValuesFilter instead.
+ */
+export interface OldEventTypePropertiesValuesFilter extends EventTypePropertiesValuesFilter {
+  EventTypePropertyUUID?: string
+}
+
 export interface EventPropertyFilter extends ResourceFilter {
   Property: string
   Datatype: string
