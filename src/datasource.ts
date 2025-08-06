@@ -444,9 +444,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         params['PropertyFilter[' + i + '].Parent'] = filter.EventFilter.PropertyFilter[i].Parent
       }
     }
-    if (!filter.EventFilter.Properties) {
+    if (!filter.EventFilter.Properties || filter.EventFilter.Properties.length === 0) {
       return Promise.resolve([])
     }
+
     return this.getResource(`event-property-values/${filter.EventFilter.Properties[0]}`, params)
   }
 }

@@ -17,6 +17,7 @@ import {
   EventTypeProperty,
   Measurement,
   MeasurementFilter,
+  OldEventTypePropertiesValuesFilter,
   Pagination,
   PropertyDatatype,
   TimeseriesDatabase,
@@ -24,6 +25,7 @@ import {
   VariableQuery,
   VariableQueryType,
 } from 'types'
+import { migrateEventTypePropertiesValuesFilter } from 'util/migration'
 
 // https://github.com/storpool/grafana/blob/1f9efade078316fe502c72dba6156860d69928d4/public/app/plugins/datasource/grafana-pyroscope-datasource/VariableSupport.ts
 
@@ -191,12 +193,19 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case VariableQueryType.PropertyValuesQuery: {
-        const filter = {
-          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypePropertiesValuesFilter | undefined),
-          ScopedVars: request.scopedVars,
-        }
-        if (!filter) {
+        const rawFilter = JSON.parse(JSON.stringify(request.targets[0].filter)) as
+          | EventTypePropertiesValuesFilter
+          | OldEventTypePropertiesValuesFilter
+          | undefined
+
+        const migratedFilter = migrateEventTypePropertiesValuesFilter(rawFilter)
+        if (!migratedFilter) {
           return of({ data: [] })
+        }
+
+        const filter: EventTypePropertiesValuesFilter = {
+          ...migratedFilter,
+          ScopedVars: request.scopedVars,
         }
 
         if (filter.EventFilter?.Assets) {
