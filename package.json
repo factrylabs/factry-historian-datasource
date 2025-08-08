@@ -55,7 +55,8 @@
     "webpack-livereload-plugin": "^3.0.2"
   },
   "resolutions": {
-    "rxjs": "7.3.0"
+    "rxjs": "7.3.0",
+    "form-data": "4.0.4"
   },
   "engines": {
     "node": ">=14"
@@ -72,5 +73,11 @@
     "react-dom": "^17.0.2",
     "tslib": "2.5.3"
   },
-  "packageManager": "pnpm@8.6.2"
+  "packageManager": "pnpm@8.6.2",
+  "pnpm": {
+    "overrides": {
+      "form-data": "4.0.4",
+      "rxjs": "7.3.0"
+    }
+  }
 }
