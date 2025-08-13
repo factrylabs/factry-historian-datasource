@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.3.1
+
+### Bug fixes
+
+- Fixed dashboard variables of type Event Property Values not being migrated correctly and breaking dashboards
+
 ## v2.3.0
 
 ### Changes
