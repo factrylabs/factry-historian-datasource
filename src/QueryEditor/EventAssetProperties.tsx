@@ -6,7 +6,14 @@ import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { QueryTag } from 'components/TagsSection/types'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
-import { Asset, AssetMeasurementQuery, AssetProperty, MeasurementQueryOptions, labelWidth } from 'types'
+import {
+  Asset,
+  AssetMeasurementQuery,
+  AssetProperty,
+  AssetPropertySelectionMethod,
+  MeasurementQueryOptions,
+  labelWidth,
+} from 'types'
 import { getChildAssets, valueFiltersToQueryTags } from './util'
 import { isFeatureEnabled } from 'util/semver'
 import Cascader, { CascaderOption } from 'components/Cascader/Cascader'
@@ -17,6 +24,7 @@ export interface Props {
   selectedAssets: Asset[]
   overrideAssets: string[]
   selectedAssetProperties: string[]
+  assetPropertySelectionMethod: AssetPropertySelectionMethod
   queryType: string
   queryOptions: MeasurementQueryOptions
   tags: QueryTag[]
@@ -67,6 +75,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
       AssetProperties: properties,
       Assets: [asset],
       Options: props.queryOptions,
+      AssetPropertySelectionMethod: props.assetPropertySelectionMethod,
     })
   }
 
@@ -76,6 +85,16 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
       AssetProperties: selectedAssetProperties,
       Assets: props.overrideAssets,
       Options: props.queryOptions,
+      AssetPropertySelectionMethod: props.assetPropertySelectionMethod,
+    })
+  }
+
+  const onChangeAssetPropertySelectionMethod = (method: AssetPropertySelectionMethod): void => {
+    props.onChangeAssetMeasurementQuery({
+      AssetProperties: props.selectedAssetProperties,
+      Assets: props.overrideAssets,
+      Options: props.queryOptions,
+      AssetPropertySelectionMethod: method,
     })
   }
 
@@ -84,6 +103,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
       AssetProperties: props.selectedAssetProperties,
       Assets: props.overrideAssets,
       Options: options,
+      AssetPropertySelectionMethod: props.assetPropertySelectionMethod,
     })
   }
 
@@ -163,18 +183,16 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
               />
             </InlineField>
           </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField label="Asset properties" labelWidth={labelWidth} grow>
-              <AssetProperties
-                assetProperties={assetProperties}
-                initialValue={props.selectedAssetProperties}
-                selectedAssets={props.selectedAssets}
-                templateVariables={props.templateVariables}
-                onChange={onChangeAssetProperties}
-                onOpenMenu={props.onOpenMenu}
-              />
-            </InlineField>
-          </InlineFieldRow>
+          <AssetProperties
+            assetProperties={assetProperties}
+            assetPropertySelectionMethod={props.assetPropertySelectionMethod}
+            initialValue={props.selectedAssetProperties}
+            selectedAssets={props.selectedAssets}
+            templateVariables={props.templateVariables}
+            onChange={onChangeAssetProperties}
+            onChangePropertySelectionMethod={onChangeAssetPropertySelectionMethod}
+            onOpenMenu={props.onOpenMenu}
+          />
           <QueryOptions
             state={props.queryOptions}
             seriesLimit={props.seriesLimit}
