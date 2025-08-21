@@ -1,6 +1,6 @@
 {
   "name": "factry-historian-datasource",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "A datasource plugin for Factry Historian",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
@@ -69,6 +69,7 @@
     "@grafana/schema": "~9.4.17",
     "@grafana/ui": "~9.4.17",
     "debounce-promise": "^3.1.2",
+    "downshift": "^9.0.10",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "tslib": "2.5.3"
