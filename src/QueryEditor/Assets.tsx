@@ -8,6 +8,7 @@ import { QueryOptions } from './QueryOptions'
 import { getChildAssets, matchedAssets, tagsToQueryTags, valueFiltersToQueryTags } from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
 import { isFeatureEnabled } from 'util/semver'
+import { isUUID } from 'util/util'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -47,10 +48,24 @@ export const Assets = (props: Props): JSX.Element => {
   )
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
-    const assetProperties = items.map((e) => e.value ?? '')
+    let selectedAssetProperties: string[] = []
+    const assets = props.query.Assets ?? []
+    if (assets.length === 1 && isUUID(assets[0])) {
+      // Save by UUID if only one asset and it's a UUID
+      selectedAssetProperties = items.map((e) => {
+        const ap = assetProperties.find((ap) => ap.UUID === e.value)
+        return ap ? ap.UUID : e.value ?? ''
+      })
+    } else {
+      // Save by name otherwise
+      selectedAssetProperties = items.map((e) => {
+        const ap = assetProperties.find((ap) => ap.UUID === e.value)
+        return ap ? ap.Name : e.value ?? ''
+      })
+    }
     props.onChangeAssetMeasurementQuery({
       ...props.query,
-      AssetProperties: assetProperties,
+      AssetProperties: selectedAssetProperties,
     })
   }
 
@@ -59,7 +74,11 @@ export const Assets = (props: Props): JSX.Element => {
     if (property) {
       const assetProperty = assetProperties.find((e) => e.UUID === property)
       if (assetProperty) {
-        properties = [assetProperty.Name]
+        if (isUUID(asset)) {
+          properties = [assetProperty.UUID]
+        } else {
+          properties = [assetProperty.Name]
+        }
       }
     }
 
