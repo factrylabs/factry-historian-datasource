@@ -147,7 +147,7 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 	}
 
 assetLoop:
-	for assetUUID := range maps.Keys(assets) {
+	for assetUUID := range assets {
 		for propertyName, assetProperty := range propertiesByAssetUUIDAndID[assetUUID] {
 			if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, propertyName) {
 				measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}

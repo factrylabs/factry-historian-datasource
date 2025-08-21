@@ -2,6 +2,7 @@ import React from 'react'
 import { MultiSelect } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { Asset, AssetProperty } from 'types'
+import { isUUID } from 'util/util'
 
 export interface Props {
   selectedAssets: Asset[]
@@ -32,7 +33,13 @@ export const AssetProperties = (props: Props): JSX.Element => {
   return (
     <>
       <MultiSelect
-        value={props.initialValue}
+        value={props.initialValue.map((e) => {
+          if (isUUID(e)) {
+            const property = props.assetProperties.find((ap) => ap.UUID === e)
+            return property?.Name || e
+          }
+          return e
+        })}
         options={availableProperties(props.selectedAssets)}
         onChange={onSelectProperties}
         onOpenMenu={props.onOpenMenu}
