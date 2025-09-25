@@ -5,15 +5,7 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
-import {
-  Asset,
-  AssetMeasurementQuery,
-  AssetPropertySelectionMethod,
-  EventQuery,
-  labelWidth,
-  PropertyType,
-  TimeRange,
-} from 'types'
+import { Asset, AssetMeasurementQuery, EventQuery, labelWidth, PropertyType, TimeRange } from 'types'
 import { EventFilter } from './EventFilter'
 import { DateRangePicker } from 'components/util/DateRangePicker'
 
@@ -104,7 +96,6 @@ export const Events = (props: Props): JSX.Element => {
       OverrideAssets: query.Assets,
       AssetProperties: query.AssetProperties,
       Options: query.Options,
-      AssetPropertySelectionMethod: query.AssetPropertySelectionMethod,
     }
     props.onChangeEventQuery(updateQuery)
   }
@@ -194,9 +185,6 @@ export const Events = (props: Props): JSX.Element => {
                 seriesLimit={props.seriesLimit}
                 queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
                 selectedAssetProperties={props.query.AssetProperties ?? []}
-                assetPropertySelectionMethod={
-                  props.query.AssetPropertySelectionMethod ?? AssetPropertySelectionMethod.PerAsset
-                }
                 overrideAssets={props.query.OverrideAssets ?? []}
                 selectedAssets={getSelectedAssets(
                   selectedAsset(props.query.Assets, props.query.OverrideAssets),

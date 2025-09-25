@@ -9,7 +9,6 @@ import { AssetFilterRow } from './AssetFilter'
 import { AssetPropertyFilterRow } from './AssetPropertyFilter'
 import { DatabaseFilterRow } from './DatabaseFilter'
 import {
-  AssetPropertySelectionMethod,
   fieldWidth,
   HistorianDataSourceOptions,
   HistorianInfo,
@@ -143,7 +142,6 @@ export function VariableQueryEditor(
                       Properties: [],
                       PropertyFilter: [],
                       QueryAssetProperties: false,
-                      AssetPropertySelectionMethod: AssetPropertySelectionMethod.PerAsset,
                       OverrideAssets: [],
                       OverrideTimeRange: false,
                       TimeRange: { from: '', to: '' },

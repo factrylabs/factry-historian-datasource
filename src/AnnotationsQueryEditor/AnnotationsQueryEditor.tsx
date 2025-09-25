@@ -3,7 +3,7 @@ import { QueryEditorProps } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Events } from 'QueryEditor/Events'
 import { DataSource } from 'datasource'
-import { HistorianDataSourceOptions, Query, EventQuery, PropertyType, AssetPropertySelectionMethod } from 'types'
+import { HistorianDataSourceOptions, Query, EventQuery, PropertyType } from 'types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
 
@@ -35,7 +35,6 @@ export class AnnotationsQueryEditor extends Component<Props> {
         EventTypes: [],
         Properties: [],
         QueryAssetProperties: false,
-        AssetPropertySelectionMethod: AssetPropertySelectionMethod.PerAsset,
         OverrideAssets: [],
         OverrideTimeRange: false,
         TimeRange: { from: '', to: '' },

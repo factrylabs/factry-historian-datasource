@@ -6,16 +6,8 @@ import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
 import { getChildAssets, matchedAssets, tagsToQueryTags, valueFiltersToQueryTags } from './util'
-import {
-  Asset,
-  AssetMeasurementQuery,
-  AssetProperty,
-  AssetPropertySelectionMethod,
-  labelWidth,
-  MeasurementQueryOptions,
-} from 'types'
+import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
 import { isFeatureEnabled } from 'util/semver'
-import { isUUID } from 'util/util'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -55,28 +47,10 @@ export const Assets = (props: Props): JSX.Element => {
   )
 
   const onSelectProperties = (items: Array<SelectableValue<string>>): void => {
-    let selectedAssetProperties: string[] = []
-    if (props.query.AssetPropertySelectionMethod === AssetPropertySelectionMethod.PerAsset) {
-      selectedAssetProperties = items.map((e) => {
-        const ap = assetProperties.find((ap) => ap.UUID === e.value)
-        return ap ? ap.UUID : e.value ?? ''
-      })
-    } else {
-      selectedAssetProperties = items.map((e) => {
-        const ap = assetProperties.find((ap) => ap.UUID === e.value)
-        return ap ? ap.Name : e.value ?? ''
-      })
-    }
+    const assetProperties = items.map((e) => e.value ?? '')
     props.onChangeAssetMeasurementQuery({
       ...props.query,
-      AssetProperties: selectedAssetProperties,
-    })
-  }
-
-  const onChangeAssetPropertySelectionMethod = (method: AssetPropertySelectionMethod): void => {
-    props.onChangeAssetMeasurementQuery({
-      ...props.query,
-      AssetPropertySelectionMethod: method,
+      AssetProperties: assetProperties,
     })
   }
 
@@ -85,11 +59,7 @@ export const Assets = (props: Props): JSX.Element => {
     if (property) {
       const assetProperty = assetProperties.find((e) => e.UUID === property)
       if (assetProperty) {
-        if (isUUID(asset)) {
-          properties = [assetProperty.UUID]
-        } else {
-          properties = [assetProperty.Name]
-        }
+        properties = [assetProperty.Name]
       }
     }
 
@@ -183,21 +153,26 @@ export const Assets = (props: Props): JSX.Element => {
               />
             </InlineField>
           </InlineFieldRow>
-          <AssetProperties
-            assetProperties={assetProperties}
-            initialValue={props.query.AssetProperties ?? []}
-            assetPropertySelectionMethod={
-              props.query.AssetPropertySelectionMethod ?? AssetPropertySelectionMethod.PerAsset
-            }
-            selectedAssets={matchedAssets(
-              props.datasource.multiSelectReplace(props.query.Assets?.length ? props.query.Assets[0] : ''),
-              assets
-            )}
-            templateVariables={props.templateVariables}
-            onChange={onSelectProperties}
-            onChangePropertySelectionMethod={onChangeAssetPropertySelectionMethod}
-            onOpenMenu={fetchAssetsAndProperties}
-          />
+          <InlineFieldRow>
+            <InlineField
+              label="Properties"
+              grow
+              labelWidth={labelWidth}
+              tooltip="Specify one or more asset properties to work with"
+            >
+              <AssetProperties
+                assetProperties={assetProperties}
+                initialValue={props.query.AssetProperties ?? []}
+                selectedAssets={matchedAssets(
+                  props.datasource.multiSelectReplace(props.query.Assets?.length ? props.query.Assets[0] : ''),
+                  assets
+                )}
+                templateVariables={props.templateVariables}
+                onChange={onSelectProperties}
+                onOpenMenu={fetchAssetsAndProperties}
+              />
+            </InlineField>
+          </InlineFieldRow>
           <QueryOptions
             state={props.query.Options}
             seriesLimit={props.seriesLimit}
