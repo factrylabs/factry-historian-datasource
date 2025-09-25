@@ -116,15 +116,9 @@ export interface MeasurementQuery {
   Options: MeasurementQueryOptions
 }
 
-export enum AssetPropertySelectionMethod {
-  All = 'all',
-  PerAsset = 'perAsset',
-}
-
 export interface AssetMeasurementQuery {
   Assets: string[]
   AssetProperties: string[]
-  AssetPropertySelectionMethod: AssetPropertySelectionMethod
   Options: MeasurementQueryOptions
 }
 
@@ -138,7 +132,6 @@ export interface EventQuery {
   QueryAssetProperties: boolean
   OverrideAssets: string[]
   AssetProperties?: string[]
-  AssetPropertySelectionMethod: AssetPropertySelectionMethod
   Options?: MeasurementQueryOptions
   IncludeParentInfo?: boolean
   Limit?: number
