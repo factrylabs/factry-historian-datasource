@@ -10,6 +10,7 @@ import { Asset, AssetMeasurementQuery, AssetProperty, MeasurementQueryOptions, l
 import { getChildAssets, valueFiltersToQueryTags } from './util'
 import { isFeatureEnabled } from 'util/semver'
 import Cascader, { CascaderOption } from 'components/Cascader/Cascader'
+import { isRegex, isUUID } from 'util/util'
 
 export interface Props {
   datasource: DataSource
@@ -55,6 +56,19 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
   )
 
   const onAssetChange = (asset: string, property?: string): void => {
+    if (!isUUID(asset) && !isRegex(asset) && !props.templateVariables.some((e) => e.value === asset)) {
+      if (!props.overrideAssets || props.overrideAssets.length === 0) {
+        return
+      }
+
+      props.onChangeAssetMeasurementQuery({
+        AssetProperties: [],
+        Assets: [],
+        Options: props.queryOptions,
+      })
+      return
+    }
+
     let properties: string[] = []
     if (property) {
       const assetProperty = assetProperties.find((e) => e.UUID === property)

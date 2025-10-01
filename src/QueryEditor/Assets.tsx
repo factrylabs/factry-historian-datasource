@@ -8,6 +8,7 @@ import { QueryOptions } from './QueryOptions'
 import { getChildAssets, matchedAssets, tagsToQueryTags, valueFiltersToQueryTags } from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
 import { isFeatureEnabled } from 'util/semver'
+import { isRegex, isUUID } from 'util/util'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -55,6 +56,19 @@ export const Assets = (props: Props): JSX.Element => {
   }
 
   const onAssetChange = (asset: string, property?: string): void => {
+    if (!isUUID(asset) && !isRegex(asset) && !props.templateVariables.some((e) => e.value === asset)) {
+      if (!props.query.Assets || props.query.Assets.length === 0) {
+        return
+      }
+
+      props.onChangeAssetMeasurementQuery({
+        ...props.query,
+        AssetProperties: [],
+        Assets: [],
+      })
+      return
+    }
+
     let properties: string[] = []
     if (property) {
       const assetProperty = assetProperties.find((e) => e.UUID === property)
