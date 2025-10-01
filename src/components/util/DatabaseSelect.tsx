@@ -4,6 +4,7 @@ import { SelectableValue } from '@grafana/data'
 import { AsyncMultiSelect } from '@grafana/ui'
 import { DataSource } from 'datasource'
 import { TimeseriesDatabaseFilter } from 'types'
+import { debouncePromise } from 'QueryEditor/util'
 
 export interface DatabaseSelectProps {
   datasource: DataSource
@@ -48,7 +49,7 @@ export function DatabaseSelect(props: DatabaseSelectProps) {
       placeholder="All databases"
       onChange={(value) => onDatabaseChange(value)}
       defaultOptions
-      loadOptions={loadDatabaseOptions}
+      loadOptions={debouncePromise(loadDatabaseOptions, 300)}
       value={props.selectedDatabases}
       width={props.width}
     />

@@ -12,7 +12,7 @@ import {
   VerticalGroup,
 } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { measurementToSelectableValue, useDebounce } from 'QueryEditor/util'
+import { debouncePromise, measurementToSelectableValue, useDebounce } from 'QueryEditor/util'
 import { Measurement, MeasurementFilter, MeasurementQuery, TimeseriesDatabase, labelWidth } from 'types'
 import { isRegex, isValidRegex } from 'util/util'
 
@@ -125,7 +125,10 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
                   <AsyncMultiSelect
                     value={getSelectedMeasurements(props.query, props.measurements)}
                     placeholder="select measurement"
-                    loadOptions={(query) => loadMeasurementOptions(query, props.selectedDatabases)}
+                    loadOptions={debouncePromise(
+                      (query: string) => loadMeasurementOptions(query, props.selectedDatabases),
+                      300
+                    )}
                     defaultOptions
                     onChange={onMeasurementChange}
                     onOpenMenu={props.onOpenMenu}
@@ -148,7 +151,7 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
                 show={regexError !== undefined}
                 interactive={false}
               >
-                <AutoSizeInput value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex}  />
+                <AutoSizeInput value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex} />
               </Tooltip>
             )}
             <Checkbox label="Use regular expression" value={props.query.IsRegex} onChange={onChangeIsRegex} />

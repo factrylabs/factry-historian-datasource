@@ -6,7 +6,7 @@ import { AssetFilter, AssetPropertyFilter, fieldWidth, HistorianInfo, labelWidth
 import { SelectableValue } from '@grafana/data'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 import { isFeatureEnabled } from 'util/semver'
-import { sortByLabel, useDebounce } from 'QueryEditor/util'
+import { debouncePromise, sortByLabel, useDebounce } from 'QueryEditor/util'
 
 export function AssetPropertyFilterRow(props: {
   datasource: DataSource
@@ -85,7 +85,7 @@ export function AssetPropertyFilterRow(props: {
             width={fieldWidth}
             onChange={(value) => onAssetsChange(value)}
             defaultOptions
-            loadOptions={loadAssetOptions}
+            loadOptions={debouncePromise(loadAssetOptions, 300)}
             value={selectedAssets}
           />
         </InlineField>

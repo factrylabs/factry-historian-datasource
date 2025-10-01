@@ -5,7 +5,7 @@ import { DataSource } from 'datasource'
 import { AssetFilter, fieldWidth, labelWidth } from 'types'
 import { SelectableValue } from '@grafana/data'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
-import { useDebounce } from 'QueryEditor/util'
+import { debouncePromise, useDebounce } from 'QueryEditor/util'
 
 export function AssetFilterRow(props: {
   datasource: DataSource
@@ -96,7 +96,7 @@ export function AssetFilterRow(props: {
             placeholder="Select parent asset(s)"
             onChange={(value) => onParentAssetsChange(value)}
             defaultOptions
-            loadOptions={loadAssetOptions}
+            loadOptions={debouncePromise(loadAssetOptions, 300)}
             value={parentAssets}
           />
         </InlineField>

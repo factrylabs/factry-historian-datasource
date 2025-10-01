@@ -12,7 +12,7 @@ import {
   fieldWidth,
   labelWidth,
 } from 'types'
-import { isSupportedPropertyType } from 'QueryEditor/util'
+import { debouncePromise, isSupportedPropertyType } from 'QueryEditor/util'
 import { isFeatureEnabled } from 'util/semver'
 
 const extraWidefieldWidth = fieldWidth + 10
@@ -81,7 +81,7 @@ export function EventTypePropertyFilterRow(props: {
             width={extraWidefieldWidth}
             onChange={(value) => onEventTypesChange(value)}
             defaultOptions
-            loadOptions={loadEventTypeOptions}
+            loadOptions={debouncePromise(loadEventTypeOptions, 300)}
             value={selectedEventTypes}
           />
         </InlineField>
