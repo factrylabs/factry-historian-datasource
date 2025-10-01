@@ -333,6 +333,49 @@ export const useDebounce = <T>(
   return [actualValue, setActualValue]
 }
 
+/**
+ * Creates a debounced version of a function that returns a promise.
+ * The debounced function delays invoking the original function until after `wait` milliseconds have elapsed
+ * since the last time the debounced function was called. If the debounced function is called again before
+ * the timeout, the previous timeout is cleared and a new one is set.
+ *
+ * All calls made during the debounce period will receive the same resolved value from the original function.
+ *
+ * @typeParam T - The type of the function to debounce. Must return a Promise.
+ * @param func - The asynchronous function to debounce.
+ * @param wait - The number of milliseconds to delay.
+ * @returns A debounced version of the input function that returns a promise resolving to the result of the original function.
+ */
+export const debouncePromise = <T extends (...args: any[]) => Promise<any>>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>>) => {
+  let timeout: NodeJS.Timeout
+  let resolveList: Array<{
+    resolve: (value: Awaited<ReturnType<T>>) => void
+    reject: (reason?: any) => void
+  }> = []
+
+  return (...args: Parameters<T>) =>
+    new Promise<Awaited<ReturnType<T>>>((resolve, reject) => {
+      if (timeout) {
+        clearTimeout(timeout)
+      }
+      resolveList.push({ resolve, reject })
+      timeout = setTimeout(() => {
+        func(...args)
+          .then((result) => {
+            resolveList.forEach(({ resolve }) => resolve(result))
+            resolveList = []
+          })
+          .catch((error) => {
+            resolveList.forEach(({ reject }) => reject(error))
+            resolveList = []
+          })
+      }, wait)
+    })
+}
+
 export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQuery {
   const measurementQuery = {
     ...query,
