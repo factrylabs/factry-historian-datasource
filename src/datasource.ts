@@ -304,6 +304,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       if (filter.Keyword && isRegex(filter.Keyword) && !isValidRegex(filter.Keyword)) {
         return []
       }
+      params = { ...filter }
     }
     return this.getResource('databases', params)
   }
