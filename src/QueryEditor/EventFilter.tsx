@@ -20,6 +20,7 @@ import {
 import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
 import { getChildAssets, isSupportedPropertyType, matchedAssets, propertyFilterToQueryTags } from './util'
 import { isFeatureEnabled } from 'util/semver'
+import { isRegex, isUUID } from 'util/util'
 
 export interface Props {
   query: EventQuery
@@ -137,6 +138,19 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const onAssetChange = (value: string): void => {
+    if (!isUUID(value) && !isRegex(value) && !props.datasource.containsTemplate(value)) {
+      if (!props.query.Assets || props.query.Assets.length === 0) {
+        return
+      }
+
+      props.onChangeQuery({
+        ...props.query,
+        Assets: [],
+        EventTypes: [],
+        Properties: [],
+      })
+      return
+    }
     const filteredEventTypes = filterEventTypes(props.query.EventTypes ?? [], value)
     const filteredProperties = filterProperties(
       props.query.Properties ?? [],
