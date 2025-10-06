@@ -119,13 +119,19 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
             eventQuery.Properties = eventQuery.Properties?.flatMap((e) =>
               this.multiSelectReplace(e, request.scopedVars)
             ).map((e) => e.replace('parent:', ''))
-            if (eventQuery.QueryAssetProperties && eventQuery.Options?.ValueFilters) {
+            if (eventQuery.QueryAssetProperties) {
               eventQuery.OverrideAssets = eventQuery.OverrideAssets?.filter((e) => e !== '').flatMap((e) =>
                 this.multiSelectReplace(e, request.scopedVars)
               )
-              eventQuery.Options.ValueFilters = eventQuery.Options.ValueFilters.filter(
-                (e) => e.Value !== 'enter a value'
+              eventQuery.AssetProperties = eventQuery.AssetProperties?.flatMap((e) =>
+                this.multiSelectReplace(e, request.scopedVars)
               )
+
+              if (eventQuery.Options?.ValueFilters) {
+                eventQuery.Options.ValueFilters = eventQuery.Options.ValueFilters.filter(
+                  (e) => e.Value !== 'enter a value'
+                )
+              }
             }
             eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, request.scopedVars)
 
