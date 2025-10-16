@@ -68,8 +68,8 @@ export const EventFilter = (props: Props): JSX.Element => {
     return matchedAssets(replacedAssets, assets)
   }
 
-  const availableEventTypes = (selected: string | undefined): Array<SelectableValue<string>> => {
-    const selectedAssets = getSelectedAssets(selected, assets)
+  const availableEventTypes = (selectedAsset: string | undefined): Array<SelectableValue<string>> => {
+    const selectedAssets = getSelectedAssets(selectedAsset, assets)
     return eventTypes
       .filter((e) =>
         eventConfigurations.some(
@@ -88,11 +88,18 @@ export const EventFilter = (props: Props): JSX.Element => {
       )
   }
 
-  const filterEventTypes = (eventTypes: string[], asset: string): string[] => {
+  const filterEventTypes = (selectedEventTypes: string[], asset: string): string[] => {
     const selectedAssets = getSelectedAssets(asset, assets)
-    return eventTypes.filter((et) =>
-      eventConfigurations.some((ec) => selectedAssets.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === et)
-    )
+    return selectedEventTypes.filter((et) => {
+      // if there is a templated event type selected, we don't filter any out
+      if (props.datasource.containsTemplate(et)) {
+        return true
+      }
+
+      return eventConfigurations.some(
+        (ec) => selectedAssets.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === et
+      )
+    })
   }
 
   const filterProperties = (properties: string[], eventTypes: string[], includeParent: boolean): string[] => {
@@ -239,6 +246,9 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const availableSimpleProperties = (eventTypeSelectors: string[], onlyParentProperties = false): string[] => {
+    if (eventTypeSelectors.some((et) => props.datasource.containsTemplate(et))) {
+      return [...new Set(eventTypeProperties.filter((e) => e.Type === PropertyType.Simple).map((e) => e.Name))]
+    }
     let selectedEventTypeUUIDs: string[] = []
     if (onlyParentProperties) {
       selectedEventTypeUUIDs = getSelectedParentEventTypes(eventTypeSelectors)
@@ -256,6 +266,19 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const availablePeriodicProperties = (eventTypeSelectors: string[]): string[] => {
+    if (eventTypeSelectors.some((et) => props.datasource.containsTemplate(et))) {
+      return [
+        ...new Set(
+          eventTypeProperties
+            .filter((e) =>
+              props.query.Type === PropertyType.Periodic
+                ? e.Type === PropertyType.PeriodicWithDimension || e.Type === PropertyType.Periodic
+                : e.Type === PropertyType.PeriodicWithDimension
+            )
+            .map((e) => e.Name)
+        ),
+      ]
+    }
     const selectedEventTypeUUIDs = getSelectedEventTypes(eventTypeSelectors)
     return [
       ...new Set(
