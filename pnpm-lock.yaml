@@ -7,6 +7,7 @@ settings:
 overrides:
   form-data: 4.0.4
   rxjs: 7.3.0
+  uplot: 1.6.31
 
 dependencies:
   '@emotion/css':
@@ -774,7 +775,7 @@ packages:
       rxjs: 7.3.0
       tinycolor2: 1.4.2
       tslib: 2.4.1
-      uplot: 1.6.24
+      uplot: 1.6.31
       xss: 1.0.14
     dev: false
 
@@ -941,7 +942,7 @@ packages:
       slate-react: 0.22.10(immutable@4.2.2)(react-dom@17.0.2)(react@17.0.2)(slate@0.47.9)
       tinycolor2: 1.4.2
       tslib: 2.4.1
-      uplot: 1.6.24
+      uplot: 1.6.31
       uuid: 9.0.0
     transitivePeerDependencies:
       - '@babel/core'
@@ -8717,8 +8718,8 @@ packages:
       escalade: 3.2.0
       picocolors: 1.1.1
 
-  /uplot@1.6.24:
-    resolution: {integrity: sha512-WpH2BsrFrqxkMu+4XBvc0eCDsRBhzoq9crttYeSI0bfxpzR5YoSVzZXOKFVWcVC7sp/aDXrdDPbDZGCtck2PVg==}
+  /uplot@1.6.31:
+    resolution: {integrity: sha512-sQZqSwVCbJGnFB4IQjQYopzj5CoTZJ4Br1fG/xdONimqgHmsacvCjNesdGDypNKFbrhLGIeshYhy89FxPF+H+w==}
     dev: false
 
   /uri-js@4.4.1:
