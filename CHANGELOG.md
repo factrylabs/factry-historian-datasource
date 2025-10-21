@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.3.2
+
+### Bug fixes
+
+- Fixed an issue where dashboard variables of type Event Property Values could break if the configured Event Type was also a variable.
+
 ## v2.3.1
 
 ### Bug fixes

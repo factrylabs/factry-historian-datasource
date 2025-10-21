@@ -21,6 +21,12 @@ This is the compatibility matrix for version listed on this page. If you have do
 | <= v1.2.x                            | <= v6.3.x                            |
 | >= v2.x                              | > v6.3                               |
 
+## v2.3.2
+
+### Bug fixes
+
+- Fixed an issue where dashboard variables of type Event Property Values could break if the configured Event Type was also a variable.
+
 ## v2.3.1
 
 ### Bug fixes
