@@ -35,11 +35,11 @@
       },
       {
         "name": "Documentation",
-        "url": "https://docs.factry.cloud/docs/grafana-datasource/latest"
+        "url": "https://docs.factry.io/reference/factry-historian-datasource-plugin-for-grafana"
       },
       {
         "name": "Changelog",
-        "url": "https://docs.factry.cloud/docs/grafana-datasource/latest/1_release_notes/"
+        "url": "https://docs.factry.io/changelog/factry-historian-datasource-for-grafana"
       }
     ],
     "screenshots": [
