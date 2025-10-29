@@ -70,7 +70,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	eventTypeUUIDs := map[uuid.UUID]struct{}{}
 	for i := range events {
 		eventTypeUUIDs[events[i].EventTypeUUID] = struct{}{}
-		if events[i].Parent != nil {
+		if eventQuery.IncludeParentInfo && events[i].Parent != nil {
 			eventTypeUUIDs[events[i].Parent.EventTypeUUID] = struct{}{}
 		}
 	}
