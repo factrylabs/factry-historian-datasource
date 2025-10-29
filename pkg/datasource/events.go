@@ -125,6 +125,10 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 		}
 
 		for j := range periodicEventTypeProperties {
+			if events[i].EventTypeUUID != periodicEventTypeProperties[j].EventTypeUUID {
+				continue
+			}
+
 			labels := data.Labels{}
 			maps.Copy(labels, eventLabels)
 			periodicPropertyValues := util.PeriodicPropertyValues{}
