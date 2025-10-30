@@ -78,7 +78,7 @@ frameLoop:
 		}
 	}
 
-	return slices.Collect(maps.Values(frameMap))
+	return slices.AppendSeq(make([]*data.Frame, 0, len(frameMap)), maps.Values(frameMap))
 }
 
 // getFrameSuffix returns the frame name for a given frame
