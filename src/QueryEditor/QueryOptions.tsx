@@ -194,6 +194,10 @@ export const QueryOptions = (props: Props): JSX.Element => {
     props.onChange({ ...props.state, MetadataAsLabels: e.target.checked })
   }
 
+  const onChangeTruncateInterval = (e: any): void => {
+    props.onChange({ ...props.state, TruncateInterval: e.target.checked })
+  }
+
   const onChangeSeriesLimit = (event: ChangeEvent<HTMLInputElement>): void => {
     setSeriesLimit(Number(event.target.value))
   }
@@ -386,6 +390,16 @@ export const QueryOptions = (props: Props): JSX.Element => {
                 tooltip="Adds metadata such as MeasurementUUID and DatabaseUUID as labels to the query result"
               >
                 <InlineSwitch value={props.state.MetadataAsLabels} onChange={onChangeMetadataAsLabels} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Truncate interval"
+                tooltip="Align the aggregation interval to the start of the previous rounded (towards zero) time interval instead of aligning it to the start of the query time range"
+                labelWidth={labelWidth}
+                disabled={!props.state.Aggregation?.Period}
+              >
+                <InlineSwitch value={props.state.TruncateInterval} onChange={onChangeTruncateInterval} />
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>

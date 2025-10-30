@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.4.0
+
+### Changes
+
+- Added option to align the start of an aggregation to the start of the query interval or to the truncated aggregation interval.
+
 ## v2.3.2
 
 ### Bug fixes

@@ -384,11 +384,10 @@ func fillQueryVariables(query string, databaseType string, timeRange backend.Tim
 }
 
 func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange, interval time.Duration) schemas.Query {
-	start := timeRange.From.Truncate(time.Second)
 	end := timeRange.To.Truncate(time.Second)
 	historianQuery := schemas.Query{
 		MeasurementUUIDs: query.Measurements,
-		Start:            start,
+		Start:            timeRange.From.Truncate(time.Second),
 		End:              &end,
 		Tags:             query.Options.Tags,
 		ValueFilters:     query.Options.ValueFilters,
@@ -400,6 +399,12 @@ func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange,
 		historianQuery.Aggregation = query.Options.Aggregation
 		if query.Options.Aggregation.Period == "$__interval" {
 			historianQuery.Aggregation.Period = interval.String()
+		}
+	}
+
+	if query.Options.TruncateInterval && historianQuery.Aggregation != nil {
+		if parsedInterval, err := time.ParseDuration(historianQuery.Aggregation.Period); err == nil {
+			historianQuery.Start = timeRange.From.Truncate(parsedInterval)
 		}
 	}
 

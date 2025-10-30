@@ -313,6 +313,7 @@ export function defaultQueryOptions(appIsAlertingType: boolean): MeasurementQuer
     UseEngineeringSpecs: !appIsAlertingType,
     DisplayDatabaseName: false,
     DisplayDescription: false,
+    TruncateInterval: true,
     MetadataAsLabels: true,
     ValueFilters: [],
     Datatypes: [],

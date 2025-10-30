@@ -96,6 +96,7 @@ export interface MeasurementQueryOptions {
   DisplayDatabaseName: boolean
   DisplayDescription: boolean
   MetadataAsLabels: boolean
+  TruncateInterval: boolean
   Limit?: number
   ValueFilters?: ValueFilter[]
   ChangesOnly?: boolean
