@@ -9,7 +9,12 @@
       "type": "go",
       "request": "attach",
       "mode": "remote",
-      // "remotePath": "${workspaceFolder}",ß
+      "substitutePath": [
+        {
+          "from": "${workspaceFolder}",
+          "to": "/root/factry-historian-datasource"
+        }
+      ],
       "remotePath": "/root/factry-historian-datasource",
       "port": 2345,
       "host": "127.0.0.1"
