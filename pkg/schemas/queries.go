@@ -15,6 +15,7 @@ type MeasurementQueryOptions struct {
 	DisplayDescription     bool
 	MetadataAsLabels       bool
 	ChangesOnly            bool
+	TruncateInterval       bool
 	ValueFilters           []ValueFilter
 	Datatypes              []string
 }
