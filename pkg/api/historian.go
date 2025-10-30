@@ -9,6 +9,7 @@ import (
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/go-playground/form"
+	"github.com/google/uuid"
 )
 
 // GetMeasurements calls get measurements in the historian API
@@ -219,8 +220,8 @@ func (api *API) GetDistinctEventPropertyValues(ctx context.Context, eventTypePro
 	}
 
 	filter := schemas.EventFilter{
-		AssetUUIDs:     slices.Collect(maps.Keys(assets)),
-		EventTypeUUIDs: slices.Collect(maps.Keys(eventTypes)),
+		AssetUUIDs:     slices.AppendSeq(make([]uuid.UUID, 0, len(assets)), maps.Keys(assets)),
+		EventTypeUUIDs: slices.AppendSeq(make([]uuid.UUID, 0, len(eventTypes)), maps.Keys(eventTypes)),
 		Limit:          0,
 		Status:         request.Statuses,
 		StartTime:      &request.From,

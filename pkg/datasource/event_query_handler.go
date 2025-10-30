@@ -53,8 +53,8 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	filter := schemas.EventFilter{
 		StartTime:         startTime,
 		StopTime:          stopTime,
-		AssetUUIDs:        slices.Collect(maps.Keys(assets)),
-		EventTypeUUIDs:    slices.Collect(maps.Keys(eventTypes)),
+		AssetUUIDs:        slices.AppendSeq(make([]uuid.UUID, 0, len(assets)), maps.Keys(assets)),
+		EventTypeUUIDs:    slices.AppendSeq(make([]uuid.UUID, 0, len(eventTypes)), maps.Keys(eventTypes)),
 		PreloadProperties: true,
 		Limit:             limit,
 		PropertyFilter:    eventQuery.PropertyFilter,
@@ -78,8 +78,10 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	var eventTypeProperties []schemas.EventTypeProperty
 	if util.CheckMinimumVersion(historianInfo, "6.4.0", false) {
 		eventTypeQuery := url.Values{}
-		for i, eventTypeUUID := range slices.Collect(maps.Keys(eventTypeUUIDs)) {
+		i := 0
+		for eventTypeUUID := range eventTypeUUIDs {
 			eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
+			i++
 		}
 		if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) {
 			eventTypeQuery.Add("Types[0]", eventQuery.Type)
@@ -152,14 +154,16 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID] = append(eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID], eventTypeProperty)
 	}
 
+	assetUUIDs := slices.AppendSeq(make([]schemas.Asset, 0, len(assets)), maps.Values(assets))
+
 	switch eventQuery.Type {
 	case string(schemas.EventTypePropertyTypeSimple):
 		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames, multipleAssetsSelected)
-		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, multipleAssetsSelected, slices.Collect(maps.Values(assets)), events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
+		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, multipleAssetsSelected, assetUUIDs, events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetUUIDs, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false)
 	case string(schemas.EventTypePropertyTypePeriodicWithDimension):
-		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, slices.Collect(maps.Values(assets)), events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, true)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetUUIDs, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, true)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
 	}
@@ -195,7 +199,7 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 	}
 
 	measurementQuery := schemas.MeasurementQuery{
-		Measurements: slices.Collect(maps.Keys(measurementUUIDs)),
+		Measurements: slices.AppendSeq(make([]string, 0, len(measurementUUIDs)), maps.Keys(measurementUUIDs)),
 		Options:      assetMeasurementQuery.Options,
 	}
 
