@@ -61,9 +61,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         return !target.hide && target.query !== undefined
       })
       .map((target) => {
-        if (!target.seriesLimit) {
-          target.seriesLimit = 50
-        }
+        target.seriesLimit ??= 50
 
         switch (target.queryType) {
           case 'AssetMeasurementQuery': {
