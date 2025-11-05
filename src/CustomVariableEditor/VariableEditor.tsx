@@ -21,6 +21,7 @@ import { EventTypePropertyFilterRow } from './EventTypePropertyFilter'
 import { EventTypeFilterRow } from './EventTypeFilter'
 import { PropertyValuesFilterRow } from './PropertyValuesFilter'
 import { isFeatureEnabled } from 'util/semver'
+import { Pagination } from './Pagination'
 
 export function VariableQueryEditor(
   props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions, VariableQuery>
@@ -156,16 +157,23 @@ export function VariableQueryEditor(
       </InlineFieldRow>
       <br />
       {props.query.type === VariableQueryType.MeasurementQuery && (
-        <MeasurementFilterRow
-          datasource={props.datasource}
-          initialValue={props.query.filter}
-          templateVariables={templateVariables}
-          onChange={(val, valid) => {
+        <>
+          <MeasurementFilterRow
+            datasource={props.datasource}
+            initialValue={props.query.filter}
+            templateVariables={templateVariables}
+            onChange={(val, valid) => {
+              if (props.query.type === VariableQueryType.MeasurementQuery) {
+                props.onChange({ ...props.query, filter: val, valid: valid })
+              }
+            }}
+          />
+          <Pagination initialValue={props.query.pagination} tooltipText="Maximum amount of measurements to fetch" onChange={(pagination) =>  {
             if (props.query.type === VariableQueryType.MeasurementQuery) {
-              props.onChange({ ...props.query, filter: val, valid: valid })
+              props.onChange({ ...props.query, pagination: pagination })
             }
-          }}
-        />
+          }} />
+        </>
       )}
       {props.query.type === VariableQueryType.AssetQuery && (
         <AssetFilterRow
