@@ -70,9 +70,15 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           return of({ data: [] })
         }
 
-        const pagination: Pagination = {
+        let pagination: Pagination = {
           Limit: 100,
           Page: 0,
+        }
+        if (request.targets[0].pagination) {
+          pagination = {
+            ...pagination,
+            ...(JSON.parse(JSON.stringify(request.targets[0].pagination)) as Pagination | undefined),
+          }
         }
 
         if (filter.DatabaseUUIDs) {
