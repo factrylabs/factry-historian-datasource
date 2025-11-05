@@ -405,7 +405,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
             <InlineFieldRow>
               <InlineField
                 label="Max Measurements"
-                tooltip="The maximum amount of measurements to fetch"
+                tooltip="The maximum amount of measurements to fetch, set to 0 for no limit"
                 labelWidth={labelWidth}
               >
                 <Input value={seriesLimit} type="number" min={0} onChange={onChangeSeriesLimit} />
