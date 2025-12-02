@@ -103,8 +103,8 @@ devDependencies:
     specifier: ^8.0.0
     version: 8.0.0(typescript@4.8.4)(webpack@5.102.1)
   glob:
-    specifier: ^10.4.5
-    version: 10.4.5
+    specifier: ^10.5.0
+    version: 10.5.0
   identity-obj-proxy:
     specifier: 3.0.0
     version: 3.0.0
@@ -4921,8 +4921,8 @@ packages:
     resolution: {integrity: sha512-lkX1HJXwyMcprw/5YUZc2s7DrpAiHB21/V+E1rHUrVNokkvB6bqMzT0VfV6/86ZNabt1k14YOIaT7nDvOX3Iiw==}
     dev: true
 
-  /glob@10.4.5:
-    resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+  /glob@10.5.0:
+    resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
     hasBin: true
     dependencies:
       foreground-child: 3.3.1
