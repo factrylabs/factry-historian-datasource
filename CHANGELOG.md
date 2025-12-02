@@ -5,6 +5,12 @@
 ### Changes
 
 - Added option to align the start of an aggregation to the start of the query interval or to the truncated aggregation interval.
+- Added option to override limit filter for measurement queries in dashboard variables.
+- Updated the max measurements setting for measurement queries to be unlimited if set to 0.
+
+### Bug fixes
+
+- Avoid duplicate columns when a parent event has the same periodic property as the child event in event queries.
 
 ## v2.3.2
 
@@ -133,6 +139,6 @@
   - Multi-value supported
 - Reworked measurement selection, using a regular expression is now a toggle
 - Fetch tag keys/values from the historian
-- Support periodic values in the event query
+- Support valid values in the event query
 - Optionally query asset properties in the event query
 - Improved error handling
