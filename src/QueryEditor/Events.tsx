@@ -187,7 +187,7 @@ export const Events = (props: Props): JSX.Element => {
                 selectedAssetProperties={props.query.AssetProperties ?? []}
                 overrideAssets={props.query.OverrideAssets ?? []}
                 selectedAssets={getSelectedAssets(
-                  selectedAsset(props.query.Assets, props.query.OverrideAssets),
+                  selectedAsset(props.query.Assets, props.query.OverrideAssets ?? []),
                   assets
                 )}
                 templateVariables={templateVariables}
