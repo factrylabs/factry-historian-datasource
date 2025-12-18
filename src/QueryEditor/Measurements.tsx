@@ -26,7 +26,7 @@ export interface Props {
   onChangeSeriesLimit: (value: number) => void
 }
 
-export const Measurements = (props: Props): React.JSX.Element => {
+export const Measurements = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [databases, setDatabases] = useState<TimeseriesDatabase[]>()
   const [selectedMeasurements, setSelectedMeasurements] = useState<Measurement[]>()

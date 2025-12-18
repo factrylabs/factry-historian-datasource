@@ -28,7 +28,7 @@ export interface Props {
   onOpenMenu?: () => void
 }
 
-export const EventAssetProperties = (props: Props): React.JSX.Element => {
+export const EventAssetProperties = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
   const [assetProperties, setAssetProperties] = useState<AssetProperty[]>([])
@@ -42,7 +42,7 @@ export const EventAssetProperties = (props: Props): React.JSX.Element => {
 
   useEffect(() => {
     if (loading) {
-      ;(async () => {
+      ; (async () => {
         await fetchAssetsAndProperties()
         setLoading(false)
       })()

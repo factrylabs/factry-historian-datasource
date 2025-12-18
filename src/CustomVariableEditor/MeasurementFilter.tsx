@@ -19,7 +19,7 @@ const datatypeOptions: Array<SelectableValue<string>> = Object.entries(Measureme
   return { label: value, value: value }
 })
 
-export function MeasurementFilterRow(props: MeasurementFilterProps) {
+export function MeasurementFilterRow (props: MeasurementFilterProps) {
   const [selectedDatabases, setSelectedDatabases] = useState<Array<SelectableValue<string>>>()
   const [keyword, setKeyword] = useDebounce<string>(props.initialValue?.Keyword ?? '', 500, (value) =>
     props.onChange(

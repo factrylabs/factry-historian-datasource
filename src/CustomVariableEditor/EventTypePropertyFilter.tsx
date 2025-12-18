@@ -17,7 +17,7 @@ import { isFeatureEnabled } from 'util/semver'
 
 const extraWidefieldWidth = fieldWidth + 10
 
-export function EventTypePropertyFilterRow(props: {
+export function EventTypePropertyFilterRow (props: {
   datasource: DataSource
   onChange: (val: EventTypePropertiesFilter) => void
   initialValue?: EventTypePropertiesFilter

@@ -15,7 +15,10 @@
       "name": "Factry",
       "url": "https://www.factry.io"
     },
-    "keywords": ["historian", "factry"],
+    "keywords": [
+      "historian",
+      "factry"
+    ],
     "logos": {
       "small": "img/logo.svg",
       "large": "img/logo.svg"
@@ -64,7 +67,7 @@
     "updated": "%TODAY%"
   },
   "dependencies": {
-    "grafanaDependency": ">=10.4.0",
+    "grafanaDependency": ">=11.6.0",
     "plugins": []
   }
 }

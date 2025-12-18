@@ -6,7 +6,7 @@ import { EventTypeFilter, fieldWidth, labelWidth } from 'types'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 import { useDebounce } from 'QueryEditor/util'
 
-export function EventTypeFilterRow(props: {
+export function EventTypeFilterRow (props: {
   datasource: DataSource
   onChange: (val: EventTypeFilter, valid: boolean) => void
   initialValue?: EventTypeFilter

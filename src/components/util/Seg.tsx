@@ -8,7 +8,7 @@ import { InlineLabel, Select, AsyncSelect, Input } from '@grafana/ui'
 
 // Yoinked from https://github.com/grafana/grafana/blob/main/public/app/plugins/datasource/influxdb/components/VisualInfluxQLEditor/Seg.tsx
 
-function useShadowedState<T>(outsideVal: T): [T, (newVal: T) => void] {
+function useShadowedState<T> (outsideVal: T): [T, (newVal: T) => void] {
   const [currentVal, setCurrentVal] = useState(outsideVal)
   const prevOutsideVal = usePrevious(outsideVal)
 

@@ -9,7 +9,7 @@ import { labelWidth, RawQuery, TimeseriesDatabase } from 'types'
 export interface Props {
   datasource: DataSource
   query: RawQuery
-  onChangeRawQuery(queryString: RawQuery): void
+  onChangeRawQuery (queryString: RawQuery): void
 }
 
 export const RawQueryEditor = (props: Props): JSX.Element => {

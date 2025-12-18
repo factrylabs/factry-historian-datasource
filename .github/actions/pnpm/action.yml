@@ -13,7 +13,7 @@ runs:
     - uses: pnpm/action-setup@v4
       name: Install pnpm
       with:
-        version: 8.6.2
+        version: 9.6.0
         run_install: false
 
     - name: Get pnpm store directory

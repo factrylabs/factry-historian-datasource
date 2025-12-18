@@ -9,7 +9,7 @@ export interface MaybeRegexInputProps {
   width?: number
 }
 
-export function MaybeRegexInput(props: MaybeRegexInputProps) {
+export function MaybeRegexInput (props: MaybeRegexInputProps) {
   const [error, setError] = useState<string | undefined>()
 
   const onChange = (event: FormEvent<HTMLInputElement>) => {

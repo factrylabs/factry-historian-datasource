@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.0.0
+
+### ⚠️ Breaking changes
+
+- Dropped support for Grafana versions earlier than **11.0**
+- Plugin now supports **Grafana 11 and 12 only**
+
 ## v2.4.0
 
 ### Changes

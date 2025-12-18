@@ -1,6 +1,5 @@
 import React, { ChangeEvent, PureComponent } from 'react'
 import { FieldSet, InlineField, InlineFieldRow, Input, SecretInput, Select } from '@grafana/ui'
-
 import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data'
 import { HistorianDataSourceOptions, HistorianSecureJsonData, TabIndex } from './types'
 

@@ -216,9 +216,8 @@ export const QueryOptions = (props: Props): JSX.Element => {
         <InlineField
           label="Aggregation"
           labelWidth={labelWidth}
-          tooltip={`Specify an aggregation and an interval to fetch an aggregated measurement value for each interval${
-            props.aggregationRequired ? '' : ', remove both to fetch raw data'
-          }`}
+          tooltip={`Specify an aggregation and an interval to fetch an aggregated measurement value for each interval${props.aggregationRequired ? '' : ', remove both to fetch raw data'
+            }`}
         >
           <VerticalGroup spacing="xs">
             <HorizontalGroup spacing="xs">

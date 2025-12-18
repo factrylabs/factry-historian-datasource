@@ -20,12 +20,12 @@ export class AnnotationsQueryEditor extends Component<Props> {
       return { label: `$${e.name}`, value: `$${e.name}` }
     })
 
-  async componentDidMount(): Promise<void> {
+  async componentDidMount (): Promise<void> {
     const { query } = this.props
 
     try {
       await this.props.datasource.refreshInfo()
-    } catch (_) {}
+    } catch (_) { }
     if (!query.query) {
       this.onChangeEventQuery({
         Type: PropertyType.Simple,
@@ -42,7 +42,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     }
   }
 
-  onChangeEventQuery(eventQuery: EventQuery): void {
+  onChangeEventQuery (eventQuery: EventQuery): void {
     const { onChange, query } = this.props
     query.queryType = 'EventQuery'
     query.query = eventQuery
@@ -51,7 +51,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     this.onRunQuery(this.props)
   }
 
-  onChangeSeriesLimit(value: number): void {
+  onChangeSeriesLimit (value: number): void {
     const { onChange, query } = this.props
     query.seriesLimit = value
     query.historianInfo = this.props.datasource.historianInfo
@@ -59,7 +59,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     this.onRunQuery(this.props)
   }
 
-  onRunQuery(
+  onRunQuery (
     props: Readonly<Props> &
       Readonly<{
         children?: React.ReactNode
@@ -79,7 +79,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     this.props.onRunQuery()
   }
 
-  render() {
+  render () {
     return (
       <>
         {this.props.query.query && (
