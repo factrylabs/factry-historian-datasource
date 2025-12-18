@@ -29,7 +29,7 @@ export interface Props {
   onOpenMenu?: () => void
 }
 
-export const MeasurementSelect = (props: Props): React.JSX.Element => {
+export const MeasurementSelect = (props: Props): JSX.Element => {
   const [regex, setRegex] = useDebounce<string>(props.query.Regex ?? '', 500, props.onChangeRegex)
   const [regexError, setRegexError] = useState<string | undefined>()
 
@@ -151,7 +151,7 @@ export const MeasurementSelect = (props: Props): React.JSX.Element => {
                 show={regexError !== undefined}
                 interactive={false}
               >
-                <AutoSizeInput value={regex} placeholder="[m|M]otor_[0-9]" onChange={onChangeRegex} />
+                <AutoSizeInput value={regex} placeholder="[m|M]otor_[0-9]" onInput={onChangeRegex} />
               </Tooltip>
             )}
             <Checkbox label="Use regular expression" value={props.query.IsRegex} onChange={onChangeIsRegex} />
