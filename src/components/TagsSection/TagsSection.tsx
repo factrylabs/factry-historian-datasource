@@ -1,5 +1,4 @@
 import React from 'react'
-
 import { getTemplateSrv } from '@grafana/runtime'
 import { AddButton } from 'components/util/AddButton'
 import { Tag } from './Tag'

@@ -8,7 +8,7 @@ export interface PaginationProps {
   tooltipText?: string
 }
 
-export function Pagination(props: PaginationProps) {
+export function Pagination (props: PaginationProps) {
   const [inputLimit, setInputLimit] = useState<string>(String(props.initialValue?.Limit ?? ''))
 
   const onLimitChange = (event: React.FocusEvent<HTMLInputElement, Element>) => {
@@ -16,7 +16,7 @@ export function Pagination(props: PaginationProps) {
     setInputLimit(value)
     const parsed = parseInt(value, 10)
     if (!isNaN(parsed) && parsed > 0) {
-      props.onChange({ ...props.initialValue, Limit: parsed, Page: 0})
+      props.onChange({ ...props.initialValue, Limit: parsed, Page: 0 })
     }
   }
 

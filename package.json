@@ -1,6 +1,6 @@
 {
   "name": "factry-historian-datasource",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "description": "A datasource plugin for Factry Historian",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
@@ -25,11 +25,13 @@
     "@swc/helpers": "^0.5.17",
     "@swc/jest": "^0.2.39",
     "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^12.1.5",
+    "@testing-library/react": "^14.x",
     "@types/debounce-promise": "^3.1.9",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.20",
     "@types/node": "^18.19.130",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
     "@typescript-eslint/parser": "^5.62.0",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.11.0",
@@ -49,7 +51,7 @@
     "swc-loader": "^0.2.6",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "4.8.4",
+    "typescript": "5.9.2",
     "webpack": "^5.102.1",
     "webpack-cli": "^5.1.4",
     "webpack-livereload-plugin": "^3.0.2"
@@ -63,18 +65,18 @@
   },
   "dependencies": {
     "@emotion/css": "^11.13.5",
-    "@grafana/data": "~9.4.17",
+    "@grafana/data": "~11.6.0",
     "@grafana/plugin-e2e": "^1.19.9",
-    "@grafana/runtime": "~9.4.17",
-    "@grafana/schema": "~9.4.17",
-    "@grafana/ui": "~9.4.17",
+    "@grafana/runtime": "~11.6.0",
+    "@grafana/schema": "~11.6.0",
+    "@grafana/ui": "~11.6.0",
     "debounce-promise": "^3.1.2",
     "downshift": "^9.0.10",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tslib": "2.5.3"
   },
-  "packageManager": "pnpm@8.6.2",
+  "packageManager": "pnpm@9.6.0",
   "pnpm": {
     "overrides": {
       "form-data": "4.0.4",

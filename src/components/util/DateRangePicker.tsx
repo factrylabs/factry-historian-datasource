@@ -53,7 +53,7 @@ export const DateRangePicker: React.FC<Props> = ({ datasource, dateTimeRange, ov
 
   const handleFromInputBlur = (value = fromInput) => {
     let parsed: string | null
-  
+
     if (!value || value === 'null') {
       parsed = null
     } else if (datasource.containsTemplate(value)) {
@@ -90,7 +90,10 @@ export const DateRangePicker: React.FC<Props> = ({ datasource, dateTimeRange, ov
     onChange(updated)
   }
 
-  const handleFromDatepickerChange = (date: DateTime) => {
+  const handleFromDatepickerChange = (date: DateTime | undefined) => {
+    if (!date) {
+      return;
+    }
     const formatted = date.format(TIME_FORMAT)
     setFromInput(formatted)
     const parsedTimeRange = { ...currentRange, from: date.toISOString() }
@@ -98,7 +101,10 @@ export const DateRangePicker: React.FC<Props> = ({ datasource, dateTimeRange, ov
     onChange(parsedTimeRange)
   }
 
-  const handleToDatepickerChange = (date: DateTime) => {
+  const handleToDatepickerChange = (date: DateTime | undefined) => {
+    if (!date) {
+      return;
+    }
     const formatted = date.format(TIME_FORMAT)
     setToInput(formatted)
     const parsedTimeRange = { ...currentRange, to: date.toISOString() }

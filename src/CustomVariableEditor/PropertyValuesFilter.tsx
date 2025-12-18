@@ -7,7 +7,7 @@ import { EventFilter } from 'QueryEditor/EventFilter'
 import { InlineField, InlineFieldRow, InlineSwitch } from '@grafana/ui'
 import { DateRangePicker } from 'components/util/DateRangePicker'
 
-export function PropertyValuesFilterRow(props: {
+export function PropertyValuesFilterRow (props: {
   datasource: DataSource
   onChange: (val: EventTypePropertiesValuesFilter) => void
   initialValue?: EventTypePropertiesValuesFilter

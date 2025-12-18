@@ -8,7 +8,7 @@ import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
 import { isFeatureEnabled } from 'util/semver'
 import { debouncePromise, sortByLabel, useDebounce } from 'QueryEditor/util'
 
-export function AssetPropertyFilterRow(props: {
+export function AssetPropertyFilterRow (props: {
   datasource: DataSource
   onChange: (val: AssetPropertyFilter, valid: boolean) => void
   initialValue?: AssetPropertyFilter

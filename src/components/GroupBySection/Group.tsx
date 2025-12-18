@@ -1,5 +1,4 @@
 import React from 'react'
-
 import { Seg } from 'components/util/Seg'
 import { SelectableValue } from '@grafana/data'
 

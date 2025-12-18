@@ -1,5 +1,4 @@
 import React from 'react'
-
 import { InlineField } from '@grafana/ui'
 import { getTemplateSrv } from '@grafana/runtime'
 import { AddButton } from 'components/util/AddButton'
