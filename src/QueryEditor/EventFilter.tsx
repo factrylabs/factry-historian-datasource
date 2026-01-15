@@ -339,6 +339,32 @@ export const EventFilter = (props: Props): JSX.Element => {
     })
   }
 
+  const getDisplayedEventTypes = (eventTypes: string[], selectedAsset: string | undefined): string[] => {
+    // Filter out UUIDs from other datasources, only show those that exist or are template variables
+    const available = availableEventTypes(selectedAsset)
+    return eventTypes.filter((eventTypeUUID) => {
+      // Keep template variables
+      if (eventTypeUUID.startsWith('$')) {
+        return true
+      }
+      // Only show event types that exist in current datasource
+      return available.some((option) => option.value === eventTypeUUID)
+    })
+  }
+
+  const getDisplayedProperties = (properties: string[], eventTypes: string[], includeParentInfo: boolean): string[] => {
+    // Filter out properties from other datasources
+    const available = availableProperties(eventTypes, includeParentInfo)
+    return properties.filter((property) => {
+      // Keep template variables
+      if (property.startsWith('$')) {
+        return true
+      }
+      // Only show properties that exist in current datasource
+      return available.some((option) => option.value === property)
+    })
+  }
+
   const availablePropertyValues = (key: string): string[] => {
     const eventTypeProperty = eventTypeProperties
       .filter((e) => props.query.EventTypes?.includes(e.EventTypeUUID))
@@ -365,7 +391,13 @@ export const EventFilter = (props: Props): JSX.Element => {
       return asset.AssetPath || ''
     }
 
-    return props.query.Assets[0]
+    // Don't display UUIDs from other datasources - hide them but preserve in query
+    // Allow template variables to be displayed
+    if (props.query.Assets[0].startsWith('$')) {
+      return props.query.Assets[0]
+    }
+
+    return ''
   }
   const availableStatuses = (): Array<SelectableValue<string>> => {
     return [
@@ -428,7 +460,10 @@ export const EventFilter = (props: Props): JSX.Element => {
               tooltip="Specify one or more event type to work with"
             >
               <MultiSelect
-                value={props.query.EventTypes}
+                value={getDisplayedEventTypes(
+                  props.query.EventTypes ?? [],
+                  props.query.Assets?.length ? props.query.Assets[0] : ''
+                )}
                 options={availableEventTypes(props.query.Assets?.length ? props.query.Assets[0] : '')}
                 onChange={onSelectEventTypes}
                 onOpenMenu={fetchAll}
@@ -444,7 +479,11 @@ export const EventFilter = (props: Props): JSX.Element => {
                 tooltip="Specify one or more event properties to work with, or leave empty to use all event properties"
               >
                 <MultiSelect
-                  value={props.query.Properties}
+                  value={getDisplayedProperties(
+                    props.query.Properties ?? [],
+                    props.query.EventTypes ?? [],
+                    props.query.IncludeParentInfo ?? false
+                  )}
                   options={availableProperties(props.query.EventTypes ?? [], props.query.IncludeParentInfo ?? false)}
                   onChange={onSelectProperties}
                   onOpenMenu={fetchAll}
@@ -453,7 +492,13 @@ export const EventFilter = (props: Props): JSX.Element => {
             ) : (
               <InlineField label="Property" grow labelWidth={labelWidth} tooltip="Specify the property to include">
                 <Select
-                  value={props.query.Properties?.length ? props.query.Properties[0] : ''}
+                  value={
+                    getDisplayedProperties(
+                      props.query.Properties ?? [],
+                      props.query.EventTypes ?? [],
+                      props.query.IncludeParentInfo ?? false
+                    )[0] || ''
+                  }
                   options={availableProperties(props.query.EventTypes ?? [], false)}
                   onChange={onSelectProperty}
                 />

@@ -58,7 +58,13 @@ export const Measurements = (props: Props): JSX.Element => {
             let selectedMeasurement: Measurement | undefined
             selectedMeasurement = selectedMeasurements?.find((e) => e.UUID === measurement)
             if (!selectedMeasurement) {
-              selectedMeasurement = await props.datasource.getMeasurement(measurement)
+              try {
+                selectedMeasurement = await props.datasource.getMeasurement(measurement)
+              } catch (error) {
+                // Measurement doesn't exist in current datasource (e.g., after switching datasources)
+                // Skip it and continue - it's preserved in the query but won't be displayed
+                continue
+              }
             }
             selectedMeasurementsUpdate.push(selectedMeasurement)
             datatypes.add(selectedMeasurement.Datatype)
