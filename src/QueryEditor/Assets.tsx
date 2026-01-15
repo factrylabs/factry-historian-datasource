@@ -101,7 +101,13 @@ export const Assets = (props: Props): JSX.Element => {
       return asset.AssetPath || ''
     }
 
-    return props.query.Assets[0]
+    // Don't display UUIDs from other datasources - hide them but preserve in query
+    // Allow template variables to be displayed
+    if (props.query.Assets[0].startsWith('$')) {
+      return props.query.Assets[0]
+    }
+
+    return ''
   }
 
   const getTagKeyOptions = async (): Promise<string[]> => {

@@ -45,11 +45,12 @@ export const MeasurementSelect = (props: Props): JSX.Element => {
 
         const measurement = measurements.find((measurement) => measurement.UUID === e)
         if (!measurement) {
-          return { label: e, value: e } as SelectableValue<string>
+          // Don't display UUIDs from other datasources - they'll be preserved in the query but hidden from UI
+          return null
         }
 
         return measurementToSelectableValue(measurement)
-      }) ?? []
+      }).filter((e): e is SelectableValue<string> => e !== null) ?? []
     )
   }
 

@@ -33,6 +33,7 @@ export function DatabaseSelect(props: DatabaseSelectProps) {
       })
       .concat(props.templateVariables)
     if (!initialLoadDone) {
+      // Only show databases that exist in current datasource (filters out UUIDs from other datasources)
       props.setSelectedDatabases(selectableValues.filter((e) => props.initialValue?.includes(e.value ?? '')))
       initialLoadDone = true
     }

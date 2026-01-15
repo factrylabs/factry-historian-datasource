@@ -42,7 +42,7 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
 
   useEffect(() => {
     if (loading) {
-      ; (async () => {
+      ;(async () => {
         await fetchAssetsAndProperties()
         setLoading(false)
       })()
@@ -152,7 +152,13 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
       return asset.AssetPath || ''
     }
 
-    return props.overrideAssets[0]
+    // Don't display UUIDs from other datasources - hide them but preserve in query
+    // Allow template variables to be displayed
+    if (props.overrideAssets[0].startsWith('$')) {
+      return props.overrideAssets[0]
+    }
+
+    return ''
   }
 
   return (
