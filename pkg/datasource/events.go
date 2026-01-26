@@ -94,7 +94,9 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 	}
 
 	periodicPropertyData := map[float64]map[eventFrameColumn]interface{}{}
+	assetPropertyData := map[float64]map[eventFrameColumn]interface{}{}
 	columns := []eventFrameColumn{}
+	assetPropertyColumns := []eventFrameColumn{}
 
 	for i := range events {
 		eventLabels := data.Labels{}
@@ -250,23 +252,45 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 			identifier.Field.Config = &data.FieldConfig{
 				Unit: valueField.Config.Unit,
 			}
-			columns = append(columns, identifier)
 
-			for k := 0; k < timeField.Len(); k++ {
-				timestamp, ok := timeField.At(k).(time.Time)
-				if !ok {
-					continue
-				}
+			// Separate asset properties when using dimension-based queries
+			if byDimension {
+				assetPropertyColumns = append(assetPropertyColumns, identifier)
 
-				offset := timestamp.Sub(events[i].StartTime).Seconds()
-				if _, ok := periodicPropertyData[offset]; !ok {
-					periodicPropertyData[offset] = map[eventFrameColumn]interface{}{}
+				for k := 0; k < timeField.Len(); k++ {
+					timestamp, ok := timeField.At(k).(time.Time)
+					if !ok {
+						continue
+					}
+
+					offset := timestamp.Sub(events[i].StartTime).Seconds()
+					if _, ok := assetPropertyData[offset]; !ok {
+						assetPropertyData[offset] = map[eventFrameColumn]interface{}{}
+					}
+					assetPropertyData[offset][identifier] = valueField.CopyAt(k)
 				}
-				periodicPropertyData[offset][identifier] = valueField.CopyAt(k)
+			} else {
+				columns = append(columns, identifier)
+
+				for k := 0; k < timeField.Len(); k++ {
+					timestamp, ok := timeField.At(k).(time.Time)
+					if !ok {
+						continue
+					}
+
+					offset := timestamp.Sub(events[i].StartTime).Seconds()
+					if _, ok := periodicPropertyData[offset]; !ok {
+						periodicPropertyData[offset] = map[eventFrameColumn]interface{}{}
+					}
+					periodicPropertyData[offset][identifier] = valueField.CopyAt(k)
+				}
 			}
 		}
 	}
 
+	resultFrames := data.Frames{}
+
+	// Build dimension/periodic property frame
 	fields := []*data.Field{
 		data.NewField("Offset", nil, []float64{}),
 	}
@@ -291,9 +315,34 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 		}
 	}
 
-	return data.Frames{
-		data.NewFrame("Result", fields...),
-	}, nil
+	resultFrames = append(resultFrames, data.NewFrame("Result", fields...))
+
+	// Build separate time-based asset property frame when using dimensions
+	if byDimension && len(assetPropertyColumns) > 0 {
+		assetFields := []*data.Field{
+			data.NewField("Time Offset", nil, []float64{}).SetConfig(&data.FieldConfig{
+				Unit: "dtdhms",
+			}),
+		}
+
+		assetOffsets := slices.Sorted(maps.Keys(assetPropertyData))
+
+		for _, offset := range assetOffsets {
+			assetFields[0].Append(offset)
+		}
+
+		for i := range assetPropertyColumns {
+			assetFields = append(assetFields, assetPropertyColumns[i].Field)
+
+			for _, offset := range assetOffsets {
+				addValueToField(assetPropertyColumns[i].Field, assetPropertyData[offset][assetPropertyColumns[i]])
+			}
+		}
+
+		resultFrames = append(resultFrames, data.NewFrame("Asset Properties (Time-based)", assetFields...))
+	}
+
+	return resultFrames, nil
 }
 
 func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}) []*data.Field {
