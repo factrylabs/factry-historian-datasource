@@ -413,23 +413,17 @@ func fillFields(prefix string, fieldByColumn map[string]*data.Field, event *sche
 		fieldByColumn[prefix+DurationColumnName].Append(nil)
 	}
 
-	if event.Properties == nil {
-		for _, eventPropertyType := range eventTypeProperties {
-			if eventPropertyType.Type == schemas.EventTypePropertyTypePeriodic {
-				continue
-			}
-
-			fieldByColumn[prefix+eventPropertyType.Name].Append(nil)
-		}
-		return
-	}
-
 	for _, eventTypeProperty := range eventTypeProperties {
 		if eventTypeProperty.Type == schemas.EventTypePropertyTypePeriodic {
 			continue
 		}
 
 		if _, ok := fieldByColumn[prefix+eventTypeProperty.Name]; !ok {
+			continue
+		}
+
+		if event.Properties == nil {
+			addValueToField(fieldByColumn[prefix+eventTypeProperty.Name], nil)
 			continue
 		}
 
