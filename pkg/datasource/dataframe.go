@@ -102,6 +102,8 @@ func getFrameSuffix(frame *data.Frame, includeDatabaseName, includeDescription b
 		labelPairs = append(labelPairs, fmt.Sprintf("%s: %s", key, value))
 	}
 
+	slices.Sort(labelPairs)
+
 	if includeDescription && meta["Description"] != nil {
 		if description, ok := meta["Description"].(string); ok && description != "" {
 			labelPairs = append(labelPairs, "Description: "+description)
