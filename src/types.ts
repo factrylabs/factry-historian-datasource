@@ -101,6 +101,7 @@ export interface MeasurementQueryOptions {
   ValueFilters?: ValueFilter[]
   ChangesOnly?: boolean
   Datatypes?: string[]
+  Desc?: boolean
 }
 
 export interface ValueFilter {
