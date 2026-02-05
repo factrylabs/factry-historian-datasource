@@ -13,8 +13,8 @@ const (
 )
 
 // CheckHealth checks the health by fetching the time series databases
-func (d *HistorianDataSource) CheckHealth(ctx context.Context, _ *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	databases, err := d.API.GetTimeseriesDatabases(ctx, "")
+func (ds *HistorianDataSource) CheckHealth(ctx context.Context, _ *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+	databases, err := ds.API.GetTimeseriesDatabases(ctx, "")
 	if err != nil {
 		return &backend.CheckHealthResult{
 			Status:  backend.HealthStatusError,
