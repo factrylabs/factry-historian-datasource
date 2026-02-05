@@ -18,6 +18,7 @@ type MeasurementQueryOptions struct {
 	TruncateInterval       bool
 	ValueFilters           []ValueFilter
 	Datatypes              []string
+	Desc                   bool
 }
 
 // ValueFilter is used to filter the values returned by the historian
