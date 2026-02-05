@@ -1,16 +1,18 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 
 	arrow_pb "github.com/factrylabs/factry-historian-datasource.git/pkg/proto"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/go-playground/form"
-	"github.com/go-resty/resty/v2"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"google.golang.org/protobuf/proto"
 )
@@ -22,13 +24,20 @@ var (
 	MIMEApplicationProtobuf = "application/protobuf"
 )
 
-func handleDataFramesResponse(response *resty.Response) (data.Frames, error) {
-	if response.StatusCode() >= 300 {
-		return nil, handleHistorianError(response)
+func handleDataFramesResponse(resp *http.Response) (data.Frames, error) {
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return nil, handleHTTPError(resp)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
 	}
 
 	dataResponse := arrow_pb.DataResponse{}
-	if err := proto.Unmarshal(response.Body(), &dataResponse); err != nil {
+	if err := proto.Unmarshal(body, &dataResponse); err != nil {
 		return nil, err
 	}
 
@@ -46,26 +55,44 @@ func handleDataFramesResponse(response *resty.Response) (data.Frames, error) {
 
 // MeasurementQuery queries data for a measurement
 func (api *API) MeasurementQuery(ctx context.Context, query schemas.Query) (data.Frames, error) {
-	request := api.client.R().SetContext(ctx)
-	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
-	response, err := request.SetBody(query).Post("/api/timeseries/query")
+	body, err := json.Marshal(query)
 	if err != nil {
 		return nil, err
 	}
 
-	return handleDataFramesResponse(response)
+	req, err := newHTTPRequest(ctx, "POST", "/api/timeseries/query", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
+
+	resp, err := api.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return handleDataFramesResponse(resp)
 }
 
 // RawQuery executes a raw time series query
 func (api *API) RawQuery(ctx context.Context, timeseriesDatabaseUUID string, query schemas.RawQuery) (data.Frames, error) {
-	request := api.client.R().SetContext(ctx)
-	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
-	response, err := request.SetBody(query).Post(fmt.Sprintf("/api/timeseries/%v/raw-query", timeseriesDatabaseUUID))
+	body, err := json.Marshal(query)
 	if err != nil {
 		return nil, err
 	}
 
-	return handleDataFramesResponse(response)
+	req, err := newHTTPRequest(ctx, "POST", fmt.Sprintf("/api/timeseries/%s/raw-query", url.PathEscape(timeseriesDatabaseUUID)), bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
+
+	resp, err := api.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return handleDataFramesResponse(resp)
 }
 
 // EventQuery executes an event query
@@ -76,16 +103,27 @@ func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter) ([]s
 		return nil, err
 	}
 
-	response, err := api.client.R().SetContext(ctx).SetQueryParamsFromValues(eventFilterParams).Get("/api/events")
+	queryURL := "/api/events"
+	if len(eventFilterParams) > 0 {
+		queryURL += "?" + eventFilterParams.Encode()
+	}
+
+	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if response.StatusCode() >= 300 {
-		return nil, handleHistorianError(response)
+	resp, err := api.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return nil, handleHTTPError(resp)
 	}
 
-	if err := json.Unmarshal(response.Body(), &queryResult); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&queryResult); err != nil {
 		return nil, err
 	}
 
@@ -94,30 +132,34 @@ func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter) ([]s
 
 // GetTagKeys queries the tag keys for a measurement
 func (api *API) GetTagKeys(ctx context.Context, measurementUUID string) (data.Frames, error) {
-	request := api.client.R().SetContext(ctx)
-	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
-	response, err := request.SetPathParam("measurementUUID", measurementUUID).Get("/api/timeseries/measurements/{measurementUUID}/tags")
+	req, err := newHTTPRequest(ctx, "GET", fmt.Sprintf("/api/timeseries/measurements/%s/tags", url.PathEscape(measurementUUID)), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
+
+	resp, err := api.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return handleDataFramesResponse(response)
+	return handleDataFramesResponse(resp)
 }
 
 // GetTagValues queries the tag values for a measurement and a tag key
 func (api *API) GetTagValues(ctx context.Context, measurementUUID, tagKey string) (data.Frames, error) {
-	request := api.client.R().SetContext(ctx)
-	request.Header.Add(HeaderAccept, MIMEApplicationProtobuf)
-	pathParams := map[string]string{
-		"measurementUUID": measurementUUID,
-		"tagKey":          tagKey,
+	req, err := newHTTPRequest(ctx, "GET", fmt.Sprintf("/api/timeseries/measurements/%s/tags/%s", url.PathEscape(measurementUUID), url.PathEscape(tagKey)), nil)
+	if err != nil {
+		return nil, err
 	}
-	response, err := request.SetPathParams(pathParams).Get("/api/timeseries/measurements/{measurementUUID}/tags/{tagKey}")
+	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
+
+	resp, err := api.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return handleDataFramesResponse(response)
+	return handleDataFramesResponse(resp)
 }
 
 func fixPropertyFilterValues(filter schemas.EventFilter) schemas.EventFilter {
