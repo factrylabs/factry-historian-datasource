@@ -139,6 +139,7 @@ export interface EventQuery {
   Limit?: number
   OverrideTimeRange: boolean
   TimeRange: TimeRange
+  Ascending: boolean
 }
 
 export interface TimeRange {

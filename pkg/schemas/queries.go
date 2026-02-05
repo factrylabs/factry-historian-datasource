@@ -68,6 +68,7 @@ type EventQuery struct {
 	Limit                int
 	OverrideTimeRange    bool `json:"overrideTimeRange"`
 	TimeRange            TimeRange
+	Ascending            bool
 }
 
 // TimeRange contains a user-defined time range that can be used to override the grafana dashboard time range
