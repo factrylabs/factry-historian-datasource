@@ -1,3 +1,8 @@
 {
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "go.lintTool": "golangci-lint-v2",
+  "go.lintFlags": [
+    "--fast-only",
+    "--path-mode=abs"
+  ],
 }
