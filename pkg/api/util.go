@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -10,6 +12,42 @@ import (
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 )
+
+// newHTTPRequest creates a new HTTP request with the given context, method, URL, and body
+func newHTTPRequest(ctx context.Context, method, requestURL string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, method, requestURL, body)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return req, nil
+}
+
+// handleHTTPError processes HTTP error responses
+func handleHTTPError(resp *http.Response) error {
+	// Read and parse the error response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	return &HTTPError{
+		StatusCode: resp.StatusCode,
+		Body:       string(body),
+	}
+}
+
+// HTTPError represents an HTTP error response
+type HTTPError struct {
+	StatusCode int
+	Body       string
+}
+
+// Error implements the error interface
+func (e *HTTPError) Error() string {
+	return http.StatusText(e.StatusCode) + ": " + e.Body
+}
 
 // GetFilteredAssets returns a map of assets that match the given asset strings
 func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
@@ -113,11 +151,13 @@ func filterItems[T any](items []T, searchValue string, matchFuncs ...func(T) str
 	}
 	return filteredItems
 }
+
 func filterAssetUUIDs(assets []schemas.Asset, searchValue string) []schemas.Asset {
 	return filterItems(assets, searchValue,
 		func(asset schemas.Asset) string { return asset.AssetPath },
 		func(asset schemas.Asset) string { return asset.UUID.String() })
 }
+
 func filterEventTypeUUIDs(eventTypes []schemas.EventType, searchValue string) []schemas.EventType {
 	return filterItems(eventTypes, searchValue,
 		func(eventType schemas.EventType) string { return eventType.Name },
