@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
@@ -245,9 +246,11 @@ func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWrite
 		eventTypePropertyUUID = parsedUUID
 	} else {
 		queryString := "Types[0]=" + request.Type + "&"
+		var queryStringBuilder strings.Builder
 		for i := range request.EventTypes {
-			queryString += fmt.Sprintf("EventTypeUUIDs[%v]=%s&", i, request.EventTypes[i])
+			fmt.Fprintf(&queryStringBuilder, "EventTypeUUIDs[%v]=%s&", i, request.EventTypes[i])
 		}
+		queryString += queryStringBuilder.String()
 
 		eventTypeProperties, err := ds.API.GetEventTypeProperties(req.Context(), queryString)
 		if err != nil {
