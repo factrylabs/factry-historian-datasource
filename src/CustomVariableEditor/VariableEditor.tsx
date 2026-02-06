@@ -23,7 +23,7 @@ import { PropertyValuesFilterRow } from './PropertyValuesFilter'
 import { isFeatureEnabled } from 'util/semver'
 import { Pagination } from './Pagination'
 
-export function VariableQueryEditor (
+export function VariableQueryEditor(
   props: QueryEditorProps<DataSource, Query, HistorianDataSourceOptions, VariableQuery>
 ) {
   const [loading, setLoading] = useState(true)
@@ -42,7 +42,7 @@ export function VariableQueryEditor (
       try {
         await props.datasource.refreshInfo()
         setHistorianInfo(props.datasource.historianInfo)
-      } catch (_) { }
+      } catch (_) {}
       setLoading(false)
     }
     if (loading) {
@@ -146,6 +146,7 @@ export function VariableQueryEditor (
                       OverrideAssets: [],
                       OverrideTimeRange: false,
                       TimeRange: { from: '', to: '' },
+                      Ascending: false,
                     },
                   },
                 })
@@ -168,11 +169,15 @@ export function VariableQueryEditor (
               }
             }}
           />
-          <Pagination initialValue={props.query.pagination} tooltipText="Maximum amount of measurements to fetch" onChange={(pagination) => {
-            if (props.query.type === VariableQueryType.MeasurementQuery) {
-              props.onChange({ ...props.query, pagination: pagination })
-            }
-          }} />
+          <Pagination
+            initialValue={props.query.pagination}
+            tooltipText="Maximum amount of measurements to fetch"
+            onChange={(pagination) => {
+              if (props.query.type === VariableQueryType.MeasurementQuery) {
+                props.onChange({ ...props.query, pagination: pagination })
+              }
+            }}
+          />
         </>
       )}
       {props.query.type === VariableQueryType.AssetQuery && (

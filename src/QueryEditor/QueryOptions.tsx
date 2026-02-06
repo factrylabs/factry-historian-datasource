@@ -12,6 +12,7 @@ import {
   Input,
   MultiSelect,
   Select,
+  RadioButtonGroup,
 } from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
@@ -57,6 +58,7 @@ const datatypeOptions: Array<SelectableValue<string>> = Object.entries(Measureme
 export const QueryOptions = (props: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
   const [seriesLimit, setSeriesLimit] = useDebounce<number>(props.seriesLimit, 500, props.onChangeSeriesLimit)
+  const [ordering, setOrdering] = useState(props.state.Desc ? 'descending' : 'ascending')
 
   useEffect(() => {
     if (props.state.Aggregation?.Period) {
@@ -210,14 +212,22 @@ export const QueryOptions = (props: Props): JSX.Element => {
       props.onChange({ ...props.state, Datatypes: selectedDatatypes })
     }
   }
+
+  const onChangeOrder = (value: string): void => {
+    setOrdering(value)
+
+    props.onChange({ ...props.state, Desc: value === 'descending' })
+  }
+
   return (
     <>
       <InlineFieldRow>
         <InlineField
           label="Aggregation"
           labelWidth={labelWidth}
-          tooltip={`Specify an aggregation and an interval to fetch an aggregated measurement value for each interval${props.aggregationRequired ? '' : ', remove both to fetch raw data'
-            }`}
+          tooltip={`Specify an aggregation and an interval to fetch an aggregated measurement value for each interval${
+            props.aggregationRequired ? '' : ', remove both to fetch raw data'
+          }`}
         >
           <VerticalGroup spacing="xs">
             <HorizontalGroup spacing="xs">
@@ -292,6 +302,22 @@ export const QueryOptions = (props: Props): JSX.Element => {
           />
         </InlineFieldRow>
       )}
+      <InlineFieldRow>
+        <InlineField
+          label="Time ordering"
+          labelWidth={labelWidth}
+          tooltip="In what way returned data should be ordered in time"
+        >
+          <RadioButtonGroup
+            options={[
+              { label: 'Ascending', value: 'ascending' },
+              { label: 'Descending', value: 'descending' },
+            ]}
+            onChange={onChangeOrder}
+            value={ordering}
+          />
+        </InlineField>
+      </InlineFieldRow>
       {!props.hideDatatypeFilter && (
         <InlineFieldRow>
           <InlineField label="Filter datatypes" labelWidth={labelWidth}>

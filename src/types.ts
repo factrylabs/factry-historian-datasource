@@ -101,6 +101,7 @@ export interface MeasurementQueryOptions {
   ValueFilters?: ValueFilter[]
   ChangesOnly?: boolean
   Datatypes?: string[]
+  Desc?: boolean
 }
 
 export interface ValueFilter {
@@ -138,6 +139,7 @@ export interface EventQuery {
   Limit?: number
   OverrideTimeRange: boolean
   TimeRange: TimeRange
+  Ascending: boolean
 }
 
 export interface TimeRange {

@@ -1,5 +1,5 @@
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
-import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input } from '@grafana/ui'
+import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input, RadioButtonGroup } from '@grafana/ui'
 import { DateTime } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
@@ -23,6 +23,7 @@ export interface Props {
 export const Events = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
+  const [ordering, setOrdering] = useState(props.query.Ascending ? 'ascending' : 'descending')
   const [limit, setLimit] = useDebounce<number | undefined>(props.query.Limit, 500, (value: number | undefined) => {
     if (value === props.query.Limit) {
       return
@@ -110,6 +111,13 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeOrder = (value: string): void => {
+    setOrdering(value)
+
+    const updatedQuery = { ...props.query, Ascending: value === 'ascending' }
+    props.onChangeEventQuery(updatedQuery)
+  }
+
   const selectedAsset = (assets: string[], overrideAssets: string[]): string => {
     if (overrideAssets.length > 0) {
       return overrideAssets[0]
@@ -169,6 +177,22 @@ export const Events = (props: Props): JSX.Element => {
                 labelWidth={labelWidth}
               >
                 <Input value={limit} type="number" min={0} onChange={onChangeLimit} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Time ordering"
+                labelWidth={labelWidth}
+                tooltip="In what way returned data should be ordered in time"
+              >
+                <RadioButtonGroup
+                  options={[
+                    { label: 'Ascending', value: 'ascending' },
+                    { label: 'Descending', value: 'descending' },
+                  ]}
+                  onChange={onChangeOrder}
+                  value={ordering}
+                />
               </InlineField>
             </InlineFieldRow>
           </FieldSet>

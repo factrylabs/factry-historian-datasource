@@ -393,6 +393,7 @@ func historianQuery(query schemas.MeasurementQuery, timeRange backend.TimeRange,
 		ValueFilters:     query.Options.ValueFilters,
 		GroupBy:          query.Options.GroupBy,
 		Format:           schemas.ArrowFormat,
+		Desc:             query.Options.Desc,
 	}
 
 	if query.Options.Aggregation != nil {

@@ -18,6 +18,7 @@ type MeasurementQueryOptions struct {
 	TruncateInterval       bool
 	ValueFilters           []ValueFilter
 	Datatypes              []string
+	Desc                   bool
 }
 
 // ValueFilter is used to filter the values returned by the historian
@@ -67,6 +68,7 @@ type EventQuery struct {
 	Limit                int
 	OverrideTimeRange    bool `json:"overrideTimeRange"`
 	TimeRange            TimeRange
+	Ascending            bool
 }
 
 // TimeRange contains a user-defined time range that can be used to override the grafana dashboard time range

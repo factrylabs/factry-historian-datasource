@@ -59,6 +59,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		Limit:             limit,
 		PropertyFilter:    eventQuery.PropertyFilter,
 		Status:            eventQuery.Statuses,
+		Ascending:         eventQuery.Ascending,
 	}
 
 	events, err := ds.API.EventQuery(ctx, filter)
