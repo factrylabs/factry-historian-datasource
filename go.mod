@@ -4,7 +4,6 @@ go 1.24.6
 
 require (
 	github.com/go-playground/form v3.1.4+incompatible
-	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.6.0
 	github.com/grafana/grafana-plugin-sdk-go v0.280.0
 	github.com/pkg/errors v0.9.1

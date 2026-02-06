@@ -42,8 +42,8 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		limit = eventQuery.Limit
 	}
 
-	var startTime *time.Time = &timeRange.From
-	var stopTime *time.Time = &timeRange.To
+	var startTime = &timeRange.From
+	var stopTime = &timeRange.To
 
 	if eventQuery.OverrideTimeRange {
 		startTime = eventQuery.TimeRange.From
