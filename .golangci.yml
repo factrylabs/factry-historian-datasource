@@ -1,4 +1,4 @@
-version: "2"
+version: '2'
 run:
   tests: true
 linters:
@@ -83,6 +83,7 @@ linters:
         - fieldalignment # too noisy for aligned structs
     gocritic:
       disabled-checks:
+        - paramTypeCombine
         - hugeParam
       enabled-tags:
         - performance
@@ -118,7 +119,7 @@ linters:
           disabled: false
         - name: context-as-argument
           arguments:
-            - allowTypesBefore: "*testing.T,*github.com/user/repo/testing.Harness"
+            - allowTypesBefore: '*testing.T,*github.com/user/repo/testing.Harness'
           severity: warning
           disabled: false
         - name: context-keys-type
@@ -287,11 +288,14 @@ linters:
     rules:
       - linters:
           - staticcheck
-        text: "ST1000:"
+        text: 'ST1000:'
       - linters:
           - lll
-        source: "^//go:generate "
+        source: '^//go:generate '
       - path: _test\.go
         linters:
           - godoclint
           - gosec
+      - linters:
+          - govet
+        text: 'declaration of "err" shadows declaration at'
