@@ -24,7 +24,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     const { query } = this.props
 
     try {
-      await this.props.datasource.refreshInfo()
+      await this.props.datasource.getInfo()
     } catch (_) {}
     if (!query.query) {
       this.onChangeEventQuery({

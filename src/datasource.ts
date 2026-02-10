@@ -37,6 +37,12 @@ import { isRegex, isValidRegex } from 'util/util'
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   defaultTab: TabIndex
   historianInfo: HistorianInfo | undefined
+
+  // Caching infrastructure
+  private metadataCache = new Map<string, { data: unknown; timestamp: number; timeoutId: number }>()
+  private cacheTTL = 5000 // 5 seconds
+  private pendingRequests = new Map<string, Promise<unknown>>()
+
   constructor(
     instanceSettings: DataSourceInstanceSettings<HistorianDataSourceOptions>,
     private readonly templateSrv: TemplateSrv = getTemplateSrv()
@@ -47,6 +53,38 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     this.annotations = {
       QueryEditor: AnnotationsQueryEditor,
     }
+  }
+
+  private async cachedRequest<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+    // Check cache
+    const cached = this.metadataCache.get(key)
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+      return cached.data as T
+    }
+
+    // Deduplicate concurrent requests
+    if (this.pendingRequests.has(key)) {
+      return this.pendingRequests.get(key)! as Promise<T>
+    }
+
+    // Execute & cache
+    const promise = fetcher()
+    this.pendingRequests.set(key, promise)
+
+    return promise
+      .then((data) => {
+        if (cached?.timeoutId) {
+          clearTimeout(cached.timeoutId)
+        }
+        const timeoutId = setTimeout(() => this.metadataCache.delete(key), this.cacheTTL)
+        this.metadataCache.set(key, { data, timestamp: Date.now(), timeoutId })
+        this.pendingRequests.delete(key)
+        return data
+      })
+      .catch((err) => {
+        this.pendingRequests.delete(key)
+        throw err
+      })
   }
 
   getDefaultQuery(app: CoreApp): Partial<Query> {
@@ -272,12 +310,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return typeof value === 'string' && /\$\{?[_a-zA-Z][_a-zA-Z0-9]*(?::[a-zA-Z0-9_]+)?}?/.test(value)
   }
 
-  async refreshInfo(): Promise<void> {
-    this.historianInfo = await this.getResource('info')
+  async getInfo(): Promise<void> {
+    const cacheKey = 'info'
+    this.historianInfo = await this.cachedRequest(cacheKey, () => this.getResource('info'))
   }
 
   async getMeasurement(uuid: string): Promise<Measurement> {
-    return this.getResource(`measurements/${uuid}`)
+    const cacheKey = `measurement:${uuid}`
+    return this.cachedRequest(cacheKey, () => this.getResource(`measurements/${uuid}`))
   }
 
   async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {
@@ -295,11 +335,13 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     if (pagination.Page) {
       params['page'] = pagination.Page
     }
-    return this.getResource('measurements', params)
+    delete params.ScopedVars
+    return this.cachedRequest(`measurements:${JSON.stringify(params)}`, () => this.getResource('measurements', params))
   }
 
   async getCollectors(): Promise<Collector[]> {
-    return this.getResource('collectors')
+    const cacheKey = 'collectors'
+    return this.cachedRequest(cacheKey, () => this.getResource('collectors'))
   }
 
   async getTimeseriesDatabases(filter?: TimeseriesDatabaseFilter): Promise<TimeseriesDatabase[]> {
@@ -309,8 +351,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         return []
       }
       params = { ...filter }
+      delete params.ScopedVars
     }
-    return this.getResource('databases', params)
+    const cacheKey = `databases:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource('databases', params))
   }
 
   async getAssets(filter?: AssetFilter): Promise<Asset[]> {
@@ -338,8 +382,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       if (filter.Path && isRegex(filter.Path) && !isValidRegex(filter.Path)) {
         return []
       }
+      delete params.ScopedVars
     }
-    return this.getResource('assets', params)
+    const cacheKey = `assets:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource('assets', params))
   }
 
   async getAssetProperties(filter?: AssetPropertyFilter): Promise<AssetProperty[]> {
@@ -351,8 +397,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       if (filter.AssetUUIDs) {
         params.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.multiSelectReplace(e, filter.ScopedVars))
       }
+      delete params.ScopedVars
     }
-    return this.getResource('asset-properties', params)
+    const cacheKey = `assetProperties:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource('asset-properties', params))
   }
 
   async getEventTypes(filter?: EventTypeFilter): Promise<EventType[]> {
@@ -365,8 +413,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       params = {
         ...filter,
       }
+      delete params.ScopedVars
     }
-    return this.getResource('event-types', params)
+    const cacheKey = `eventTypes:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource('event-types', params))
   }
 
   async getEventTypeProperties(filter?: EventTypePropertiesFilter): Promise<EventTypeProperty[]> {
@@ -383,16 +433,20 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       params = {
         ...eventTypePropertiesFilter,
       }
+      delete params.ScopedVars
     }
-    return this.getResource('event-type-properties', params)
+    const cacheKey = `eventTypeProperties:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource('event-type-properties', params))
   }
 
   async getEventConfigurations(): Promise<EventConfiguration[]> {
-    return this.getResource('event-configurations')
+    const cacheKey = 'eventConfigurations'
+    return this.cachedRequest(cacheKey, () => this.getResource('event-configurations'))
   }
 
   async getTagKeysForMeasurement(measurement: string): Promise<string[]> {
-    return this.getResource(`measurements/${measurement}/tags`)
+    const cacheKey = `tagKeys:${measurement}`
+    return this.cachedRequest(cacheKey, () => this.getResource(`measurements/${measurement}/tags`))
   }
 
   async getTagKeysForMeasurements(filter: MeasurementFilter): Promise<string[]> {
@@ -403,11 +457,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     const params: Record<string, unknown> = {
       ...f,
     }
-    return this.getResource(`tags`, params)
+    delete params.ScopedVars
+    const cacheKey = `tagKeys:multi:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource(`tags`, params))
   }
 
   async getTagValuesForMeasurement(measurement: string, key: string): Promise<string[]> {
-    return this.getResource(`measurements/${measurement}/tags/${key}`)
+    const cacheKey = `tagValues:${measurement}:${key}`
+    return this.cachedRequest(cacheKey, () => this.getResource(`measurements/${measurement}/tags/${key}`))
   }
 
   async getTagValuesForMeasurements(filter: MeasurementFilter, key: string): Promise<string[]> {
@@ -418,7 +475,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     const params: Record<string, unknown> = {
       ...f,
     }
-    return this.getResource(`tags/${key}`, params)
+    delete params.ScopedVars
+    const cacheKey = `tagValues:multi:${key}:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource(`tags/${key}`, params))
   }
 
   async getDistinctEventPropertyValues(filter: EventTypePropertiesValuesFilter): Promise<string[]> {
@@ -452,7 +511,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     if (!filter.EventFilter.Properties || filter.EventFilter.Properties.length === 0) {
       return Promise.resolve([])
     }
-
-    return this.getResource(`event-property-values/${filter.EventFilter.Properties[0]}`, params)
+    return this.cachedRequest(`event-property-values:${JSON.stringify(params)}`, () =>
+      this.getResource(`event-property-values/${filter.EventFilter.Properties![0]}`, params)
+    )
   }
 }
