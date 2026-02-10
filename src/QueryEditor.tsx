@@ -81,7 +81,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     const tabIndex = query.tabIndex ?? this.state.tabIndex
     this.setTabIndex(tabIndex)
     try {
-      await this.props.datasource.refreshInfo()
+      await this.props.datasource.getInfo()
     } catch (_) {}
     this.mountFinished = true
     // force re-render
