@@ -194,6 +194,9 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   onChangeSeriesLimit(value: number): void {
     const { onChange, query } = this.props
+    if (query.seriesLimit === value) {
+      return
+    }
     const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
     updatedQuery.seriesLimit = value
     updatedQuery.historianInfo = this.props.datasource.historianInfo
@@ -207,6 +210,10 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         children?: React.ReactNode
       }>
   ) {
+    if (!this.mountFinished) {
+      return
+    }
+
     if (!this.props.query.queryType) {
       return
     }
