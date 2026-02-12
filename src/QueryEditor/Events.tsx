@@ -181,7 +181,7 @@ export const Events = (props: Props): JSX.Element => {
             </InlineFieldRow>
             <InlineFieldRow>
               <InlineField
-                label="Time ordering"
+                label="Order by time"
                 labelWidth={labelWidth}
                 tooltip="In what way returned data should be ordered in time"
               >
