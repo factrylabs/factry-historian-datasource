@@ -66,6 +66,7 @@ func (api *API) MeasurementQuery(ctx context.Context, query schemas.Query) (data
 	}
 	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
 
+	// #nosec G704 -- False positive: base URL is admin-configured, paths are hardcoded, only query params contain user input which are properly escaped
 	resp, err := api.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -87,6 +88,7 @@ func (api *API) RawQuery(ctx context.Context, timeseriesDatabaseUUID string, que
 	}
 	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
 
+	// #nosec G704 -- False positive: base URL is admin-configured, paths are hardcoded, only query params contain user input which are properly escaped
 	resp, err := api.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -113,6 +115,7 @@ func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter) ([]s
 		return nil, err
 	}
 
+	// #nosec G704 -- False positive: base URL is admin-configured, paths are hardcoded, only query params contain user input which are properly escaped
 	resp, err := api.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -138,6 +141,7 @@ func (api *API) GetTagKeys(ctx context.Context, measurementUUID string) (data.Fr
 	}
 	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
 
+	// #nosec G704 -- False positive: base URL is admin-configured, paths are hardcoded, only query params contain user input which are properly escaped
 	resp, err := api.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -154,6 +158,7 @@ func (api *API) GetTagValues(ctx context.Context, measurementUUID, tagKey string
 	}
 	req.Header.Set(HeaderAccept, MIMEApplicationProtobuf)
 
+	// #nosec G704 -- False positive: base URL is admin-configured, paths are hardcoded, only query params contain user input which are properly escaped
 	resp, err := api.client.Do(req)
 	if err != nil {
 		return nil, err

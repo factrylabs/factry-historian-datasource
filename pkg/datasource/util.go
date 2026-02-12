@@ -51,6 +51,7 @@ func handleJSON(f func(http.ResponseWriter, *http.Request) (interface{}, error))
 			return
 		}
 		// Set the content type and write the response
+		// #nosec G705 -- False positive: writing JSON response body, not user-controlled HTML. Content-Type is application/json
 		if _, err := rw.Write(jsonResponse); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
