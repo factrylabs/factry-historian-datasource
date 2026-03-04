@@ -62,13 +62,11 @@ jobs:
           version: v2.8.0
           only-new-issues: true
 
-      # Disabled: gosec master branch is currently giving false positives.
-      # Aikido scan also covers security scanning for us.
-      # - name: gosec
-      #   if: steps.check-for-backend.outputs.has-backend == 'true'
-      #   uses: securego/gosec@master
-      #   with:
-      #     args: ./...
+      - name: gosec
+        if: steps.check-for-backend.outputs.has-backend == 'true'
+        uses: securego/gosec@v2.24.7
+        with:
+          args: ./...
 
       - name: Test backend
         if: steps.check-for-backend.outputs.has-backend == 'true'
@@ -144,6 +142,8 @@ jobs:
   #     - name: Resolve Grafana E2E versions
   #       id: resolve-versions
   #       uses: grafana/plugin-actions/e2e-version@main
+  #       with:
+  #         skip-grafana-react-19-preview-image: false
 
   # playwright-tests:
   #   needs: [resolve-versions, build]
