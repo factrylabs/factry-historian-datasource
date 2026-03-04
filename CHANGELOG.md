@@ -5,7 +5,19 @@
 ### ⚠️ Breaking changes
 
 - Dropped support for Grafana versions earlier than **11.0**
-- Plugin now supports **Grafana 11 and 12 only**
+
+### Changes
+
+- Improve handling of dimension event properties in event queries when also querying asset properties
+- Added options to order time series and events queries by both ascending and descending time
+- Performance improvements when editing panels with multiple queries
+
+### Bug fixes
+
+- Fixed regex selection for measurements not always working correctly
+- Filter out UUIDs from other datasources in query displays
+- Fixed possible panic in the event query
+- Sort labels to ensure consistent ordering of series in the frontend
 
 ## v2.4.0
 
