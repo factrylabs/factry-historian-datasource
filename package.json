@@ -45,7 +45,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "prettier": "^2.8.8",
     "replace-in-file-webpack-plugin": "^1.0.6",
-    "sass": "1.63.2",
+    "sass": "1.97.3",
     "sass-loader": "13.3.1",
     "style-loader": "3.3.3",
     "swc-loader": "^0.2.6",
@@ -81,6 +81,7 @@
     "overrides": {
       "form-data": "4.0.4",
       "rxjs": "7.3.0",
+      "immutable": "5.1.5",
       "uplot": "1.6.31",
       "qs": "6.14.1",
       "@remix-run/router": "1.23.2",

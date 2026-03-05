@@ -7,6 +7,7 @@ settings:
 overrides:
   rxjs: 7.3.0
   form-data: 4.0.4
+  immutable: 5.1.5
   uplot: 1.6.31
   qs: 6.14.1
   '@remix-run/router': 1.23.2
@@ -134,11 +135,11 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6
       sass:
-        specifier: 1.63.2
-        version: 1.63.2
+        specifier: 1.97.3
+        version: 1.97.3
       sass-loader:
         specifier: 13.3.1
-        version: 13.3.1(sass@1.63.2)(webpack@5.102.1(@swc/core@1.3.75(@swc/helpers@0.5.17))(webpack-cli@5.1.4))
+        version: 13.3.1(sass@1.97.3)(webpack@5.102.1(@swc/core@1.3.75(@swc/helpers@0.5.17))(webpack-cli@5.1.4))
       style-loader:
         specifier: 3.3.3
         version: 3.3.3(webpack@5.102.1(@swc/core@1.3.75(@swc/helpers@0.5.17))(webpack-cli@5.1.4))
@@ -732,6 +733,88 @@ packages:
   '@opentelemetry/semantic-conventions@1.38.0':
     resolution: {integrity: sha512-kocjix+/sSggfJhwXqClZ3i9Y/MI0fp7b+g7kCRm6psy2dsf8uApTRclwG18h8Avm7C9+fnt+O36PspJ/OzoWg==}
     engines: {node: '>=14'}
+
+  '@parcel/watcher-android-arm64@2.5.6':
+    resolution: {integrity: sha512-YQxSS34tPF/6ZG7r/Ih9xy+kP/WwediEUsqmtf0cuCV5TPPKw/PQHRhueUo6JdeFJaqV3pyjm0GdYjZotbRt/A==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [arm64]
+    os: [android]
+
+  '@parcel/watcher-darwin-arm64@2.5.6':
+    resolution: {integrity: sha512-Z2ZdrnwyXvvvdtRHLmM4knydIdU9adO3D4n/0cVipF3rRiwP+3/sfzpAwA/qKFL6i1ModaabkU7IbpeMBgiVEA==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@parcel/watcher-darwin-x64@2.5.6':
+    resolution: {integrity: sha512-HgvOf3W9dhithcwOWX9uDZyn1lW9R+7tPZ4sug+NGrGIo4Rk1hAXLEbcH1TQSqxts0NYXXlOWqVpvS1SFS4fRg==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@parcel/watcher-freebsd-x64@2.5.6':
+    resolution: {integrity: sha512-vJVi8yd/qzJxEKHkeemh7w3YAn6RJCtYlE4HPMoVnCpIXEzSrxErBW5SJBgKLbXU3WdIpkjBTeUNtyBVn8TRng==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@parcel/watcher-linux-arm-glibc@2.5.6':
+    resolution: {integrity: sha512-9JiYfB6h6BgV50CCfasfLf/uvOcJskMSwcdH1PHH9rvS1IrNy8zad6IUVPVUfmXr+u+Km9IxcfMLzgdOudz9EQ==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [arm]
+    os: [linux]
+
+  '@parcel/watcher-linux-arm-musl@2.5.6':
+    resolution: {integrity: sha512-Ve3gUCG57nuUUSyjBq/MAM0CzArtuIOxsBdQ+ftz6ho8n7s1i9E1Nmk/xmP323r2YL0SONs1EuwqBp2u1k5fxg==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [arm]
+    os: [linux]
+
+  '@parcel/watcher-linux-arm64-glibc@2.5.6':
+    resolution: {integrity: sha512-f2g/DT3NhGPdBmMWYoxixqYr3v/UXcmLOYy16Bx0TM20Tchduwr4EaCbmxh1321TABqPGDpS8D/ggOTaljijOA==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@parcel/watcher-linux-arm64-musl@2.5.6':
+    resolution: {integrity: sha512-qb6naMDGlbCwdhLj6hgoVKJl2odL34z2sqkC7Z6kzir8b5W65WYDpLB6R06KabvZdgoHI/zxke4b3zR0wAbDTA==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@parcel/watcher-linux-x64-glibc@2.5.6':
+    resolution: {integrity: sha512-kbT5wvNQlx7NaGjzPFu8nVIW1rWqV780O7ZtkjuWaPUgpv2NMFpjYERVi0UYj1msZNyCzGlaCWEtzc+exjMGbQ==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@parcel/watcher-linux-x64-musl@2.5.6':
+    resolution: {integrity: sha512-1JRFeC+h7RdXwldHzTsmdtYR/Ku8SylLgTU/reMuqdVD7CtLwf0VR1FqeprZ0eHQkO0vqsbvFLXUmYm/uNKJBg==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@parcel/watcher-win32-arm64@2.5.6':
+    resolution: {integrity: sha512-3ukyebjc6eGlw9yRt678DxVF7rjXatWiHvTXqphZLvo7aC5NdEgFufVwjFfY51ijYEWpXbqF5jtrK275z52D4Q==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@parcel/watcher-win32-ia32@2.5.6':
+    resolution: {integrity: sha512-k35yLp1ZMwwee3Ez/pxBi5cf4AoBKYXj00CZ80jUz5h8prpiaQsiRPKQMxoLstNuqe2vR4RNPEAEcjEFzhEz/g==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@parcel/watcher-win32-x64@2.5.6':
+    resolution: {integrity: sha512-hbQlYcCq5dlAX9Qx+kFb0FHue6vbjlf0FrNzSKdYK2APUf7tGfGxQCk2ihEREmbR6ZMc0MVAD5RIX/41gpUzTw==}
+    engines: {node: '>= 10.0.0'}
+    cpu: [x64]
+    os: [win32]
+
+  '@parcel/watcher@2.5.6':
+    resolution: {integrity: sha512-tmmZ3lQxAe/k/+rNnXQRawJ4NjxO2hqiOLTHvWchtGZULp4RyFeh6aU4XdOYBFe2KE1oShQTv4AblOs2iOrNnQ==}
+    engines: {node: '>= 10.0.0'}
 
   '@petamoriken/float16@3.9.3':
     resolution: {integrity: sha512-8awtpHXCx/bNpFt4mt2xdkgtgVvKqty8VbjHI/WWWQuEw+KLzFot3f4+LkQY9YmOtq7A5GdOnqoIC8Pdygjk2g==}
@@ -1586,6 +1669,10 @@ packages:
     resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
     engines: {node: '>= 8.10.0'}
 
+  chokidar@4.0.3:
+    resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
+    engines: {node: '>= 14.16.0'}
+
   chrome-trace-event@1.0.4:
     resolution: {integrity: sha512-rNjApaLzuwaOTjCiT8lSDdGN1APCiqkChLMJxJPWLunPAt5fy8xgU9/jNOchV84wfIxrA0lRQB7oCT8jrn/wrQ==}
     engines: {node: '>=6.0'}
@@ -1939,6 +2026,10 @@ packages:
   delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
+
+  detect-libc@2.1.2:
+    resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
+    engines: {node: '>=8'}
 
   detect-newline@3.1.0:
     resolution: {integrity: sha512-TLz+x/vEXm/Y7P7wn1EJFNLxYpUD4TgMosxY6fAVJUnJMbupHBOncxyWUG9OpTaH9EBD7uFI5LfEgmMOc54DsA==}
@@ -2524,11 +2615,8 @@ packages:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
     engines: {node: '>= 4'}
 
-  immutable@4.3.7:
-    resolution: {integrity: sha512-1hqclzwYwjRDFLjcFxOM5AYkkG0rpFPpr1RLPMEuGczoS7YA8gLhy8SWXYRAA/XwfEHpfo3cw5JGioS32fnMRw==}
-
-  immutable@5.0.3:
-    resolution: {integrity: sha512-P8IdPQHq3lA1xVeBRi5VPqUm5HDgKnx0Ru51wZz5mjxHr5n3RWhjIpOFU7ybkUxfB+5IToy+OLaHYDBIWsv+uw==}
+  immutable@5.1.5:
+    resolution: {integrity: sha512-t7xcm2siw+hlUM68I+UEOK+z84RzmN59as9DZ7P1l0994DKUWV7UXBMQZVxaoMSRQ+PBZbHCOoBt7a2wxOMt+A==}
 
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
@@ -3183,6 +3271,9 @@ packages:
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
 
+  node-addon-api@7.1.1:
+    resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
+
   node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
 
@@ -3343,6 +3434,10 @@ packages:
   picomatch@2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
+
+  picomatch@4.0.3:
+    resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
+    engines: {node: '>=12'}
 
   pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
@@ -3646,7 +3741,7 @@ packages:
   react-immutable-proptypes@2.2.0:
     resolution: {integrity: sha512-Vf4gBsePlwdGvSZoLSBfd4HAP93HDauMY4fDjXhreg/vg6F3Fj/MXDNyTbltPC/xZKmZc+cjLu3598DdYK6sgQ==}
     peerDependencies:
-      immutable: '>=3.6.2'
+      immutable: 5.1.5
 
   react-inlinesvg@4.2.0:
     resolution: {integrity: sha512-V59P6sFU7NACIbvoay9ikYKVFWyIIZFGd7w6YT1m+H7Ues0fOI6B6IftE6NPSYXXv7RHVmrncIyJeYurs3OJcA==}
@@ -3749,6 +3844,10 @@ packages:
   readdirp@3.6.0:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
+
+  readdirp@4.1.2:
+    resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
+    engines: {node: '>= 14.18.0'}
 
   rechoir@0.8.0:
     resolution: {integrity: sha512-/vxpCXddiX8NGfGO/mTafwjq4aFa/71pvamip0++IQk3zG8cbCj0fifNPrjjF1XMXUne91jL9OoxmdykoEtifQ==}
@@ -3881,8 +3980,8 @@ packages:
       sass-embedded:
         optional: true
 
-  sass@1.63.2:
-    resolution: {integrity: sha512-u56TU0AIFqMtauKl/OJ1AeFsXqRHkgO7nCWmHaDwfxDo9GUMSqBA4NEh6GMuh1CYVM7zuROYtZrHzPc2ixK+ww==}
+  sass@1.97.3:
+    resolution: {integrity: sha512-fDz1zJpd5GycprAbu4Q2PV/RprsRtKC/0z82z0JLgdytmcq0+ujJbJ/09bPGDxCLkKY3Np5cRAOcWiVkLXJURg==}
     engines: {node: '>=14.0.0'}
     hasBin: true
 
@@ -3997,13 +4096,13 @@ packages:
   slate-plain-serializer@0.7.13:
     resolution: {integrity: sha512-TtrlaslxQBEMV0LYdf3s7VAbTxRPe1xaW10WNNGAzGA855/0RhkaHjKkQiRjHv5rvbRleVf7Nxr9fH+4uErfxQ==}
     peerDependencies:
-      immutable: '>=3.8.1'
+      immutable: 5.1.5
       slate: '>=0.46.0 <0.50.0'
 
   slate-prop-types@0.5.44:
     resolution: {integrity: sha512-JS0iW7uaciE/W3ADuzeN1HOnSjncQhHPXJ65nZNQzB0DF7mXVmbwQKI6cmCo/xKni7XRJT0JbWSpXFhEdPiBUA==}
     peerDependencies:
-      immutable: '>=3.8.1'
+      immutable: 5.1.5
       slate: '>=0.32.0 <0.50.0'
 
   slate-react-placeholder@0.2.9:
@@ -4016,7 +4115,7 @@ packages:
   slate-react@0.22.10:
     resolution: {integrity: sha512-B2Ms1u/REbdd8yKkOItKgrw/tX8klgz5l5x6PP86+oh/yqmB6EHe0QyrYlQ9fc3WBlJUVTOL+nyAP1KmlKj2/w==}
     peerDependencies:
-      immutable: '>=3.8.1 || >4.0.0-rc'
+      immutable: 5.1.5
       react: '>=16.6.0'
       react-dom: '>=16.6.0'
       slate: '>=0.47.0'
@@ -4024,7 +4123,7 @@ packages:
   slate@0.47.9:
     resolution: {integrity: sha512-EK4O6b7lGt+g5H9PGw9O5KCM4RrOvOgE9mPi3rzQ0zDRlgAb2ga4TdpS6XNQbrsJWsc8I1fjaSsUeCqCUhhi9A==}
     peerDependencies:
-      immutable: '>=3.8.1 || >4.0.0-rc'
+      immutable: 5.1.5
 
   sort-asc@0.1.0:
     resolution: {integrity: sha512-jBgdDd+rQ+HkZF2/OHCmace5dvpos/aWQpcxuyRs9QUbPRnkEJmYVo81PIGpjIdpOcsnJ4rGjStfDHsbn+UVyw==}
@@ -5123,7 +5222,7 @@ snapshots:
       hoist-non-react-statics: 3.3.2
       i18next: 24.2.3(typescript@5.9.2)
       i18next-browser-languagedetector: 8.2.0
-      immutable: 5.0.3
+      immutable: 5.1.5
       is-hotkey: 0.2.0
       jquery: 3.7.1
       lodash: 4.17.21
@@ -5156,9 +5255,9 @@ snapshots:
       react-use: 17.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-window: 1.8.11(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       rxjs: 7.3.0
-      slate: 0.47.9(immutable@5.0.3)
-      slate-plain-serializer: 0.7.13(immutable@5.0.3)(slate@0.47.9(immutable@5.0.3))
-      slate-react: 0.22.10(immutable@5.0.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.0.3))
+      slate: 0.47.9(immutable@5.1.5)
+      slate-plain-serializer: 0.7.13(immutable@5.1.5)(slate@0.47.9(immutable@5.1.5))
+      slate-react: 0.22.10(immutable@5.1.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.1.5))
       tinycolor2: 1.6.0
       tslib: 2.8.1
       uplot: 1.6.31
@@ -5538,6 +5637,67 @@ snapshots:
       '@opentelemetry/semantic-conventions': 1.38.0
 
   '@opentelemetry/semantic-conventions@1.38.0': {}
+
+  '@parcel/watcher-android-arm64@2.5.6':
+    optional: true
+
+  '@parcel/watcher-darwin-arm64@2.5.6':
+    optional: true
+
+  '@parcel/watcher-darwin-x64@2.5.6':
+    optional: true
+
+  '@parcel/watcher-freebsd-x64@2.5.6':
+    optional: true
+
+  '@parcel/watcher-linux-arm-glibc@2.5.6':
+    optional: true
+
+  '@parcel/watcher-linux-arm-musl@2.5.6':
+    optional: true
+
+  '@parcel/watcher-linux-arm64-glibc@2.5.6':
+    optional: true
+
+  '@parcel/watcher-linux-arm64-musl@2.5.6':
+    optional: true
+
+  '@parcel/watcher-linux-x64-glibc@2.5.6':
+    optional: true
+
+  '@parcel/watcher-linux-x64-musl@2.5.6':
+    optional: true
+
+  '@parcel/watcher-win32-arm64@2.5.6':
+    optional: true
+
+  '@parcel/watcher-win32-ia32@2.5.6':
+    optional: true
+
+  '@parcel/watcher-win32-x64@2.5.6':
+    optional: true
+
+  '@parcel/watcher@2.5.6':
+    dependencies:
+      detect-libc: 2.1.2
+      is-glob: 4.0.3
+      node-addon-api: 7.1.1
+      picomatch: 4.0.3
+    optionalDependencies:
+      '@parcel/watcher-android-arm64': 2.5.6
+      '@parcel/watcher-darwin-arm64': 2.5.6
+      '@parcel/watcher-darwin-x64': 2.5.6
+      '@parcel/watcher-freebsd-x64': 2.5.6
+      '@parcel/watcher-linux-arm-glibc': 2.5.6
+      '@parcel/watcher-linux-arm-musl': 2.5.6
+      '@parcel/watcher-linux-arm64-glibc': 2.5.6
+      '@parcel/watcher-linux-arm64-musl': 2.5.6
+      '@parcel/watcher-linux-x64-glibc': 2.5.6
+      '@parcel/watcher-linux-x64-musl': 2.5.6
+      '@parcel/watcher-win32-arm64': 2.5.6
+      '@parcel/watcher-win32-ia32': 2.5.6
+      '@parcel/watcher-win32-x64': 2.5.6
+    optional: true
 
   '@petamoriken/float16@3.9.3': {}
 
@@ -6515,6 +6675,10 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
+  chokidar@4.0.3:
+    dependencies:
+      readdirp: 4.1.2
+
   chrome-trace-event@1.0.4: {}
 
   ci-info@3.9.0: {}
@@ -6896,6 +7060,9 @@ snapshots:
       robust-predicates: 3.0.2
 
   delayed-stream@1.0.0: {}
+
+  detect-libc@2.1.2:
+    optional: true
 
   detect-newline@3.1.0: {}
 
@@ -7618,9 +7785,7 @@ snapshots:
 
   ignore@5.3.2: {}
 
-  immutable@4.3.7: {}
-
-  immutable@5.0.3: {}
+  immutable@5.1.5: {}
 
   import-fresh@3.3.1:
     dependencies:
@@ -8443,6 +8608,9 @@ snapshots:
 
   node-abort-controller@3.1.1: {}
 
+  node-addon-api@7.1.1:
+    optional: true
+
   node-int64@0.4.0: {}
 
   node-releases@2.0.27: {}
@@ -8611,6 +8779,9 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@2.3.1: {}
+
+  picomatch@4.0.3:
+    optional: true
 
   pirates@4.0.7: {}
 
@@ -8932,9 +9103,9 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       typescript: 5.9.2
 
-  react-immutable-proptypes@2.2.0(immutable@5.0.3):
+  react-immutable-proptypes@2.2.0(immutable@5.1.5):
     dependencies:
-      immutable: 5.0.3
+      immutable: 5.1.5
       invariant: 2.2.4
 
   react-inlinesvg@4.2.0(react@18.3.1):
@@ -9070,6 +9241,8 @@ snapshots:
     dependencies:
       picomatch: 2.3.1
 
+  readdirp@4.1.2: {}
+
   rechoir@0.8.0:
     dependencies:
       resolve: 1.22.11
@@ -9186,19 +9359,21 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
-  sass-loader@13.3.1(sass@1.63.2)(webpack@5.102.1(@swc/core@1.3.75(@swc/helpers@0.5.17))(webpack-cli@5.1.4)):
+  sass-loader@13.3.1(sass@1.97.3)(webpack@5.102.1(@swc/core@1.3.75(@swc/helpers@0.5.17))(webpack-cli@5.1.4)):
     dependencies:
       klona: 2.0.6
       neo-async: 2.6.2
       webpack: 5.102.1(@swc/core@1.3.75(@swc/helpers@0.5.17))(webpack-cli@5.1.4)
     optionalDependencies:
-      sass: 1.63.2
+      sass: 1.97.3
 
-  sass@1.63.2:
+  sass@1.97.3:
     dependencies:
-      chokidar: 3.6.0
-      immutable: 4.3.7
+      chokidar: 4.0.3
+      immutable: 5.1.5
       source-map-js: 1.2.1
+    optionalDependencies:
+      '@parcel/watcher': 2.5.6
 
   saxes@6.0.0:
     dependencies:
@@ -9303,10 +9478,10 @@ snapshots:
 
   slash@4.0.0: {}
 
-  slate-base64-serializer@0.2.115(slate@0.47.9(immutable@5.0.3)):
+  slate-base64-serializer@0.2.115(slate@0.47.9(immutable@5.1.5)):
     dependencies:
       isomorphic-base64: 1.0.2
-      slate: 0.47.9(immutable@5.0.3)
+      slate: 0.47.9(immutable@5.1.5)
 
   slate-dev-environment@0.2.5:
     dependencies:
@@ -9317,53 +9492,53 @@ snapshots:
       is-hotkey: 0.1.4
       slate-dev-environment: 0.2.5
 
-  slate-plain-serializer@0.7.13(immutable@5.0.3)(slate@0.47.9(immutable@5.0.3)):
+  slate-plain-serializer@0.7.13(immutable@5.1.5)(slate@0.47.9(immutable@5.1.5)):
     dependencies:
-      immutable: 5.0.3
-      slate: 0.47.9(immutable@5.0.3)
+      immutable: 5.1.5
+      slate: 0.47.9(immutable@5.1.5)
 
-  slate-prop-types@0.5.44(immutable@5.0.3)(slate@0.47.9(immutable@5.0.3)):
+  slate-prop-types@0.5.44(immutable@5.1.5)(slate@0.47.9(immutable@5.1.5)):
     dependencies:
-      immutable: 5.0.3
-      slate: 0.47.9(immutable@5.0.3)
+      immutable: 5.1.5
+      slate: 0.47.9(immutable@5.1.5)
 
-  slate-react-placeholder@0.2.9(react@18.3.1)(slate-react@0.22.10(immutable@5.0.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.0.3)))(slate@0.47.9(immutable@5.0.3)):
+  slate-react-placeholder@0.2.9(react@18.3.1)(slate-react@0.22.10(immutable@5.1.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.1.5)))(slate@0.47.9(immutable@5.1.5)):
     dependencies:
       react: 18.3.1
-      slate: 0.47.9(immutable@5.0.3)
-      slate-react: 0.22.10(immutable@5.0.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.0.3))
+      slate: 0.47.9(immutable@5.1.5)
+      slate-react: 0.22.10(immutable@5.1.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.1.5))
 
-  slate-react@0.22.10(immutable@5.0.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.0.3)):
+  slate-react@0.22.10(immutable@5.1.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.1.5)):
     dependencies:
       debug: 3.2.7
       get-window: 1.1.2
-      immutable: 5.0.3
+      immutable: 5.1.5
       is-window: 1.0.2
       lodash: 4.17.21
       memoize-one: 4.0.3
       prop-types: 15.8.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-immutable-proptypes: 2.2.0(immutable@5.0.3)
+      react-immutable-proptypes: 2.2.0(immutable@5.1.5)
       selection-is-backward: 1.0.0
-      slate: 0.47.9(immutable@5.0.3)
-      slate-base64-serializer: 0.2.115(slate@0.47.9(immutable@5.0.3))
+      slate: 0.47.9(immutable@5.1.5)
+      slate-base64-serializer: 0.2.115(slate@0.47.9(immutable@5.1.5))
       slate-dev-environment: 0.2.5
       slate-hotkeys: 0.2.11
-      slate-plain-serializer: 0.7.13(immutable@5.0.3)(slate@0.47.9(immutable@5.0.3))
-      slate-prop-types: 0.5.44(immutable@5.0.3)(slate@0.47.9(immutable@5.0.3))
-      slate-react-placeholder: 0.2.9(react@18.3.1)(slate-react@0.22.10(immutable@5.0.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.0.3)))(slate@0.47.9(immutable@5.0.3))
+      slate-plain-serializer: 0.7.13(immutable@5.1.5)(slate@0.47.9(immutable@5.1.5))
+      slate-prop-types: 0.5.44(immutable@5.1.5)(slate@0.47.9(immutable@5.1.5))
+      slate-react-placeholder: 0.2.9(react@18.3.1)(slate-react@0.22.10(immutable@5.1.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(slate@0.47.9(immutable@5.1.5)))(slate@0.47.9(immutable@5.1.5))
       tiny-invariant: 1.3.3
       tiny-warning: 0.0.3
     transitivePeerDependencies:
       - supports-color
 
-  slate@0.47.9(immutable@5.0.3):
+  slate@0.47.9(immutable@5.1.5):
     dependencies:
       debug: 3.2.7
       direction: 0.1.5
       esrever: 0.2.0
-      immutable: 5.0.3
+      immutable: 5.1.5
       is-plain-object: 2.0.4
       lodash: 4.17.21
       tiny-invariant: 1.3.3
