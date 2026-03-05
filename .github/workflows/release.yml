@@ -23,6 +23,7 @@ jobs:
         with:
           policy_token: ${{ secrets.GRAFANA_POLICY_TOKEN }}
           attestation: true
+          go-version: '1.26'
         id: build
       - name: Upload to Factry Portal
         run: |
