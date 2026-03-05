@@ -246,6 +246,73 @@ Playwright tests exist but are currently commented out in CI. Infrastructure use
 
 ---
 
+## Git Commit Conventions
+
+This project uses **Conventional Commits** for all commit messages.
+
+### Format
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Types
+
+| Type | When to use |
+|------|-------------|
+| `feat` | A new feature |
+| `fix` | A bug fix |
+| `docs` | Documentation changes only |
+| `style` | Formatting, missing semicolons, etc. (no logic change) |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
+| `test` | Adding or updating tests |
+| `chore` | Build process, dependency updates, tooling changes |
+| `perf` | Performance improvements |
+| `ci` | CI/CD configuration changes |
+| `revert` | Reverts a previous commit |
+
+### Scopes (optional but encouraged)
+
+Use scopes to indicate the area of the codebase affected:
+
+- `frontend` — TypeScript/React changes in `src/`
+- `backend` — Go changes in `pkg/`
+- `api` — Historian API client (`pkg/api/`)
+- `query` — Query handling logic
+- `events` — Event query handling
+- `config` — Configuration/settings
+- `deps` — Dependency updates
+- `ci` — CI/CD workflows
+
+### Examples
+
+```
+feat(frontend): add multi-select support to asset picker
+fix(backend): handle empty measurement list in query handler
+docs: update SCHEMA.md with new event query fields
+chore(deps): bump grafana/grafana-plugin-sdk-go to v0.250.0
+refactor(api): extract pagination logic into helper function
+test(backend): add unit tests for event property filtering
+ci: add Go security scan step to CI workflow
+```
+
+### Breaking Changes
+
+For breaking changes, add `!` after the type/scope and include a `BREAKING CHANGE:` footer:
+
+```
+feat(backend)!: remove deprecated OldEventTypePropertiesValuesFilter
+
+BREAKING CHANGE: OldEventTypePropertiesValuesFilter has been removed.
+Use EventTypePropertiesValuesFilter instead.
+```
+
+---
+
 ## Code Conventions
 
 ### TypeScript / React
