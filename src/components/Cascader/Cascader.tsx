@@ -278,7 +278,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
           options={options}
           changeOnSelect={changeOnSelect}
           value={rcValue.value}
-          fieldNames={{ label: 'label', value: 'value', children: undefined}}
+          fieldNames={{ label: 'label', value: 'value', children: 'items' }}
           expandIcon={null}
           open={focusCascade}
           dropdownClassName={styles.dropdown}
