@@ -2,7 +2,26 @@
 // generally used by snapshots, but can affect specific tests
 process.env.TZ = 'UTC'
 
+const baseConfig = require('./.config/jest.config')
+
 module.exports = {
-  // Jest configuration provided by Grafana scaffolding
-  ...require('./.config/jest.config'),
+  ...baseConfig,
+  transform: {
+    '^.+\\.(t|j)sx?$': [
+      '@swc/jest',
+      {
+        sourceMaps: 'inline',
+        jsc: {
+          parser: {
+            syntax: 'typescript',
+            tsx: true,
+            decorators: false,
+            dynamicImport: true,
+          },
+          // Pin to es2022 — the installed @swc/core does not support es2023
+          target: 'es2022',
+        },
+      },
+    ],
+  },
 }
