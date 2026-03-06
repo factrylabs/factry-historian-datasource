@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -162,4 +163,18 @@ func filterEventTypeUUIDs(eventTypes []schemas.EventType, searchValue string) []
 	return filterItems(eventTypes, searchValue,
 		func(eventType schemas.EventType) string { return eventType.Name },
 		func(eventType schemas.EventType) string { return eventType.UUID.String() })
+}
+
+// AppendEscapedQuery appends the given raw query string to the path after validating and escaping it
+func AppendEscapedQuery(path, rawQuery string) (string, error) {
+	if rawQuery == "" {
+		return path, nil
+	}
+
+	values, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		return "", fmt.Errorf("invalid query parameters: %w", err)
+	}
+
+	return path + "?" + values.Encode(), nil
 }
