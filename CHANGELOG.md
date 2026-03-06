@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.0.1
+
+### Bug fixes
+
+- Fixed an issue escaping special characters when calling the historian API
+- Fixed the asset selection cascader only showing root level assets
+
 ## v3.0.0
 
 ### ⚠️ Breaking changes
