@@ -16,9 +16,9 @@ import (
 func (api *API) GetMeasurements(ctx context.Context, query string) ([]schemas.Measurement, error) {
 	measurements := []schemas.Measurement{}
 
-	queryURL := "/api/measurements"
-	if query != "" {
-		queryURL += "?" + url.PathEscape(query)
+	queryURL, err := AppendEscapedQuery("/api/measurements", query)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
@@ -99,9 +99,9 @@ func (api *API) GetCollectors(ctx context.Context) ([]schemas.Collector, error) 
 func (api *API) GetTimeseriesDatabases(ctx context.Context, query string) ([]schemas.TimeseriesDatabase, error) {
 	timeseriesDatabases := []schemas.TimeseriesDatabase{}
 
-	queryURL := "/api/timeseries-databases"
-	if query != "" {
-		queryURL += "?" + url.PathEscape(query)
+	queryURL, err := AppendEscapedQuery("/api/timeseries-databases", query)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
@@ -130,9 +130,9 @@ func (api *API) GetTimeseriesDatabases(ctx context.Context, query string) ([]sch
 func (api *API) GetAssets(ctx context.Context, query string) ([]schemas.Asset, error) {
 	assets := []schemas.Asset{}
 
-	queryURL := "/api/assets"
-	if query != "" {
-		queryURL += "?" + url.PathEscape(query)
+	queryURL, err := AppendEscapedQuery("/api/assets", query)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
@@ -161,9 +161,9 @@ func (api *API) GetAssets(ctx context.Context, query string) ([]schemas.Asset, e
 func (api *API) GetAssetProperties(ctx context.Context, query string) ([]schemas.AssetProperty, error) {
 	assetProperties := []schemas.AssetProperty{}
 
-	queryURL := "/api/asset-properties"
-	if query != "" {
-		queryURL += "?" + url.PathEscape(query)
+	queryURL, err := AppendEscapedQuery("/api/asset-properties", query)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
@@ -192,9 +192,9 @@ func (api *API) GetAssetProperties(ctx context.Context, query string) ([]schemas
 func (api *API) GetEventTypes(ctx context.Context, query string) ([]schemas.EventType, error) {
 	eventTypes := []schemas.EventType{}
 
-	queryURL := "/api/event-types"
-	if query != "" {
-		queryURL += "?" + url.PathEscape(query)
+	queryURL, err := AppendEscapedQuery("/api/event-types", query)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
@@ -223,9 +223,9 @@ func (api *API) GetEventTypes(ctx context.Context, query string) ([]schemas.Even
 func (api *API) GetEventTypeProperties(ctx context.Context, query string) ([]schemas.EventTypeProperty, error) {
 	eventTypeProperties := []schemas.EventTypeProperty{}
 
-	queryURL := "/api/event-type-properties"
-	if query != "" {
-		queryURL += "?" + url.PathEscape(query)
+	queryURL, err := AppendEscapedQuery("/api/event-type-properties", query)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
