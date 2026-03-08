@@ -47,13 +47,13 @@ jobs:
 
       - name: Coverage comment
         if: github.event_name == 'pull_request'
-        uses: MishaKav/jest-coverage-comment@main
+        uses: MishaKav/jest-coverage-comment@d1a95e365f7f60e1438b5b36198b8c23e9ea4d59
         with:
           coverage-summary-path: ./coverage/coverage-summary.json
 
       - name: Update coverage badge
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.COVERAGE_GIST_ID != ''
-        uses: Schneegans/dynamic-badges-action@v1.7.0
+        uses: Schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: ${{ vars.COVERAGE_GIST_ID }}
