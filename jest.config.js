@@ -6,6 +6,13 @@ const baseConfig = require('./.config/jest.config')
 
 module.exports = {
   ...baseConfig,
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.test.{ts,tsx}',
+    '!src/**/__tests__/**',
+  ],
+  coverageReporters: ['text', 'lcov', 'html'],
+  coverageProvider: 'v8',
   transform: {
     '^.+\\.(t|j)sx?$': [
       '@swc/jest',
