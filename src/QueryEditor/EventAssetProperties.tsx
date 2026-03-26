@@ -7,10 +7,12 @@ import { QueryTag } from 'components/TagsSection/types'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
 import { Asset, AssetMeasurementQuery, AssetProperty, MeasurementQueryOptions, labelWidth } from 'types'
-import { getChildAssets, valueFiltersToQueryTags } from './util'
+import { buildLazyCascaderOptions, updateTreeChildren, valueFiltersToQueryTags } from './util'
 import { isFeatureEnabled } from 'util/semver'
 import Cascader, { CascaderOption } from 'components/Cascader/Cascader'
 import { isRegex, isUUID } from 'util/util'
+
+const NIL_UUID = '00000000-0000-0000-0000-000000000000'
 
 export interface Props {
   datasource: DataSource
@@ -30,32 +32,138 @@ export interface Props {
 
 export const EventAssetProperties = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
-  const [assets, setAssets] = useState<Asset[]>([])
+  const [assetOptions, setAssetOptions] = useState<CascaderOption[]>([])
+  const [selectedAssets, setSelectedAssets] = useState<Asset[]>([])
   const [assetProperties, setAssetProperties] = useState<AssetProperty[]>([])
+  const [initialLabel, setInitialLabel] = useState('')
 
-  const fetchAssetsAndProperties = useCallback(async () => {
-    const assets = await props.datasource.getAssets()
-    setAssets(assets)
-    const assetProperties = await props.datasource.getAssetProperties()
-    setAssetProperties(assetProperties)
-  }, [props.datasource])
+  const fetchRootAssets = useCallback(async () => {
+    const rootAssets = await props.datasource.getAssets({ ParentUUIDs: [NIL_UUID] })
+    const rootUUIDs = rootAssets.map((a) => a.UUID)
+    const rootProperties = rootUUIDs.length > 0
+      ? await props.datasource.getAssetProperties({ AssetUUIDs: rootUUIDs })
+      : []
+    const options = buildLazyCascaderOptions(rootAssets, rootProperties).concat(
+      props.templateVariables.map((e) => ({
+        value: e.value,
+        label: e.label ?? '',
+        isLeaf: true,
+      }))
+    )
+    setAssetOptions(options)
+  }, [props.datasource, props.templateVariables])
+
+  const resolveInitialLabel = useCallback(async () => {
+    if (!props.overrideAssets || props.overrideAssets.length === 0) {
+      setInitialLabel('')
+      return
+    }
+
+    const selectedValue = props.overrideAssets[0]
+    if (selectedValue.startsWith('$')) {
+      setInitialLabel(selectedValue)
+      return
+    }
+
+    if (isUUID(selectedValue)) {
+      const results = await props.datasource.getAssets({ Keyword: selectedValue })
+      const asset = results.find((a) => a.UUID === selectedValue)
+      if (asset) {
+        setInitialLabel(asset.AssetPath || asset.Name)
+        const matched = [asset]
+        setSelectedAssets(matched)
+        const properties = await props.datasource.getAssetProperties({ AssetUUIDs: [asset.UUID] })
+        setAssetProperties(properties)
+      } else {
+        setInitialLabel('')
+      }
+      return
+    }
+
+    setInitialLabel('')
+  }, [props.overrideAssets, props.datasource])
 
   useEffect(() => {
     if (loading) {
       ;(async () => {
-        await fetchAssetsAndProperties()
+        await Promise.all([fetchRootAssets(), resolveInitialLabel()])
         setLoading(false)
       })()
     }
-  }, [loading, fetchAssetsAndProperties])
+  }, [loading, fetchRootAssets, resolveInitialLabel])
 
-  const assetOptions = getChildAssets(null, assets, assetProperties).concat(
-    props.templateVariables.map((e) => {
-      return { value: e.value, label: e.label } as CascaderOption
-    })
+  const handleLoadData = useCallback(
+    (selectOptions: CascaderOption[]) => {
+      const targetOption = selectOptions[selectOptions.length - 1]
+      const parentUUID = targetOption.value
+
+      if (targetOption.items?.some((item) => !item.isLeaf)) {
+        return
+      }
+
+      Promise.all([
+        props.datasource.getAssets({ ParentUUIDs: [parentUUID] }),
+        props.datasource.getAssetProperties({ AssetUUIDs: [parentUUID] }),
+      ]).then(([children, properties]) => {
+        const childAssetOptions = buildLazyCascaderOptions(children, [])
+        const propertyOptions: CascaderOption[] = properties.map((prop) => ({
+          label: `📏 ${prop.Name}`,
+          value: prop.UUID,
+          isLeaf: true,
+        }))
+        const allItems = childAssetOptions.concat(propertyOptions)
+        setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, allItems))
+      })
+    },
+    [props.datasource]
   )
 
-  const onAssetChange = (asset: string, property?: string): void => {
+  const handleSearchAsync = useCallback(
+    async (keyword: string): Promise<Array<SelectableValue<string[]>>> => {
+      if (!keyword || keyword.length < 2) {
+        return []
+      }
+      const [assets, properties] = await Promise.all([
+        props.datasource.getAssets({ Keyword: keyword, UseAssetPath: true }),
+        props.datasource.getAssetProperties({ Keyword: keyword }),
+      ])
+
+      const matchedProperties = properties.filter((prop) =>
+        prop.Name.toLowerCase().includes(keyword.toLowerCase())
+      )
+
+      const assetMap = new Map(assets.map((a) => [a.UUID, a]))
+      const missingParentUUIDs = [...new Set(
+        matchedProperties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid))
+      )]
+      if (missingParentUUIDs.length > 0) {
+        const parentAssets = await props.datasource.getAssets({ UUIDs: missingParentUUIDs })
+        for (const asset of parentAssets) {
+          assetMap.set(asset.UUID, asset)
+        }
+      }
+
+      const assetResults: Array<SelectableValue<string[]>> = assets.map((asset) => ({
+        label: `📦 ${asset.AssetPath || asset.Name}`,
+        value: [asset.UUID],
+      }))
+
+      const propertyResults: Array<SelectableValue<string[]>> = matchedProperties.map((prop) => {
+        const parentAsset = assetMap.get(prop.AssetUUID)
+        const parentLabel = parentAsset?.AssetPath || parentAsset?.Name || ''
+        return {
+          label: `${parentLabel ? '📦 ' + parentLabel + '\\' : ''}📏 ${prop.Name}`,
+          value: [prop.AssetUUID, prop.UUID],
+          description: parentLabel,
+        }
+      })
+
+      return assetResults.concat(propertyResults)
+    },
+    [props.datasource]
+  )
+
+  const onAssetChange = async (asset: string, property?: string): Promise<void> => {
     if (!isUUID(asset) && !isRegex(asset) && !props.templateVariables.some((e) => e.value === asset)) {
       if (!props.overrideAssets || props.overrideAssets.length === 0) {
         return
@@ -66,15 +174,27 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
         Assets: [],
         Options: props.queryOptions,
       })
+      setSelectedAssets([])
+      setAssetProperties([])
       return
     }
 
     let properties: string[] = []
     if (property) {
-      const assetProperty = assetProperties.find((e) => e.UUID === property)
+      const allProps = await props.datasource.getAssetProperties({ AssetUUIDs: [asset] })
+      const assetProperty = allProps.find((e) => e.UUID === property)
       if (assetProperty) {
         properties = [assetProperty.Name]
       }
+      setAssetProperties(allProps)
+    } else {
+      const assetProps = await props.datasource.getAssetProperties({ AssetUUIDs: [asset] })
+      setAssetProperties(assetProps)
+    }
+
+    if (isUUID(asset)) {
+      const assets = await props.datasource.getAssets({ Keyword: asset })
+      setSelectedAssets(assets.filter((a) => a.UUID === asset))
     }
 
     props.onChangeAssetMeasurementQuery({
@@ -125,40 +245,21 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
 
   const getSelectedAssetProperties = (): AssetProperty[] => {
     const assetPropertiesSet = new Set<AssetProperty>()
-    const selectedAssetProperties = props.selectedAssetProperties.flatMap((e) =>
+    const selectedAssetPropertyNames = props.selectedAssetProperties.flatMap((e) =>
       props.datasource.multiSelectReplace(e, {})
     )
 
     for (const assetProperty of assetProperties) {
       const propertySelected =
-        selectedAssetProperties.find((e) => e === assetProperty.UUID || e === assetProperty.Name) !== undefined
+        selectedAssetPropertyNames.find((e) => e === assetProperty.UUID || e === assetProperty.Name) !== undefined
 
-      const assetSelected = props.selectedAssets.find((e) => e.UUID === assetProperty.AssetUUID)
+      const assetSelected = selectedAssets.find((e) => e.UUID === assetProperty.AssetUUID)
       if (propertySelected && assetSelected) {
         assetPropertiesSet.add(assetProperty)
       }
     }
 
     return Array.from(assetPropertiesSet)
-  }
-
-  const initialLabel = (): string => {
-    if (!props.overrideAssets || props.overrideAssets.length === 0) {
-      return ''
-    }
-
-    const asset = assets.find((e) => e.UUID === props.overrideAssets[0])
-    if (asset) {
-      return asset.AssetPath || ''
-    }
-
-    // Don't display UUIDs from other datasources - hide them but preserve in query
-    // Allow template variables to be displayed
-    if (props.overrideAssets[0].startsWith('$')) {
-      return props.overrideAssets[0]
-    }
-
-    return ''
   }
 
   return (
@@ -174,12 +275,14 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
             >
               <Cascader
                 initialValue={props.overrideAssets?.length ? props.overrideAssets[0] : ''}
-                initialLabel={initialLabel()}
+                initialLabel={initialLabel}
                 options={assetOptions}
                 displayAllSelectedLevels
                 onSelect={onAssetChange}
                 separator="\\"
-                onOpen={fetchAssetsAndProperties}
+                onOpen={fetchRootAssets}
+                loadData={handleLoadData}
+                onSearchAsync={handleSearchAsync}
               />
             </InlineField>
           </InlineFieldRow>
@@ -188,10 +291,17 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
               <AssetProperties
                 assetProperties={assetProperties}
                 initialValue={props.selectedAssetProperties}
-                selectedAssets={props.selectedAssets}
+                selectedAssets={selectedAssets}
                 templateVariables={props.templateVariables}
                 onChange={onChangeAssetProperties}
-                onOpenMenu={props.onOpenMenu}
+                onOpenMenu={async () => {
+                  if (selectedAssets.length > 0) {
+                    const props2 = await props.datasource.getAssetProperties({
+                      AssetUUIDs: selectedAssets.map((a) => a.UUID),
+                    })
+                    setAssetProperties(props2)
+                  }
+                }}
               />
             </InlineField>
           </InlineFieldRow>

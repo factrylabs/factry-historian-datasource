@@ -175,6 +175,52 @@ export function getChildAssets(
   return result.sort(sortByLabel)
 }
 
+export function buildLazyCascaderOptions(
+  assets: Asset[],
+  assetProperties: AssetProperty[] = []
+): CascaderOption[] {
+  const result: CascaderOption[] = assets.map((asset) => {
+    const properties: CascaderOption[] = assetProperties
+      .filter((prop) => prop.AssetUUID === asset.UUID)
+      .map((prop) => ({
+        label: `📏 ${prop.Name}`,
+        value: prop.UUID,
+        isLeaf: true,
+      }))
+
+    return {
+      label: `📦 ${asset.Name}`,
+      value: asset.UUID,
+      items: properties.length > 0 ? properties : undefined,
+      isLeaf: false,
+    }
+  })
+
+  return result.sort(sortByLabel)
+}
+
+export function updateTreeChildren(
+  options: CascaderOption[],
+  parentUUID: string,
+  children: CascaderOption[]
+): CascaderOption[] {
+  return options.map((option) => {
+    if (option.value === parentUUID) {
+      if (children.length === 0) {
+        return { ...option, items: undefined, isLeaf: true }
+      }
+      return { ...option, items: children }
+    }
+    if (option.items && option.items.length > 0) {
+      const updatedItems = updateTreeChildren(option.items, parentUUID, children)
+      if (updatedItems !== option.items) {
+        return { ...option, items: updatedItems }
+      }
+    }
+    return option
+  })
+}
+
 export function findOption(
   options: Array<SelectableValue<string[]>>,
   label: string
