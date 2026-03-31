@@ -5,12 +5,20 @@ import { default as Cascader, CascaderOption } from 'components/Cascader/Cascade
 import { AssetProperties } from 'components/util/AssetPropertiesSelect'
 import { DataSource } from 'datasource'
 import { QueryOptions } from './QueryOptions'
-import { buildLazyCascaderOptions, matchedAssets, tagsToQueryTags, updateTreeChildren, valueFiltersToQueryTags } from './util'
+import {
+  buildLazyCascaderOptions,
+  matchedAssets,
+  NIL_UUID,
+  resolveAssetLabel,
+  searchAssetsAndProperties,
+  tagsToQueryTags,
+  templateVariablesToCascaderOptions,
+  updateTreeChildren,
+  valueFiltersToQueryTags,
+} from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
 import { isFeatureEnabled } from 'util/semver'
 import { isRegex, isUUID } from 'util/util'
-
-const NIL_UUID = '00000000-0000-0000-0000-000000000000'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -31,51 +39,21 @@ export const Assets = (props: Props): JSX.Element => {
 
   const fetchRootAssets = useCallback(async () => {
     const rootAssets = await props.datasource.getAssets({ ParentUUIDs: [NIL_UUID] })
-    const rootUUIDs = rootAssets.map((a) => a.UUID)
-    const rootProperties = rootUUIDs.length > 0
-      ? await props.datasource.getAssetProperties({ AssetUUIDs: rootUUIDs })
-      : []
-    const options = buildLazyCascaderOptions(rootAssets, rootProperties).concat(
-      props.templateVariables.map((e) => ({
-        value: e.value,
-        label: e.label ?? '',
-        isLeaf: true,
-      }))
+    const options = buildLazyCascaderOptions(rootAssets, []).concat(
+      templateVariablesToCascaderOptions(props.templateVariables)
     )
     setAssetOptions(options)
   }, [props.datasource, props.templateVariables])
 
   const resolveInitialLabel = useCallback(async () => {
-    if (!props.query.Assets || props.query.Assets.length === 0) {
-      setInitialLabel('')
-      return
+    const selectedValue = props.query.Assets?.[0]
+    const { label, asset } = await resolveAssetLabel(props.datasource, selectedValue)
+    setInitialLabel(label)
+    if (asset) {
+      setSelectedAssets([asset])
+      const properties = await props.datasource.getAssetProperties({ AssetUUIDs: [asset.UUID] })
+      setAssetProperties(properties)
     }
-
-    const selectedValue = props.query.Assets[0]
-
-    if (selectedValue.startsWith('$')) {
-      setInitialLabel(selectedValue)
-      return
-    }
-
-    if (isUUID(selectedValue)) {
-      const assets = await props.datasource.getAssets({ Keyword: selectedValue })
-      const asset = assets.find((a) => a.UUID === selectedValue)
-      if (asset) {
-        setInitialLabel(asset.AssetPath || asset.Name)
-
-        // Also load properties for the selected asset
-        const matched = [asset]
-        setSelectedAssets(matched)
-        const properties = await props.datasource.getAssetProperties({ AssetUUIDs: [asset.UUID] })
-        setAssetProperties(properties)
-      } else {
-        setInitialLabel('')
-      }
-      return
-    }
-
-    setInitialLabel('')
   }, [props.query.Assets, props.datasource])
 
   useEffect(() => {
@@ -92,7 +70,6 @@ export const Assets = (props: Props): JSX.Element => {
       const targetOption = selectOptions[selectOptions.length - 1]
       const parentUUID = targetOption.value
 
-      // Skip if children are already loaded (non-leaf items present)
       if (targetOption.items?.some((item) => !item.isLeaf)) {
         return
       }
@@ -107,57 +84,14 @@ export const Assets = (props: Props): JSX.Element => {
           value: prop.UUID,
           isLeaf: true,
         }))
-        const allItems = childAssetOptions.concat(propertyOptions)
-        setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, allItems))
-      })
+        setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, childAssetOptions.concat(propertyOptions)))
+      }).catch(() => {})
     },
     [props.datasource]
   )
 
   const handleSearchAsync = useCallback(
-    async (keyword: string): Promise<Array<SelectableValue<string[]>>> => {
-      if (!keyword || keyword.length < 2) {
-        return []
-      }
-      const [assets, properties] = await Promise.all([
-        props.datasource.getAssets({ Keyword: keyword, UseAssetPath: true }),
-        props.datasource.getAssetProperties({ Keyword: keyword }),
-      ])
-
-      // Filter properties to only those whose name matches the keyword
-      const matchedProperties = properties.filter((prop) =>
-        prop.Name.toLowerCase().includes(keyword.toLowerCase())
-      )
-
-      // Fetch parent assets for properties whose parent wasn't in the keyword search results
-      const assetMap = new Map(assets.map((a) => [a.UUID, a]))
-      const missingParentUUIDs = [...new Set(
-        matchedProperties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid))
-      )]
-      if (missingParentUUIDs.length > 0) {
-        const parentAssets = await props.datasource.getAssets({ UUIDs: missingParentUUIDs })
-        for (const asset of parentAssets) {
-          assetMap.set(asset.UUID, asset)
-        }
-      }
-
-      const assetResults: Array<SelectableValue<string[]>> = assets.map((asset) => ({
-        label: `📦 ${asset.AssetPath || asset.Name}`,
-        value: [asset.UUID],
-      }))
-
-      const propertyResults: Array<SelectableValue<string[]>> = matchedProperties.map((prop) => {
-        const parentAsset = assetMap.get(prop.AssetUUID)
-        const parentLabel = parentAsset?.AssetPath || parentAsset?.Name || ''
-        return {
-          label: `${parentLabel ? '📦 ' + parentLabel + '\\' : ''}📏 ${prop.Name}`,
-          value: [prop.AssetUUID, prop.UUID],
-          description: parentLabel,
-        }
-      })
-
-      return assetResults.concat(propertyResults)
-    },
+    (keyword: string) => searchAssetsAndProperties(props.datasource, keyword),
     [props.datasource]
   )
 
@@ -185,28 +119,24 @@ export const Assets = (props: Props): JSX.Element => {
       return
     }
 
+    const [assetProps, resolvedAssets] = await Promise.all([
+      props.datasource.getAssetProperties({ AssetUUIDs: [asset] }),
+      isUUID(asset) || isRegex(asset) ? props.datasource.getAssets({ Keyword: asset }) : Promise.resolve([]),
+    ])
+    setAssetProperties(assetProps)
+
+    if (isUUID(asset)) {
+      setSelectedAssets(resolvedAssets.filter((a) => a.UUID === asset))
+    } else if (isRegex(asset)) {
+      setSelectedAssets(matchedAssets(props.datasource.multiSelectReplace(asset), resolvedAssets))
+    }
+
     let properties: string[] = []
     if (property) {
-      // Fetch the property details to get its name
-      const allProps = await props.datasource.getAssetProperties({ AssetUUIDs: [asset] })
-      const assetProperty = allProps.find((e) => e.UUID === property)
+      const assetProperty = assetProps.find((e) => e.UUID === property)
       if (assetProperty) {
         properties = [assetProperty.Name]
       }
-      setAssetProperties(allProps)
-    } else {
-      // Fetch properties for the selected asset
-      const assetProps = await props.datasource.getAssetProperties({ AssetUUIDs: [asset] })
-      setAssetProperties(assetProps)
-    }
-
-    // Resolve selected asset(s) for the properties multiselect
-    if (isUUID(asset)) {
-      const assets = await props.datasource.getAssets({ Keyword: asset })
-      setSelectedAssets(assets.filter((a) => a.UUID === asset))
-    } else if (isRegex(asset)) {
-      const assets = await props.datasource.getAssets({ Keyword: asset })
-      setSelectedAssets(matchedAssets(props.datasource.multiSelectReplace(asset), assets))
     }
 
     props.onChangeAssetMeasurementQuery({
@@ -280,7 +210,7 @@ export const Assets = (props: Props): JSX.Element => {
                 displayAllSelectedLevels
                 onSelect={onAssetChange}
                 separator="\\"
-                onOpen={fetchRootAssets}
+                onOpen={() => { if (assetOptions.length === 0) { fetchRootAssets() } }}
                 loadData={handleLoadData}
                 onSearchAsync={handleSearchAsync}
               />

@@ -107,6 +107,12 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
 
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
+  componentWillUnmount() {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer)
+    }
+  }
+
   flattenOptions = (options: CascaderOption[], optionPath: CascaderOption[] = []) => {
     let selectOptions: Array<SelectableValue<string[]>> = []
     for (const option of options) {
@@ -200,7 +206,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     this.props.onBlur?.()
   }
 
-  handleChange(e: any) {
+  handleChange = (e: any) => {
     const userInput: string = e.target.value
 
     this.setState({
@@ -373,7 +379,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
               onBlur={this.onBlurCascade}
               value={activeLabel?.replace(new RegExp('📦 ', 'g'), '')}
               onKeyDown={this.onKeyDown}
-              onChange={this.handleChange.bind(this)}
+              onChange={this.handleChange}
               onFocus={this.openCascade}
               suffix={
                 focusCascade ? (

@@ -15,7 +15,90 @@ import {
   PropertyType,
   ValueFilter,
 } from 'types'
+import { DataSource } from 'datasource'
 import { isFeatureEnabled } from 'util/semver'
+import { isUUID } from 'util/util'
+
+export const NIL_UUID = '00000000-0000-0000-0000-000000000000'
+
+export function templateVariablesToCascaderOptions(
+  templateVariables: Array<SelectableValue<string>>
+): CascaderOption[] {
+  return templateVariables.map((e) => ({
+    value: e.value,
+    label: e.label ?? '',
+    isLeaf: true,
+  }))
+}
+
+export async function resolveAssetLabel(
+  datasource: DataSource,
+  selectedValue: string | undefined
+): Promise<{ label: string; asset?: Asset }> {
+  if (!selectedValue) {
+    return { label: '' }
+  }
+
+  if (selectedValue.startsWith('$')) {
+    return { label: selectedValue }
+  }
+
+  if (isUUID(selectedValue)) {
+    const results = await datasource.getAssets({ Keyword: selectedValue })
+    const asset = results.find((a) => a.UUID === selectedValue)
+    if (asset) {
+      return { label: asset.AssetPath || asset.Name, asset }
+    }
+  }
+
+  return { label: '' }
+}
+
+export async function searchAssetsAndProperties(
+  datasource: DataSource,
+  keyword: string
+): Promise<Array<SelectableValue<string[]>>> {
+  if (!keyword || keyword.length < 2) {
+    return []
+  }
+
+  const [assets, properties] = await Promise.all([
+    datasource.getAssets({ Keyword: keyword, UseAssetPath: true }),
+    datasource.getAssetProperties({ Keyword: keyword }),
+  ])
+
+  const matchedProperties = properties.filter((prop) =>
+    prop.Name.toLowerCase().includes(keyword.toLowerCase())
+  )
+
+  const assetMap = new Map(assets.map((a) => [a.UUID, a]))
+  const missingParentUUIDs = [...new Set(
+    matchedProperties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid))
+  )]
+  if (missingParentUUIDs.length > 0) {
+    const parentAssets = await datasource.getAssets({ UUIDs: missingParentUUIDs })
+    for (const asset of parentAssets) {
+      assetMap.set(asset.UUID, asset)
+    }
+  }
+
+  const assetResults: Array<SelectableValue<string[]>> = assets.map((asset) => ({
+    label: `📦 ${asset.AssetPath || asset.Name}`,
+    value: [asset.UUID],
+  }))
+
+  const propertyResults: Array<SelectableValue<string[]>> = matchedProperties.map((prop) => {
+    const parentAsset = assetMap.get(prop.AssetUUID)
+    const parentLabel = parentAsset?.AssetPath || parentAsset?.Name || ''
+    return {
+      label: `${parentLabel ? '📦 ' + parentLabel + '\\' : ''}📏 ${prop.Name}`,
+      value: [prop.AssetUUID, prop.UUID],
+      description: parentLabel,
+    }
+  })
+
+  return assetResults.concat(propertyResults)
+}
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
