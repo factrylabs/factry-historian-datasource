@@ -382,10 +382,10 @@ export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQue
     ...query,
   }
   if (!query.IsRegex && query.Measurements?.find((e) => e.length >= 2 && e.startsWith('/') && e.endsWith('/'))) {
-    query.IsRegex = true
-    query.Regex = query.Measurements?.find((e) => e.length >= 2 && e.startsWith('/') && e.endsWith('/'))
-    query.Regex = query.Regex?.substring(1, query.Regex.length - 1)
-    query.Measurements = []
+    measurementQuery.IsRegex = true
+    measurementQuery.Regex = query.Measurements?.find((e) => e.length >= 2 && e.startsWith('/') && e.endsWith('/'))
+    measurementQuery.Regex = measurementQuery.Regex?.substring(1, measurementQuery.Regex.length - 1)
+    measurementQuery.Measurements = []
   }
 
   return measurementQuery
