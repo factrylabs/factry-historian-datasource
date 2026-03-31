@@ -27,8 +27,10 @@ const fromRCOptions = (options: RCCascaderOption[]): CascaderOption[] => {
 }
 
 const fromRCOption = (option: RCCascaderOption): CascaderOption => {
+  const opt = option as RCCascaderOption & Record<string, any>
   return {
     value: option.value ?? '',
     label: option.label as string ?? '',
+    ...(opt.isLeaf !== undefined && { isLeaf: opt.isLeaf as boolean }),
   }
 }

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { InlineField, InlineFieldRow, MultiSelect, Select } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
-import { default as Cascader } from 'components/Cascader/Cascader'
+import { default as Cascader, CascaderOption } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { toSelectableValue } from 'components/TagsSection/util'
 import { DataSource } from 'datasource'
@@ -18,7 +18,16 @@ import {
   PropertyType,
 } from 'types'
 import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
-import { getChildAssets, isSupportedPropertyType, matchedAssets, propertyFilterToQueryTags } from './util'
+import {
+  buildLazyCascaderOptions,
+  isSupportedPropertyType,
+  matchedAssets,
+  NIL_UUID,
+  propertyFilterToQueryTags,
+  resolveAssetLabel,
+  templateVariablesToCascaderOptions,
+  updateTreeChildren,
+} from './util'
 import { isFeatureEnabled } from 'util/semver'
 import { isRegex, isUUID } from 'util/util'
 
@@ -33,39 +42,86 @@ export interface Props {
 export const EventFilter = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
+  const [assetOptions, setAssetOptions] = useState<CascaderOption[]>([])
   const [eventTypes, setEventTypes] = useState<EventType[]>([])
   const [eventTypeProperties, setEventTypeProperties] = useState<EventTypeProperty[]>([])
   const [eventConfigurations, setEventConfigurations] = useState<EventConfiguration[]>([])
+  const [initialLabel, setInitialLabel] = useState('')
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
       return { label: `$${e.name}`, value: `$${e.name}` }
     })
-  const assetOptions = getChildAssets(null, assets).concat(templateVariables)
+
+  const fetchRootAssets = useCallback(async () => {
+    const rootAssets = await props.datasource.getAssets({ ParentUUIDs: [NIL_UUID] })
+    const options = buildLazyCascaderOptions(rootAssets, []).concat(
+      templateVariablesToCascaderOptions(templateVariables)
+    )
+    setAssetOptions(options)
+  }, [props.datasource, templateVariables])
+
+  const fetchEventData = useCallback(async () => {
+    const [types, typeProperties, configurations] = await Promise.all([
+      props.datasource.getEventTypes(),
+      props.datasource.getEventTypeProperties(),
+      props.datasource.getEventConfigurations(),
+    ])
+    setEventTypes(types)
+    setEventTypeProperties(typeProperties)
+    setEventConfigurations(configurations)
+  }, [props.datasource])
 
   const fetchAll = useCallback(async () => {
-    const assets = await props.datasource.getAssets()
-    setAssets(assets)
-    const eventTypes = await props.datasource.getEventTypes()
-    setEventTypes(eventTypes)
-    const eventTypeProperties = await props.datasource.getEventTypeProperties()
-    setEventTypeProperties(eventTypeProperties)
-    const eventConfigurations = await props.datasource.getEventConfigurations()
-    setEventConfigurations(eventConfigurations)
-  }, [props.datasource])
+    const allAssets = await props.datasource.getAssets()
+    setAssets(allAssets)
+    await Promise.all([fetchRootAssets(), fetchEventData()])
+  }, [props.datasource, fetchRootAssets, fetchEventData])
 
   useEffect(() => {
     if (loading) {
       ;(async () => {
-        await fetchAll()
+        const resolved = resolveAssetLabel(props.datasource, props.query.Assets?.[0])
+        await Promise.all([fetchAll(), resolved.then(({ label }) => setInitialLabel(label))])
         setLoading(false)
       })()
     }
-  }, [loading, fetchAll])
+  }, [loading, fetchAll, props.datasource, props.query.Assets])
 
-  const getSelectedAssets = (selected: string | undefined, assets: Asset[]): Asset[] => {
+  const handleLoadData = useCallback(
+    (selectOptions: CascaderOption[]) => {
+      const targetOption = selectOptions[selectOptions.length - 1]
+      const parentUUID = targetOption.value
+
+      if (targetOption.items?.some((item) => !item.isLeaf)) {
+        return
+      }
+
+      props.datasource.getAssets({ ParentUUIDs: [parentUUID] }).then((children) => {
+        const childOptions = buildLazyCascaderOptions(children, [])
+        setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, childOptions))
+      }).catch(() => {})
+    },
+    [props.datasource]
+  )
+
+  const handleSearchAsync = useCallback(
+    async (keyword: string): Promise<Array<SelectableValue<string[]>>> => {
+      if (!keyword || keyword.length < 2) {
+        return []
+      }
+      const searchAssets = await props.datasource.getAssets({ Keyword: keyword, UseAssetPath: true })
+      return searchAssets.map((asset) => ({
+        label: `📦 ${asset.AssetPath || asset.Name}`,
+        value: [asset.UUID],
+      }))
+    },
+    [props.datasource]
+  )
+
+  const getSelectedAssets = (selected: string | undefined, allAssets: Asset[]): Asset[] => {
     const replacedAssets = props.datasource.multiSelectReplace(selected, {})
-    return matchedAssets(replacedAssets, assets)
+    return matchedAssets(replacedAssets, allAssets)
   }
 
   const availableEventTypes = (selectedAsset: string | undefined): Array<SelectableValue<string>> => {
@@ -91,7 +147,6 @@ export const EventFilter = (props: Props): JSX.Element => {
   const filterEventTypes = (selectedEventTypes: string[], asset: string): string[] => {
     const selectedAssets = getSelectedAssets(asset, assets)
     return selectedEventTypes.filter((et) => {
-      // if there is a templated event type selected, we don't filter any out
       if (props.datasource.containsTemplate(et)) {
         return true
       }
@@ -340,27 +395,21 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const getDisplayedEventTypes = (eventTypes: string[], selectedAsset: string | undefined): string[] => {
-    // Filter out UUIDs from other datasources, only show those that exist or are template variables
     const available = availableEventTypes(selectedAsset)
     return eventTypes.filter((eventTypeUUID) => {
-      // Keep template variables
       if (eventTypeUUID.startsWith('$')) {
         return true
       }
-      // Only show event types that exist in current datasource
       return available.some((option) => option.value === eventTypeUUID)
     })
   }
 
   const getDisplayedProperties = (properties: string[], eventTypes: string[], includeParentInfo: boolean): string[] => {
-    // Filter out properties from other datasources
     const available = availableProperties(eventTypes, includeParentInfo)
     return properties.filter((property) => {
-      // Keep template variables
       if (property.startsWith('$')) {
         return true
       }
-      // Only show properties that exist in current datasource
       return available.some((option) => option.value === property)
     })
   }
@@ -381,24 +430,6 @@ export const EventFilter = (props: Props): JSX.Element => {
     return ['true', 'false']
   }
 
-  const initialLabel = (): string => {
-    if (!props.query.Assets || props.query.Assets.length === 0) {
-      return ''
-    }
-
-    const asset = assets.find((e) => e.UUID === props.query.Assets[0])
-    if (asset) {
-      return asset.AssetPath || ''
-    }
-
-    // Don't display UUIDs from other datasources - hide them but preserve in query
-    // Allow template variables to be displayed
-    if (props.query.Assets[0].startsWith('$')) {
-      return props.query.Assets[0]
-    }
-
-    return ''
-  }
   const availableStatuses = (): Array<SelectableValue<string>> => {
     return [
       toSelectableValue('processed'),
@@ -442,12 +473,14 @@ export const EventFilter = (props: Props): JSX.Element => {
             >
               <Cascader
                 initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
-                initialLabel={initialLabel()}
+                initialLabel={initialLabel}
                 options={assetOptions}
                 displayAllSelectedLevels
                 onSelect={onAssetChange}
-                onOpen={fetchAll}
+                onOpen={() => { if (assetOptions.length === 0) { fetchRootAssets() } }}
                 separator="\\"
+                loadData={handleLoadData}
+                onSearchAsync={handleSearchAsync}
               />
             </InlineField>
           </InlineFieldRow>
@@ -466,7 +499,7 @@ export const EventFilter = (props: Props): JSX.Element => {
                 )}
                 options={availableEventTypes(props.query.Assets?.length ? props.query.Assets[0] : '')}
                 onChange={onSelectEventTypes}
-                onOpenMenu={fetchAll}
+                onOpenMenu={fetchEventData}
               />
             </InlineField>
           </InlineFieldRow>
@@ -486,7 +519,7 @@ export const EventFilter = (props: Props): JSX.Element => {
                   )}
                   options={availableProperties(props.query.EventTypes ?? [], props.query.IncludeParentInfo ?? false)}
                   onChange={onSelectProperties}
-                  onOpenMenu={fetchAll}
+                  onOpenMenu={fetchEventData}
                 />
               </InlineField>
             ) : (

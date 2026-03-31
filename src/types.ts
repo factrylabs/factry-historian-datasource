@@ -167,6 +167,7 @@ export interface AssetFilter extends ResourceFilter {
   Path?: string
   ParentUUIDs?: string[]
   UseAssetPath?: boolean
+  UUIDs?: string[]
 }
 
 export interface AssetPropertyFilter extends ResourceFilter {
