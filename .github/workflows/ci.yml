@@ -37,7 +37,36 @@ jobs:
       - name: Lint
         run: pnpm run lint
       - name: Unit tests
-        run: pnpm run test:ci
+        run: pnpm run test:coverage
+
+      - name: Extract coverage percentage
+        id: coverage
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            PCT=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+          else
+            PCT=0
+          fi
+          echo "pct=$PCT" >> $GITHUB_OUTPUT
+
+      - name: Coverage comment
+        if: github.event_name == 'pull_request'
+        uses: MishaKav/jest-coverage-comment@d1a95e365f7f60e1438b5b36198b8c23e9ea4d59
+        with:
+          coverage-summary-path: ./coverage/coverage-summary.json
+
+      - name: Update coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.COVERAGE_GIST_ID != ''
+        uses: Schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ vars.COVERAGE_GIST_ID }}
+          filename: factry-historian-coverage.json
+          label: coverage
+          message: ${{ steps.coverage.outputs.pct }}%
+          valColorRange: ${{ steps.coverage.outputs.pct }}
+          maxColorRange: 100
+          minColorRange: 0
       - name: Build frontend
         run: pnpm run build
 
