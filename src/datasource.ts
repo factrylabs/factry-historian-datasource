@@ -1,4 +1,4 @@
-import { CoreApp, DataQueryRequest, DataSourceInstanceSettings, dateTime, ScopedVars } from '@grafana/data'
+import { type AdHocVariableFilter, CoreApp, DataSourceInstanceSettings, dateTime, ScopedVars } from '@grafana/data'
 import { DataSourceWithBackend, TemplateSrv, getTemplateSrv } from '@grafana/runtime'
 import { VariableSupport } from 'variable_support'
 import { AnnotationsQueryEditor } from 'AnnotationsQueryEditor/AnnotationsQueryEditor'
@@ -93,114 +93,99 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     }
   }
 
-  query(request: DataQueryRequest<Query>): any {
-    request.targets = request.targets
-      .filter((target) => {
-        return !target.hide && target.query !== undefined
-      })
-      .map((target) => {
-        target.seriesLimit ??= 50
+  applyTemplateVariables(target: Query, scopedVars: ScopedVars, _filters?: AdHocVariableFilter[]): Query {
+    const base: Query = { ...target, seriesLimit: target.seriesLimit ?? 50 }
+    const query = this.applyTemplateVariablesToQuery(base.queryType, base.query, scopedVars)
+    return query !== null ? { ...base, query } : base
+  }
 
-        switch (target.queryType) {
-          case 'AssetMeasurementQuery': {
-            const assetMeasurementQuery = JSON.parse(JSON.stringify(target.query)) as AssetMeasurementQuery
-            assetMeasurementQuery.Assets = assetMeasurementQuery.Assets?.flatMap((e) =>
-              this.multiSelectReplace(e, request.scopedVars)
-            )
-            assetMeasurementQuery.AssetProperties = assetMeasurementQuery.AssetProperties.flatMap((e) => {
-              return this.multiSelectReplace(e, request.scopedVars)
-            })
-            assetMeasurementQuery.Options = this.templateReplaceQueryOptions(
-              assetMeasurementQuery.Options,
-              request.scopedVars
-            )
-            assetMeasurementQuery.Options.ValueFilters = assetMeasurementQuery.Options.ValueFilters?.filter(
-              (e) => e.Value !== 'enter a value'
-            )
-            target.query = assetMeasurementQuery
-            break
-          }
-          case 'MeasurementQuery': {
-            const measurementQuery = JSON.parse(JSON.stringify(target.query)) as MeasurementQuery
-            measurementQuery.Databases = measurementQuery.Databases?.flatMap((e) =>
-              this.multiSelectReplace(e, request.scopedVars)
-            )
-            measurementQuery.Measurements = measurementQuery.Measurements?.flatMap((m) =>
-              this.multiSelectReplace(m, request.scopedVars)
-            )
-            if (measurementQuery.IsRegex && measurementQuery.Regex) {
-              measurementQuery.Regex = this.templateSrv.replace(measurementQuery.Regex, request.scopedVars)
-            }
-            measurementQuery.Options = this.templateReplaceQueryOptions(measurementQuery.Options, request.scopedVars)
-            measurementQuery.Options.ValueFilters = measurementQuery.Options.ValueFilters?.filter(
-              (e) => e.Value !== 'enter a value'
-            )
-            target.query = measurementQuery
-            break
-          }
-          case 'RawQuery': {
-            const rawQuery = JSON.parse(JSON.stringify(target.query)) as RawQuery
-            rawQuery.TimeseriesDatabase = this.templateSrv.replace(rawQuery.TimeseriesDatabase, request.scopedVars)
-            rawQuery.Query = this.templateSrv.replace(rawQuery.Query, request.scopedVars)
-            target.query = rawQuery
-            break
-          }
-          case 'EventQuery': {
-            const eventQuery = JSON.parse(JSON.stringify(target.query)) as EventQuery
-            eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e, request.scopedVars))
-            eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) =>
-              this.multiSelectReplace(e, request.scopedVars)
-            )
-            eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e, request.scopedVars))
-            eventQuery.Properties = eventQuery.Properties?.flatMap((e) =>
-              this.multiSelectReplace(e, request.scopedVars)
-            ).map((e) => e.replace('parent:', ''))
-            if (eventQuery.QueryAssetProperties) {
-              eventQuery.OverrideAssets = eventQuery.OverrideAssets?.filter((e) => e !== '').flatMap((e) =>
-                this.multiSelectReplace(e, request.scopedVars)
-              )
-              eventQuery.AssetProperties = eventQuery.AssetProperties?.flatMap((e) =>
-                this.multiSelectReplace(e, request.scopedVars)
-              )
-
-              if (eventQuery.Options?.ValueFilters) {
-                eventQuery.Options.ValueFilters = eventQuery.Options.ValueFilters.filter(
-                  (e) => e.Value !== 'enter a value'
-                )
-              }
-            }
-            eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, request.scopedVars)
-
-            // Time Range overrides
-            if (eventQuery.TimeRange && eventQuery.OverrideTimeRange) {
-              const resolvedFromTime = eventQuery.TimeRange.from ? this.replace(eventQuery.TimeRange.from) : null
-              const timestampFrom = Number(resolvedFromTime)
-              const parsedFromTime = eventQuery.TimeRange.from
-                ? dateTime(isNaN(timestampFrom) ? resolvedFromTime : timestampFrom).toISOString()
-                : null
-
-              const resolvedToTime = eventQuery.TimeRange.to ? this.replace(eventQuery.TimeRange.to) : null
-              const timestampTo = Number(resolvedToTime)
-              const parsedToTime = eventQuery.TimeRange.to
-                ? dateTime(isNaN(timestampTo) ? resolvedToTime : timestampTo).toISOString()
-                : null
-
-              eventQuery.TimeRange = {
-                from: eventQuery.TimeRange.from,
-                fromParsed: parsedFromTime,
-                to: eventQuery.TimeRange.to,
-                toParsed: parsedToTime,
-              }
-            }
-            target.query = eventQuery
-            break
-          }
-          default:
-            break
+  private applyTemplateVariablesToQuery(
+    queryType: string | undefined,
+    query: AssetMeasurementQuery | MeasurementQuery | RawQuery | EventQuery | undefined,
+    scopedVars: ScopedVars
+  ): AssetMeasurementQuery | MeasurementQuery | RawQuery | EventQuery | null {
+    switch (queryType) {
+      case 'AssetMeasurementQuery': {
+        const q = JSON.parse(JSON.stringify(query)) as AssetMeasurementQuery
+        q.Assets = q.Assets?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
+        q.AssetProperties = q.AssetProperties.flatMap((e) => this.multiSelectReplace(e, scopedVars))
+        q.Options = this.templateReplaceQueryOptions(q.Options, scopedVars)
+        q.Options.ValueFilters = q.Options.ValueFilters?.filter((e) => e.Value !== 'enter a value')
+        return q
+      }
+      case 'MeasurementQuery': {
+        const q = JSON.parse(JSON.stringify(query)) as MeasurementQuery
+        q.Databases = q.Databases?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
+        q.Measurements = q.Measurements?.flatMap((m) => this.multiSelectReplace(m, scopedVars))
+        if (q.IsRegex && q.Regex) {
+          q.Regex = this.templateSrv.replace(q.Regex, scopedVars)
         }
-        return target
-      })
-    return super.query(request)
+        q.Options = this.templateReplaceQueryOptions(q.Options, scopedVars)
+        q.Options.ValueFilters = q.Options.ValueFilters?.filter((e) => e.Value !== 'enter a value')
+        return q
+      }
+      case 'RawQuery': {
+        const q = JSON.parse(JSON.stringify(query)) as RawQuery
+        q.TimeseriesDatabase = this.templateSrv.replace(q.TimeseriesDatabase, scopedVars)
+        q.Query = this.templateSrv.replace(q.Query, scopedVars)
+        return q
+      }
+      case 'EventQuery':
+        return this.applyTemplateVariablesToEventQuery(query as EventQuery, scopedVars)
+      default:
+        return null
+    }
+  }
+
+  private applyTemplateVariablesToEventQuery(query: EventQuery, scopedVars: ScopedVars): EventQuery {
+    const eventQuery = JSON.parse(JSON.stringify(query)) as EventQuery
+    eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
+    eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
+    eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
+    eventQuery.Properties = eventQuery.Properties?.flatMap((e) => this.multiSelectReplace(e, scopedVars)).map(
+      (e) => e.replace('parent:', '')
+    )
+    eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, scopedVars)
+
+    if (eventQuery.QueryAssetProperties) {
+      eventQuery.OverrideAssets = eventQuery.OverrideAssets?.filter((e) => e !== '').flatMap((e) =>
+        this.multiSelectReplace(e, scopedVars)
+      )
+      eventQuery.AssetProperties = eventQuery.AssetProperties?.flatMap((e) =>
+        this.multiSelectReplace(e, scopedVars)
+      )
+      if (eventQuery.Options?.ValueFilters) {
+        eventQuery.Options.ValueFilters = eventQuery.Options.ValueFilters.filter((e) => e.Value !== 'enter a value')
+      }
+    }
+
+    if (!eventQuery.TimeRange || !eventQuery.OverrideTimeRange) {
+      return eventQuery
+    }
+
+    const resolvedFromTime = eventQuery.TimeRange.from ? this.replace(eventQuery.TimeRange.from) : null
+    const timestampFrom = Number(resolvedFromTime)
+    const parsedFromTime = eventQuery.TimeRange.from
+      ? dateTime(isNaN(timestampFrom) ? resolvedFromTime : timestampFrom).toISOString()
+      : null
+
+    const resolvedToTime = eventQuery.TimeRange.to ? this.replace(eventQuery.TimeRange.to) : null
+    const timestampTo = Number(resolvedToTime)
+    const parsedToTime = eventQuery.TimeRange.to
+      ? dateTime(isNaN(timestampTo) ? resolvedToTime : timestampTo).toISOString()
+      : null
+
+    eventQuery.TimeRange = {
+      from: eventQuery.TimeRange.from,
+      fromParsed: parsedFromTime,
+      to: eventQuery.TimeRange.to,
+      toParsed: parsedToTime,
+    }
+    return eventQuery
+  }
+
+  filterQuery(target: Query): boolean {
+    return target.query !== undefined
   }
 
   replaceEventPropertyFilter(
