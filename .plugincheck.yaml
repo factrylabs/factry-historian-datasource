@@ -1,0 +1,5 @@
+analyzers:
+  go-manifest:
+    rules:
+      valid-go-manifest:
+        severity: warning
