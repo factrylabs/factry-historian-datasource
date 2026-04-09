@@ -24,7 +24,7 @@ export interface QueryEditorState {
 
 export interface Query extends DataQuery {
   query: MeasurementQuery | AssetMeasurementQuery | RawQuery | EventQuery
-  seriesLimit: number
+  seriesLimit: number | string
   tabIndex: number
   selectedAssetPath?: string
   selectedAssetProperties?: string[]
@@ -97,7 +97,7 @@ export interface MeasurementQueryOptions {
   DisplayDescription: boolean
   MetadataAsLabels: boolean
   TruncateInterval: boolean
-  Limit?: number
+  Limit?: number | string
   ValueFilters?: ValueFilter[]
   ChangesOnly?: boolean
   Datatypes?: string[]
@@ -136,7 +136,7 @@ export interface EventQuery {
   AssetProperties?: string[]
   Options?: MeasurementQueryOptions
   IncludeParentInfo?: boolean
-  Limit?: number
+  Limit?: number | string
   OverrideTimeRange: boolean
   TimeRange: TimeRange
   Ascending: boolean

@@ -18,12 +18,12 @@ import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   query: MeasurementQuery
-  seriesLimit: number
+  seriesLimit: number | string
   appIsAlertingType: boolean
   datasource: DataSource
   templateVariables: Array<SelectableValue<string>>
   onChangeMeasurementQuery: (query: MeasurementQuery) => void
-  onChangeSeriesLimit: (value: number) => void
+  onChangeSeriesLimit: (value: number | string) => void
 }
 
 export const Measurements = (props: Props): JSX.Element => {

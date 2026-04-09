@@ -192,7 +192,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     } as QueryEditorState)
   }
 
-  onChangeSeriesLimit(value: number): void {
+  onChangeSeriesLimit(value: number | string): void {
     const { onChange, query } = this.props
     if (query.seriesLimit === value) {
       return
