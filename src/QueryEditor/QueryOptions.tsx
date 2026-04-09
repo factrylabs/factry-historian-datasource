@@ -30,7 +30,7 @@ import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   state: MeasurementQueryOptions
-  seriesLimit: number
+  seriesLimit: number | string
   tags: QueryTag[]
   valueFilters: QueryTag[]
   appIsAlertingType: boolean
@@ -48,7 +48,7 @@ export interface Props {
   getTagKeyOptions?: () => Promise<string[]>
   getTagValueOptions?: (key: string) => Promise<string[]>
   onChange: (options: MeasurementQueryOptions) => void
-  onChangeSeriesLimit: (value: number) => void
+  onChangeSeriesLimit: (value: number | string) => void
 }
 
 const datatypeOptions: Array<SelectableValue<string>> = Object.entries(MeasurementDatatype).map(([_, value]) => {
@@ -57,7 +57,7 @@ const datatypeOptions: Array<SelectableValue<string>> = Object.entries(Measureme
 
 export const QueryOptions = (props: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
-  const [seriesLimit, setSeriesLimit] = useDebounce<number>(props.seriesLimit, 500, props.onChangeSeriesLimit)
+  const [seriesLimit, setSeriesLimit] = useDebounce<number | string>(props.seriesLimit, 500, props.onChangeSeriesLimit)
   const [ordering, setOrdering] = useState(props.state.Desc ? 'descending' : 'ascending')
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
   }
 
   const onLimitChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    props.onChange({ ...props.state, Limit: event.target.valueAsNumber })
+    props.onChange({ ...props.state, Limit: event.target.value })
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
@@ -201,7 +201,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
   }
 
   const onChangeSeriesLimit = (event: ChangeEvent<HTMLInputElement>): void => {
-    setSeriesLimit(Number(event.target.value))
+    setSeriesLimit(event.target.value)
   }
 
   const onChangeDatatypes = (selected: Array<SelectableValue<string>>): void => {
@@ -374,7 +374,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
             tooltip="The maximum amount of values to fetch per measurement"
             labelWidth={labelWidth}
           >
-            <Input placeholder="(optional)" type="number" onBlur={onLimitChange} defaultValue={props.state.Limit} />
+            <Input placeholder="(optional)" onBlur={onLimitChange} defaultValue={props.state.Limit} />
           </InlineField>
         </InlineFieldRow>
       )}
@@ -433,7 +433,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
                 tooltip="The maximum amount of measurements to fetch, set to 0 for no limit"
                 labelWidth={labelWidth}
               >
-                <Input value={seriesLimit} type="number" min={0} onChange={onChangeSeriesLimit} />
+                <Input value={seriesLimit} onChange={onChangeSeriesLimit} />
               </InlineField>
             </InlineFieldRow>
           </ControlledCollapse>

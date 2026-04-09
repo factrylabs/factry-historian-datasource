@@ -14,7 +14,7 @@ import { isRegex, isUUID } from 'util/util'
 
 export interface Props {
   datasource: DataSource
-  seriesLimit: number
+  seriesLimit: number | string
   selectedAssets: Asset[]
   overrideAssets: string[]
   selectedAssetProperties: string[]
@@ -24,7 +24,7 @@ export interface Props {
   appIsAlertingType: boolean
   templateVariables: Array<SelectableValue<string>>
   onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
-  onChangeSeriesLimit: (value: number) => void
+  onChangeSeriesLimit: (value: number | string) => void
   onOpenMenu?: () => void
 }
 

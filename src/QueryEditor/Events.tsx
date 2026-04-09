@@ -11,27 +11,31 @@ import { DateRangePicker } from 'components/util/DateRangePicker'
 
 export interface Props {
   query: EventQuery
-  seriesLimit: number
+  seriesLimit: number | string
   datasource: DataSource
   appIsAlertingType?: boolean
   isAnnotationQuery?: boolean
   range?: { from: DateTime; to: DateTime }
   onChangeEventQuery: (query: EventQuery) => void
-  onChangeSeriesLimit: (value: number) => void
+  onChangeSeriesLimit: (value: number | string) => void
 }
 
 export const Events = (props: Props): JSX.Element => {
   const [loading, setLoading] = useState(true)
   const [assets, setAssets] = useState<Asset[]>([])
   const [ordering, setOrdering] = useState(props.query.Ascending ? 'ascending' : 'descending')
-  const [limit, setLimit] = useDebounce<number | undefined>(props.query.Limit, 500, (value: number | undefined) => {
-    if (value === props.query.Limit) {
-      return
-    }
+  const [limit, setLimit] = useDebounce<number | string | undefined>(
+    props.query.Limit,
+    500,
+    (value: number | string | undefined) => {
+      if (value === props.query.Limit) {
+        return
+      }
 
-    const updatedQuery = { ...props.query, Limit: value } as EventQuery
-    props.onChangeEventQuery(updatedQuery)
-  })
+      const updatedQuery = { ...props.query, Limit: value } as EventQuery
+      props.onChangeEventQuery(updatedQuery)
+    }
+  )
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
@@ -88,7 +92,7 @@ export const Events = (props: Props): JSX.Element => {
   }
 
   const onChangeLimit = (event: ChangeEvent<HTMLInputElement>): void => {
-    setLimit(Number(event.target.value))
+    setLimit(event.target.value)
   }
 
   const onChangeAssetMeasurementQuery = (query: AssetMeasurementQuery): void => {
@@ -176,7 +180,7 @@ export const Events = (props: Props): JSX.Element => {
                 tooltip="Limit the number of events returned, 0 for no limit"
                 labelWidth={labelWidth}
               >
-                <Input value={limit} type="number" min={0} onChange={onChangeLimit} />
+                <Input value={limit} onChange={onChangeLimit} />
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>

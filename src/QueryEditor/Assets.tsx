@@ -12,12 +12,12 @@ import { isRegex, isUUID } from 'util/util'
 
 export interface Props {
   query: AssetMeasurementQuery
-  seriesLimit: number
+  seriesLimit: number | string
   datasource: DataSource
   appIsAlertingType: boolean
   templateVariables: Array<SelectableValue<string>>
   onChangeAssetMeasurementQuery: (query: AssetMeasurementQuery) => void
-  onChangeSeriesLimit: (value: number) => void
+  onChangeSeriesLimit: (value: number | string) => void
 }
 
 export const Assets = (props: Props): JSX.Element => {

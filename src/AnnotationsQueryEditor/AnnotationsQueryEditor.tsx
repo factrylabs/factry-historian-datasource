@@ -52,7 +52,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
     this.onRunQuery(this.props)
   }
 
-  onChangeSeriesLimit(value: number): void {
+  onChangeSeriesLimit(value: number | string): void {
     const { onChange, query } = this.props
     query.seriesLimit = value
     query.historianInfo = this.props.datasource.historianInfo

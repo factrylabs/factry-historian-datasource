@@ -94,7 +94,11 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   applyTemplateVariables(target: Query, scopedVars: ScopedVars, _filters?: AdHocVariableFilter[]): Query {
-    const base: Query = { ...target, seriesLimit: target.seriesLimit ?? 50 }
+    const replacedSeriesLimit = Number(this.templateSrv.replace(target.seriesLimit as string, scopedVars))
+    const base: Query = {
+      ...target,
+      seriesLimit: Number.isNaN(replacedSeriesLimit) ? 50 : replacedSeriesLimit,
+    }
     const query = this.applyTemplateVariablesToQuery(base.queryType, base.query, scopedVars)
     return query !== null ? { ...base, query } : base
   }
@@ -142,18 +146,19 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     eventQuery.Assets = eventQuery.Assets?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
     eventQuery.EventTypes = eventQuery.EventTypes?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
     eventQuery.Statuses = eventQuery.Statuses?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
-    eventQuery.Properties = eventQuery.Properties?.flatMap((e) => this.multiSelectReplace(e, scopedVars)).map(
-      (e) => e.replace('parent:', '')
+    eventQuery.Properties = eventQuery.Properties?.flatMap((e) => this.multiSelectReplace(e, scopedVars)).map((e) =>
+      e.replace('parent:', '')
     )
     eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, scopedVars)
+
+    const replacedLimit = Number(this.templateSrv.replace(eventQuery.Limit as string, scopedVars))
+    eventQuery.Limit = Number.isNaN(replacedLimit) ? 500 : replacedLimit
 
     if (eventQuery.QueryAssetProperties) {
       eventQuery.OverrideAssets = eventQuery.OverrideAssets?.filter((e) => e !== '').flatMap((e) =>
         this.multiSelectReplace(e, scopedVars)
       )
-      eventQuery.AssetProperties = eventQuery.AssetProperties?.flatMap((e) =>
-        this.multiSelectReplace(e, scopedVars)
-      )
+      eventQuery.AssetProperties = eventQuery.AssetProperties?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
       if (eventQuery.Options?.ValueFilters) {
         eventQuery.Options.ValueFilters = eventQuery.Options.ValueFilters.filter((e) => e.Value !== 'enter a value')
       }
@@ -276,10 +281,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       options.Aggregation = {
         Name: this.templateSrv.replace(options.Aggregation?.Name, scopedVars),
         Period: this.templateSrv.replace(options.Aggregation?.Period, scopedVars),
-        Fill: options.Aggregation.Fill,
+        Fill: this.templateSrv.replace(options.Aggregation.Fill, scopedVars),
         Arguments: aggregationArguments,
       }
     }
+    const replacedOptionsLimit = Number(this.templateSrv.replace(options.Limit as string, scopedVars))
+    options.Limit = Number.isNaN(replacedOptionsLimit) ? 500 : replacedOptionsLimit
     return options
   }
 
