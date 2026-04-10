@@ -13,6 +13,8 @@ import {
   MultiSelect,
   Select,
   RadioButtonGroup,
+  Combobox,
+  type ComboboxOption,
 } from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
@@ -130,8 +132,8 @@ export const QueryOptions = (props: Props): JSX.Element => {
     props.onChange({ ...props.state, GroupBy: groups })
   }
 
-  const onLimitChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    props.onChange({ ...props.state, Limit: event.target.value })
+  const onLimitChange = (option: ComboboxOption<string>): void => {
+    props.onChange({ ...props.state, Limit: option.value })
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
@@ -374,7 +376,20 @@ export const QueryOptions = (props: Props): JSX.Element => {
             tooltip="The maximum amount of values to fetch per measurement"
             labelWidth={labelWidth}
           >
-            <Input placeholder="(optional)" onBlur={onLimitChange} defaultValue={props.state.Limit} />
+            <Combobox
+              options={[
+                { value: '10', label: '10' },
+                { value: '25', label: '25' },
+                { value: '100', label: '100' },
+                { value: '500', label: '500' },
+                { value: '1000', label: '1000' },
+                ...props.templateVariables.map((v) => ({ value: v.value ?? '', label: v.label })),
+              ]}
+              value={(props.state.Limit as string) ?? null}
+              onChange={onLimitChange}
+              placeholder="(optional)"
+              createCustomValue
+            />
           </InlineField>
         </InlineFieldRow>
       )}
