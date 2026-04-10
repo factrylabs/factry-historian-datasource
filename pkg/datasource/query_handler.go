@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -59,7 +60,6 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 		}
 
 		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
-		return response
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
 		if err := json.Unmarshal(query.Query, &measurementQuery); err != nil {
@@ -77,7 +77,6 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 
 		measurementQuery.Measurements = measurements
 		response.Frames, response.Error = ds.handleMeasurementQuery(ctx, measurementQuery, backendQuery.TimeRange, backendQuery.Interval)
-		return response
 	case QueryTypeRaw:
 		rawQuery := schemas.RawQuery{}
 		if err := json.Unmarshal(query.Query, &rawQuery); err != nil {
@@ -87,7 +86,6 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 		}
 
 		response.Frames, response.Error = ds.handleRawQuery(ctx, rawQuery, backendQuery.TimeRange, backendQuery.Interval)
-		return response
 	case QueryTypeEvent:
 		eventQuery := schemas.EventQuery{}
 		if err := json.Unmarshal(query.Query, &eventQuery); err != nil {
@@ -97,11 +95,52 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 		}
 
 		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
+	default:
+		response.Error = fmt.Errorf("unsupported query type %s", backendQuery.QueryType)
 		return response
 	}
 
-	response.Error = fmt.Errorf("unsupported query type %s", backendQuery.QueryType)
+	// Sort frames in order:
+	// * first all frames that have a DisplayNameFromDS set, in alphabetical order
+	// * then all frames that don't have one set, in alphabetical order according to the frame name
+	slices.SortStableFunc(response.Frames, func(frameI, frameJ *data.Frame) int {
+		// Fields in a frame aren't provided in a specific order, so the DisplayNameFromDS can be in any of the fields
+		nameI := findDisplayNameFromDS(frameI)
+		nameJ := findDisplayNameFromDS(frameJ)
+
+		hasDisplayNameI := nameI != ""
+		hasDisplayNameJ := nameJ != ""
+
+		// Compare display names if they both have one set
+		if hasDisplayNameI && hasDisplayNameJ {
+			return cmp.Compare(nameI, nameJ)
+		}
+
+		// Compare frame names if none have a display name set
+		if !hasDisplayNameI && !hasDisplayNameJ {
+			return cmp.Compare(frameI.Name, frameJ.Name)
+		}
+
+		// frames with DisplayNameFromDS are considered greater
+		if hasDisplayNameI {
+			return 1
+		}
+
+		return -1
+	})
+
 	return response
+}
+
+// Return the first non-empty DisplayNameFromDS value found in one of the fields
+func findDisplayNameFromDS(frame *data.Frame) string {
+	for i := range frame.Fields {
+		if frame.Fields[i].Config != nil && frame.Fields[i].Config.DisplayNameFromDS != "" {
+			return frame.Fields[i].Config.DisplayNameFromDS
+		}
+	}
+
+	return ""
 }
 
 func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, timeRange backend.TimeRange, interval time.Duration, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
