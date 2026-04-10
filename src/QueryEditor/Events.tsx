@@ -1,5 +1,13 @@
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
-import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input, RadioButtonGroup } from '@grafana/ui'
+import {
+  Combobox,
+  ComboboxOption,
+  FieldSet,
+  InlineField,
+  InlineFieldRow,
+  InlineSwitch,
+  RadioButtonGroup,
+} from '@grafana/ui'
 import { DateTime } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
@@ -91,8 +99,8 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
-  const onChangeLimit = (event: ChangeEvent<HTMLInputElement>): void => {
-    setLimit(event.target.value)
+  const onChangeLimit = (option: ComboboxOption<string>): void => {
+    setLimit(option.value)
   }
 
   const onChangeAssetMeasurementQuery = (query: AssetMeasurementQuery): void => {
@@ -180,7 +188,20 @@ export const Events = (props: Props): JSX.Element => {
                 tooltip="Limit the number of events returned, 0 for no limit"
                 labelWidth={labelWidth}
               >
-                <Input value={limit} onChange={onChangeLimit} />
+                <Combobox
+                  options={[
+                    { value: '10', label: '10' },
+                    { value: '25', label: '25' },
+                    { value: '100', label: '100' },
+                    { value: '500', label: '500' },
+                    { value: '1000', label: '1000' },
+                    ...templateVariables,
+                  ]}
+                  value={(limit as string) ?? null}
+                  onChange={onChangeLimit}
+                  placeholder="(optional)"
+                  createCustomValue
+                />
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>
