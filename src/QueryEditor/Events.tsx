@@ -99,8 +99,8 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
-  const onChangeLimit = (option: ComboboxOption<string>): void => {
-    setLimit(option.value)
+  const onChangeLimit = (option: ComboboxOption<string> | null): void => {
+    setLimit(option?.value ?? undefined)
   }
 
   const onChangeAssetMeasurementQuery = (query: AssetMeasurementQuery): void => {
@@ -201,6 +201,7 @@ export const Events = (props: Props): JSX.Element => {
                   onChange={onChangeLimit}
                   placeholder="(optional)"
                   createCustomValue
+                  isClearable
                 />
               </InlineField>
             </InlineFieldRow>
