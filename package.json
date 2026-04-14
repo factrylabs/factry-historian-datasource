@@ -31,7 +31,7 @@
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.20",
     "@types/node": "^18.19.130",
-    "@types/react": "^18",
+    "@types/react": "^18.2.25",
     "@types/react-dom": "^18",
     "@typescript-eslint/parser": "^5.62.0",
     "copy-webpack-plugin": "^11.0.0",
@@ -89,7 +89,7 @@
       "minimatch@<3.1.4": "3.1.4",
       "minimatch@>=9.0.0 <9.0.7": "9.0.7",
       "serialize-javascript": "7.0.3",
-      "lodash": "4.17.23",
+      "lodash": "4.18.1",
       "picomatch": "4.0.4"
     }
   }
