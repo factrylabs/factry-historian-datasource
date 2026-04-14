@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.1.0
+
+### Changes
+
+- Add support for using variables in all free-form text inputs
+- Change limit number inputs to combobox
+- Sort frames in a query result by name to ensure consistent ordering in the frontend
+
+### Bug fixes
+
+- Fixed using variables in SQL expressions.
+
+### Misc
+
+- Updated dependencies to address security vulnerabilities.
+- Added frontend unit tests and configured jest.
+
 ## v3.0.1
 
 ### Bug fixes
