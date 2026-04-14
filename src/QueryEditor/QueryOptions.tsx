@@ -132,8 +132,8 @@ export const QueryOptions = (props: Props): JSX.Element => {
     props.onChange({ ...props.state, GroupBy: groups })
   }
 
-  const onLimitChange = (option: ComboboxOption<string>): void => {
-    props.onChange({ ...props.state, Limit: option.value })
+  const onLimitChange = (option: ComboboxOption<string> | null): void => {
+    props.onChange({ ...props.state, Limit: option?.value ?? undefined })
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
@@ -389,6 +389,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
               onChange={onLimitChange}
               placeholder="(optional)"
               createCustomValue
+              isClearable
             />
           </InlineField>
         </InlineFieldRow>
