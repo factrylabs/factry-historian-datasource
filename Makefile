@@ -103,4 +103,4 @@ clean: # Cleans build artifacts
 	rm factry-historian-datasource*.zip
 
 validate: factry-historian-datasource.zip ## Validates the code
-	npx @grafana/plugin-validator@latest -config .plugincheck.yaml -sourceCodeUri file://. factry-historian-datasource.zip
+	pnpx @grafana/plugin-validator@latest -config .plugincheck.yaml -sourceCodeUri file://. factry-historian-datasource.zip

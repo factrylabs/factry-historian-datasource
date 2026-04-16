@@ -97,7 +97,7 @@ const config = async (env): Promise<Configuration> => {
         },
         {
           test: /\.css$/,
-          use: ["style-loader", "css-loader"]
+          use: ['style-loader', 'css-loader'],
         },
         {
           test: /\.s[ac]ss$/,
@@ -185,7 +185,6 @@ const config = async (env): Promise<Configuration> => {
         typescript: { configFile: path.join(process.cwd(), 'tsconfig.json') },
       }),
       new ESLintPlugin({
-        extensions: ['.ts', '.tsx'],
         lintDirtyModulesOnly: Boolean(env.development), // don't lint on start, only lint changed files
       }),
       ...(env.development ? [new LiveReloadPlugin()] : []),
@@ -197,17 +196,16 @@ const config = async (env): Promise<Configuration> => {
       modules: [path.resolve(process.cwd(), 'src'), 'node_modules'],
       unsafeCache: true,
     },
-  }
+  };
 
-  if(isWSL()) {
+  if (isWSL()) {
     baseConfig.watchOptions = {
       poll: 3000,
       ignored: /node_modules/,
-    }}
-
+    };
+  }
 
   return baseConfig;
-
 };
 
 export default config;

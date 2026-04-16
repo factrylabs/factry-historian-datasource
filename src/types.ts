@@ -3,8 +3,7 @@ import { DataQuery } from '@grafana/schema'
 
 export const labelWidth = 25
 export const fieldWidth = 25
-/* eslint-disable no-use-before-define, @typescript-eslint/no-empty-interface */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export type Attributes = Record<string, any>
 
 export enum TabIndex {
@@ -81,7 +80,6 @@ export enum FillType {
 export interface Aggregation {
   Name: string
   Period?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Arguments?: any[]
   Fill?: string
 }
