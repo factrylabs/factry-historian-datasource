@@ -107,6 +107,10 @@ export const Assets = (props: Props): JSX.Element => {
       return props.query.Assets[0]
     }
 
+    if (isRegex(props.query.Assets[0])) {
+      return props.query.Assets[0]
+    }
+
     return ''
   }
 
