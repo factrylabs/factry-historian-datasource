@@ -14,7 +14,7 @@
     "lint:fix": "pnpm run lint -- --fix",
     "e2e": "playwright test",
     "server": "docker-compose up --build",
-    "sign": "pnpx --yes @grafana/sign-plugin@latest"
+    "sign": "pnpx @grafana/sign-plugin@latest"
   },
   "author": "Factry",
   "license": "Apache-2.0",
