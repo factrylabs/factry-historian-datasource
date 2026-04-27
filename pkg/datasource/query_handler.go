@@ -216,7 +216,7 @@ assetLoop:
 	if measurementQuery.Options.MetadataAsLabels {
 		setFieldLabels(frames)
 	}
-	return sortByStatus(frames), nil
+	return applyFrameFormat(sortByStatus(frames), measurementQuery.Options.FrameFormat), nil
 }
 
 func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQuery, seriesLimit int) ([]string, error) {
@@ -280,7 +280,7 @@ func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measu
 	if measurementQuery.Options.MetadataAsLabels {
 		setFieldLabels(frames)
 	}
-	return sortByStatus(frames), nil
+	return applyFrameFormat(sortByStatus(frames), measurementQuery.Options.FrameFormat), nil
 }
 
 func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Query, options schemas.MeasurementQueryOptions) (data.Frames, error) {
@@ -341,7 +341,7 @@ func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Qu
 	}
 	if options.ChangesOnly {
 		for _, frame := range result {
-			valueField, _ := frame.FieldByName("value")
+			valueField, _ := frame.FieldByName(valueFieldName)
 			if valueField == nil {
 				continue
 			}

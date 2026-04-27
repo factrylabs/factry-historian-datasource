@@ -2,6 +2,15 @@ package schemas
 
 import "time"
 
+// FrameFormat controls the shape of frames returned to Grafana.
+type FrameFormat string
+
+// FrameFormat values. Empty string is the default (time series) so existing saved queries keep working.
+const (
+	FrameFormatAuto  FrameFormat = ""
+	FrameFormatTable FrameFormat = "table"
+)
+
 // MeasurementQueryOptions are measurement query options
 type MeasurementQueryOptions struct {
 	Tags                   map[string]string
@@ -19,6 +28,7 @@ type MeasurementQueryOptions struct {
 	ValueFilters           []ValueFilter
 	Datatypes              []string
 	Desc                   bool
+	FrameFormat            FrameFormat
 }
 
 // ValueFilter is used to filter the values returned by the historian

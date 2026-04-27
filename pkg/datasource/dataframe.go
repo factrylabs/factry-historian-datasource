@@ -17,6 +17,17 @@ import (
 // fieldLabelsFromMeta are the field labels that are extracted from the metadata
 var fieldLabelsFromMeta = []string{"MeasurementUUID", "MeasurementName", "DatabaseUUID", "DatabaseName", "AssetProperty", "AssetPropertyUUID", "AssetUUID", "AssetPath", "AssetName", "Description"}
 
+// valueFieldName is the historian's value column name in returned frames.
+const valueFieldName = "value"
+
+// Field names produced by the SSE long-format converter; finalizeFlatFrames mirrors them
+// so SQL expressions can reference the same columns regardless of the Auto/Table frame format.
+const (
+	sseValueFieldName       = "__value__"
+	sseMetricNameFieldName  = "__metric_name__"
+	sseDisplayNameFieldName = "__display_name__"
+)
+
 // getLabelsFromFrame returns the tag from a frame
 func getLabelsFromFrame(frame *data.Frame) map[string]interface{} {
 	if frame == nil || frame.Meta == nil {
@@ -126,47 +137,46 @@ func getMeasurementFrameName(frame *data.Frame, includeDatabaseName, includeDesc
 	return getMetaValueFromFrame(frame, "MeasurementName") + getFrameSuffix(frame, includeDatabaseName, includeDescription)
 }
 
+// mergedLabelsFromMeta returns the per-frame label set: the optional Custom["Labels"] map
+// (groupby / tag values) merged with the well-known metadata fields listed in fieldLabelsFromMeta.
+// Returns nil when the frame has no metadata map.
+func mergedLabelsFromMeta(frame *data.Frame) map[string]string {
+	if frame == nil || frame.Meta == nil {
+		return nil
+	}
+	meta, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	labels := map[string]string{}
+	if metaLabels, ok := meta["Labels"].(map[string]interface{}); ok {
+		for k, v := range metaLabels {
+			labels[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	for _, key := range fieldLabelsFromMeta {
+		if value, ok := meta[key].(string); ok {
+			labels[key] = value
+		}
+	}
+	return labels
+}
+
 // setFieldLabels sets the labels for a given field
 func setFieldLabels(frames data.Frames) {
 	for _, frame := range frames {
-		if frame == nil {
+		labels := mergedLabelsFromMeta(frame)
+		if labels == nil {
 			continue
 		}
-
-		if frame.Meta == nil {
-			continue
-		}
-
-		meta, ok := frame.Meta.Custom.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		metaLabels, ok := meta["Labels"].(map[string]interface{})
-		if !ok {
-			metaLabels = make(map[string]interface{})
-		}
-
-		labels := data.Labels{}
-		for key, value := range metaLabels {
-			labels[key] = fmt.Sprintf("%v", value)
-		}
-
-		for _, key := range fieldLabelsFromMeta {
-			if value, ok := meta[key].(string); ok {
-				labels[key] = value
-			}
-		}
-
 		for _, field := range frame.Fields {
 			if field.Name == "time" {
 				continue
 			}
-
 			if field.Labels == nil {
 				field.Labels = make(map[string]string)
 			}
-
 			maps.Copy(field.Labels, labels)
 		}
 	}
@@ -233,7 +243,7 @@ func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQue
 			continue
 		}
 
-		if field, _ := frame.FieldByName("value"); field != nil {
+		if field, _ := frame.FieldByName(valueFieldName); field != nil {
 			if field.Config == nil {
 				field.Config = &data.FieldConfig{}
 			}
@@ -327,7 +337,7 @@ func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, 
 			custom["AssetUUID"] = property.AssetUUID
 			custom["AssetPath"] = assetPath
 			custom["AssetName"] = asstName
-			if field, _ := frame.FieldByName("value"); field != nil {
+			if field, _ := frame.FieldByName(valueFieldName); field != nil {
 				if field.Config == nil {
 					field.Config = &data.FieldConfig{}
 				}
@@ -342,7 +352,7 @@ func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, 
 
 func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Frames {
 	for _, frame := range frames {
-		valueField, _ := frame.FieldByName("value")
+		valueField, _ := frame.FieldByName(valueFieldName)
 		if valueField == nil {
 			continue
 		}
@@ -390,19 +400,105 @@ func deleteFirstRow(frames data.Frames) data.Frames {
 	return frames
 }
 
-// addMetaData adds metadata from measurements to data frames
+// addMetaData applies the per-frame field config derived from measurement metadata.
+// Frame-type assignment is done separately in applyFrameFormat so it can be driven by
+// the per-query FrameFormat option and the SSE-detection signal.
 func addMetaData(frames data.Frames, useEngineeringSpecs bool) data.Frames {
 	for _, frame := range frames {
 		setFieldConfig(frame, useEngineeringSpecs)
-		if frame.Meta != nil {
-			frame.Meta.Type = data.FrameTypeTimeSeriesMulti
+	}
+	return frames
+}
+
+// applyFrameFormat assigns frame.Meta.Type per the requested FrameFormat. The default is
+// FrameTypeTimeSeriesMulti (panel-friendly; SSE auto-converts numeric frames via its long
+// converter, which silently drops non-numeric value fields). Table switches to
+// FrameTypeUnknown + a flat column layout to make SQL expressions work on string and bool
+// measurements: SSE has a single-frame bypass — if the response has exactly one frame and
+// no field labels, SSE hands it to the SQL engine as-is regardless of declared type. Only
+// single-series queries are supported in Table mode; multi-frame responses surface SSE's
+// "more than one dataframe" error (acceptable, documented in the UI).
+func applyFrameFormat(frames data.Frames, format schemas.FrameFormat) data.Frames {
+	flatten := format == schemas.FrameFormatTable
+	frameType := data.FrameTypeTimeSeriesMulti
+	if flatten {
+		frameType = data.FrameTypeUnknown
+	}
+	for _, frame := range frames {
+		if frame.Meta == nil {
+			frame.Meta = &data.FrameMeta{}
+		}
+		frame.Meta.Type = frameType
+	}
+	if flatten {
+		finalizeFlatFrames(frames)
+	}
+	return frames
+}
+
+// finalizeFlatFrames rewrites frames typed as FrameTypeUnknown into a flat column layout that
+// SSE's single-frame bypass passes through to SQL unchanged. Mirrors what SSE produces from
+// numeric TimeSeriesMulti via its long converter so SQL expressions reference the same columns
+// regardless of measurement datatype:
+//
+//	time | __value__ | __metric_name__ | __display_name__ | <merged labels alphabetically>
+//
+// SSE's bypass requires no field labels, so all field labels are cleared and the label data is
+// re-emitted as plain string columns (which SSE's bypass passes through as SQL columns).
+// Must run after setFieldLabels / setAssetFrameNames since those write labels and DisplayNameFromDS.
+func finalizeFlatFrames(frames data.Frames) data.Frames {
+	for _, frame := range frames {
+		if frame.Meta == nil || frame.Meta.Type != data.FrameTypeUnknown {
+			continue
+		}
+		valueField, _ := frame.FieldByName(valueFieldName)
+		if valueField == nil {
+			continue
+		}
+
+		labels := mergedLabelsFromMeta(frame)
+
+		for _, field := range frame.Fields {
+			field.Labels = nil
+		}
+
+		// SSE uses field Name (not DisplayNameFromDS) as the SQL column name for flat frames.
+		var displayName string
+		if valueField.Config != nil {
+			displayName = valueField.Config.DisplayNameFromDS
+			valueField.Config.DisplayNameFromDS = ""
+		}
+		valueField.Name = sseValueFieldName
+
+		rows := frame.Rows()
+		frame.Fields = append(frame.Fields,
+			data.NewField(sseMetricNameFieldName, nil, slices.Repeat([]string{valueFieldName}, rows)),
+			data.NewField(sseDisplayNameFieldName, nil, repeatStringPtr(displayName, rows)),
+		)
+
+		for _, key := range slices.Sorted(maps.Keys(labels)) {
+			frame.Fields = append(frame.Fields, data.NewField(key, nil, slices.Repeat([]string{labels[key]}, rows)))
 		}
 	}
 	return frames
 }
 
+// repeatStringPtr returns n pointers all referencing the same string. Returns all-nil for
+// empty input so SSE's __display_name__ column reads as null when no display name is set.
+func repeatStringPtr(value string, n int) []*string {
+	out := make([]*string, n)
+	if value == "" {
+		return out
+	}
+	v := value
+	for i := range out {
+		out[i] = &v
+	}
+	return out
+}
+
 func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
-	field, _ := frame.FieldByName("value")
+	field, _ := frame.FieldByName(valueFieldName)
 	if field == nil {
 		return
 	}
