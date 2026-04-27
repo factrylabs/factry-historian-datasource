@@ -84,6 +84,11 @@ export interface Aggregation {
   Fill?: string
 }
 
+export enum FrameFormat {
+  Auto = '',
+  Table = 'table',
+}
+
 export interface MeasurementQueryOptions {
   Tags?: Attributes
   GroupBy?: string[]
@@ -100,6 +105,7 @@ export interface MeasurementQueryOptions {
   ChangesOnly?: boolean
   Datatypes?: string[]
   Desc?: boolean
+  FrameFormat?: FrameFormat
 }
 
 export interface ValueFilter {
