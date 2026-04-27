@@ -23,6 +23,7 @@ import {
   Aggregation,
   Attributes,
   fieldWidth,
+  FrameFormat,
   labelWidth,
   MeasurementDatatype,
   MeasurementQueryOptions,
@@ -56,6 +57,11 @@ export interface Props {
 const datatypeOptions: Array<SelectableValue<string>> = Object.entries(MeasurementDatatype).map(([_, value]) => {
   return { label: value, value: value }
 })
+
+const frameFormatOptions: Array<ComboboxOption<FrameFormat>> = [
+  { label: 'Time series', value: FrameFormat.Auto, description: 'Default — time series shape for panel rendering' },
+  { label: 'Table', value: FrameFormat.Table, description: 'Flat tabular shape compatible with SQL expressions and the table panel; required for SQL expressions on string measurements' },
+]
 
 export const QueryOptions = (props: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
@@ -219,6 +225,10 @@ export const QueryOptions = (props: Props): JSX.Element => {
     setOrdering(value)
 
     props.onChange({ ...props.state, Desc: value === 'descending' })
+  }
+
+  const onChangeFrameFormat = (option: ComboboxOption<FrameFormat> | null): void => {
+    props.onChange({ ...props.state, FrameFormat: option?.value ?? FrameFormat.Auto })
   }
 
   return (
@@ -450,6 +460,20 @@ export const QueryOptions = (props: Props): JSX.Element => {
                 labelWidth={labelWidth}
               >
                 <Input value={seriesLimit} onChange={onChangeSeriesLimit} />
+              </InlineField>
+            </InlineFieldRow>
+            <InlineFieldRow>
+              <InlineField
+                label="Format as"
+                labelWidth={labelWidth}
+                tooltip="Default is time series for panel rendering. Pick Table for a flat tabular shape compatible with SQL expressions and the table panel — required for SQL expressions on string measurements."
+              >
+                <Combobox
+                  value={props.state.FrameFormat ?? FrameFormat.Auto}
+                  options={frameFormatOptions}
+                  onChange={onChangeFrameFormat}
+                  width={fieldWidth}
+                />
               </InlineField>
             </InlineFieldRow>
           </ControlledCollapse>

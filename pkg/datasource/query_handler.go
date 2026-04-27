@@ -37,18 +37,12 @@ type Query struct {
 
 // QueryData handles incoming backend queries
 func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
-	// Grafana's SSE (server-side expression) engine sets X-Grafana-From-Expr: true when it
-	// calls the datasource on behalf of a SQL expression. We detect this here so we can
-	// automatically convert string measurement frames to the flat tabular layout that the
-	// SSE SQL engine requires, without needing a flag in the saved query JSON.
-	sqlCompatible := req.Headers["http_X-Grafana-From-Expr"] == "true"
-
 	return concurrent.QueryData(ctx, req, func(ctx context.Context, query concurrent.Query) (res backend.DataResponse) {
-		return ds.queryData(ctx, query.DataQuery, sqlCompatible)
+		return ds.queryData(ctx, query.DataQuery)
 	}, 10)
 }
 
-func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backend.DataQuery, sqlCompatible bool) backend.DataResponse {
+func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backend.DataQuery) backend.DataResponse {
 	response := backend.DataResponse{}
 	query := Query{}
 	if err := json.Unmarshal(backendQuery.JSON, &query); err != nil {
@@ -65,7 +59,7 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 			}
 		}
 
-		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo, sqlCompatible)
+		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
 		if err := json.Unmarshal(query.Query, &measurementQuery); err != nil {
@@ -82,7 +76,7 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 		}
 
 		measurementQuery.Measurements = measurements
-		response.Frames, response.Error = ds.handleMeasurementQuery(ctx, measurementQuery, backendQuery.TimeRange, backendQuery.Interval, sqlCompatible)
+		response.Frames, response.Error = ds.handleMeasurementQuery(ctx, measurementQuery, backendQuery.TimeRange, backendQuery.Interval)
 	case QueryTypeRaw:
 		rawQuery := schemas.RawQuery{}
 		if err := json.Unmarshal(query.Query, &rawQuery); err != nil {
@@ -149,7 +143,7 @@ func findDisplayNameFromDS(frame *data.Frame) string {
 	return ""
 }
 
-func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, timeRange backend.TimeRange, interval time.Duration, seriesLimit int, historianInfo *schemas.HistorianInfo, sqlCompatible bool) (data.Frames, error) {
+func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, assetMeasurementQuery schemas.AssetMeasurementQuery, timeRange backend.TimeRange, interval time.Duration, seriesLimit int, historianInfo *schemas.HistorianInfo) (data.Frames, error) {
 	assets, err := ds.API.GetFilteredAssets(ctx, assetMeasurementQuery.Assets, historianInfo)
 	if err != nil {
 		return nil, err
@@ -222,7 +216,7 @@ assetLoop:
 	if measurementQuery.Options.MetadataAsLabels {
 		setFieldLabels(frames)
 	}
-	return maybeConvertStringFrames(sqlCompatible, sortByStatus(frames)), nil
+	return applyFrameFormat(sortByStatus(frames), measurementQuery.Options.FrameFormat), nil
 }
 
 func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQuery schemas.MeasurementQuery, seriesLimit int) ([]string, error) {
@@ -276,7 +270,7 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 	return parsedMeasurements, nil
 }
 
-func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measurementQuery schemas.MeasurementQuery, timeRange backend.TimeRange, interval time.Duration, sqlCompatible bool) (data.Frames, error) {
+func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measurementQuery schemas.MeasurementQuery, timeRange backend.TimeRange, interval time.Duration) (data.Frames, error) {
 	frames, err := ds.handleQuery(ctx, historianQuery(measurementQuery, timeRange, interval), measurementQuery.Options)
 	if err != nil {
 		return nil, err
@@ -286,7 +280,7 @@ func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measu
 	if measurementQuery.Options.MetadataAsLabels {
 		setFieldLabels(frames)
 	}
-	return maybeConvertStringFrames(sqlCompatible, sortByStatus(frames)), nil
+	return applyFrameFormat(sortByStatus(frames), measurementQuery.Options.FrameFormat), nil
 }
 
 func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Query, options schemas.MeasurementQueryOptions) (data.Frames, error) {
@@ -347,7 +341,7 @@ func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Qu
 	}
 	if options.ChangesOnly {
 		for _, frame := range result {
-			valueField, _ := frame.FieldByName("value")
+			valueField, _ := frame.FieldByName(valueFieldName)
 			if valueField == nil {
 				continue
 			}
