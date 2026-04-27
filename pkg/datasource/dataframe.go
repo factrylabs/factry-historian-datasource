@@ -126,47 +126,46 @@ func getMeasurementFrameName(frame *data.Frame, includeDatabaseName, includeDesc
 	return getMetaValueFromFrame(frame, "MeasurementName") + getFrameSuffix(frame, includeDatabaseName, includeDescription)
 }
 
+// mergedLabelsFromMeta returns the per-frame label set: the optional Custom["Labels"] map
+// (groupby / tag values) merged with the well-known metadata fields listed in fieldLabelsFromMeta.
+// Returns nil when the frame has no metadata map.
+func mergedLabelsFromMeta(frame *data.Frame) map[string]string {
+	if frame == nil || frame.Meta == nil {
+		return nil
+	}
+	meta, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	labels := map[string]string{}
+	if metaLabels, ok := meta["Labels"].(map[string]interface{}); ok {
+		for k, v := range metaLabels {
+			labels[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	for _, key := range fieldLabelsFromMeta {
+		if value, ok := meta[key].(string); ok {
+			labels[key] = value
+		}
+	}
+	return labels
+}
+
 // setFieldLabels sets the labels for a given field
 func setFieldLabels(frames data.Frames) {
 	for _, frame := range frames {
-		if frame == nil {
+		labels := mergedLabelsFromMeta(frame)
+		if labels == nil {
 			continue
 		}
-
-		if frame.Meta == nil {
-			continue
-		}
-
-		meta, ok := frame.Meta.Custom.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		metaLabels, ok := meta["Labels"].(map[string]interface{})
-		if !ok {
-			metaLabels = make(map[string]interface{})
-		}
-
-		labels := data.Labels{}
-		for key, value := range metaLabels {
-			labels[key] = fmt.Sprintf("%v", value)
-		}
-
-		for _, key := range fieldLabelsFromMeta {
-			if value, ok := meta[key].(string); ok {
-				labels[key] = value
-			}
-		}
-
 		for _, field := range frame.Fields {
 			if field.Name == "time" {
 				continue
 			}
-
 			if field.Labels == nil {
 				field.Labels = make(map[string]string)
 			}
-
 			maps.Copy(field.Labels, labels)
 		}
 	}
