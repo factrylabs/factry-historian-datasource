@@ -45,20 +45,22 @@ export function AssetFilterRow(props: {
       Keyword: query,
     }
     const assets = await props.datasource.getAssets(filter)
-    const selectableValues = assets
-      .map((e) => {
-        return {
-          label: e.Name,
-          value: e.UUID,
-        } as SelectableValue<string>
-      })
+    const selectableValues = [
+      { label: 'No parent', value: '00000000-0000-0000-0000-000000000000' } as SelectableValue<string>,
+    ]
+      .concat(
+        assets.map((e) => {
+          return {
+            label: e.Name,
+            value: e.UUID,
+          } as SelectableValue<string>
+        })
+      )
       .concat(props.templateVariables)
     if (!parentAssets) {
       setParentAssets(selectableValues.filter((e) => props.initialValue?.ParentUUIDs?.includes(e.value ?? '')))
     }
-    return [{ label: 'No parent', value: '00000000-0000-0000-0000-000000000000' } as SelectableValue<string>].concat(
-      selectableValues
-    )
+    return selectableValues
   }
 
   const onParentAssetsChange = (values: Array<SelectableValue<string>>) => {
