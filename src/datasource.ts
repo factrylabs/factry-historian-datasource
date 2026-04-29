@@ -94,10 +94,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   applyTemplateVariables(target: Query, scopedVars: ScopedVars, _filters?: AdHocVariableFilter[]): Query {
-    const replacedSeriesLimit = Number(this.templateSrv.replace(target.seriesLimit as string, scopedVars))
     const base: Query = {
       ...target,
-      seriesLimit: Number.isNaN(replacedSeriesLimit) ? 50 : replacedSeriesLimit,
+      seriesLimit: this.templatedNumber(target.seriesLimit, 50, scopedVars),
     }
     const query = this.applyTemplateVariablesToQuery(base.queryType, base.query, scopedVars)
     return query !== null ? { ...base, query } : base
@@ -150,9 +149,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       e.replace('parent:', '')
     )
     eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, scopedVars)
-
-    const replacedLimit = Number(this.templateSrv.replace(eventQuery.Limit as string, scopedVars))
-    eventQuery.Limit = Number.isNaN(replacedLimit) ? 500 : replacedLimit
+    eventQuery.Limit = this.templatedNumber(eventQuery.Limit, 500, scopedVars)
 
     if (eventQuery.QueryAssetProperties) {
       eventQuery.OverrideAssets = eventQuery.OverrideAssets?.filter((e) => e !== '').flatMap((e) =>
@@ -285,8 +282,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         Arguments: aggregationArguments,
       }
     }
-    const replacedOptionsLimit = Number(this.templateSrv.replace(options.Limit as string, scopedVars))
-    options.Limit = Number.isNaN(replacedOptionsLimit) ? 500 : replacedOptionsLimit
+    options.Limit = this.templatedNumber(options.Limit, 500, scopedVars)
     return options
   }
 
@@ -506,5 +502,11 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return this.cachedRequest(`event-property-values:${JSON.stringify(params)}`, () =>
       this.getResource(`event-property-values/${filter.EventFilter.Properties![0]}`, params)
     )
+  }
+
+  // Replace template variables in the provided value and convert it to a number, of valid
+  templatedNumber(raw: number | string | undefined, defaultValue: number, scopedVars?: ScopedVars): number {
+    const replaced = typeof raw === 'string' ? Number(this.templateSrv.replace(raw, scopedVars)) : raw
+    return typeof replaced === 'number' && !Number.isNaN(replaced) ? replaced : defaultValue
   }
 }
