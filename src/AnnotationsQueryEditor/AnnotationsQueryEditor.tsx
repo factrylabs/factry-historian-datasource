@@ -38,7 +38,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
         OverrideAssets: [],
         OverrideTimeRange: false,
         TimeRange: { from: '', to: '' },
-        Ascending: false,
+        Ascending: true,
       })
     }
   }
