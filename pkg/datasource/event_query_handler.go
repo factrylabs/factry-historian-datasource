@@ -69,10 +69,31 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 
 	// get all unique event types from the events
 	eventTypeUUIDs := map[uuid.UUID]struct{}{}
+	missingParentAssetUUIDs := map[uuid.UUID]struct{}{}
 	for i := range events {
 		eventTypeUUIDs[events[i].EventTypeUUID] = struct{}{}
 		if eventQuery.IncludeParentInfo && events[i].Parent != nil {
 			eventTypeUUIDs[events[i].Parent.EventTypeUUID] = struct{}{}
+			parentAssetUUID := events[i].Parent.AssetUUID
+			if _, ok := assets[parentAssetUUID]; !ok {
+				missingParentAssetUUIDs[parentAssetUUID] = struct{}{}
+			}
+		}
+	}
+
+	// Parent events often live on assets that are not part of the user's selected
+	// asset filter (e.g. user picks leaf assets, parent event lives on the parent
+	// asset). Fetch those assets so the data-frame builders can populate
+	// Parent_Asset and Parent_AssetPath instead of leaving them empty.
+	parentAssets := map[uuid.UUID]schemas.Asset{}
+	if len(missingParentAssetUUIDs) > 0 {
+		missingAssetStrings := make([]string, 0, len(missingParentAssetUUIDs))
+		for parentAssetUUID := range missingParentAssetUUIDs {
+			missingAssetStrings = append(missingAssetStrings, parentAssetUUID.String())
+		}
+		parentAssets, err = ds.API.GetFilteredAssets(ctx, missingAssetStrings, historianInfo)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -155,16 +176,17 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID] = append(eventTypePropertiesByEventType[eventTypeProperty.EventTypeUUID], eventTypeProperty)
 	}
 
-	assetUUIDs := slices.AppendSeq(make([]schemas.Asset, 0, len(assets)), maps.Values(assets))
+	assetsForFrames := slices.AppendSeq(make([]schemas.Asset, 0, len(assets)+len(parentAssets)), maps.Values(assets))
+	assetsForFrames = slices.AppendSeq(assetsForFrames, maps.Values(parentAssets))
 
 	switch eventQuery.Type {
 	case string(schemas.EventTypePropertyTypeSimple):
 		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames, multipleAssetsSelected)
-		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, multipleAssetsSelected, assetUUIDs, events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
+		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, multipleAssetsSelected, assetsForFrames, events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetUUIDs, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetsForFrames, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false)
 	case string(schemas.EventTypePropertyTypePeriodicWithDimension):
-		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetUUIDs, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, true)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetsForFrames, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, true)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
 	}
