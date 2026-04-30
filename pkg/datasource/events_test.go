@@ -3,8 +3,10 @@ package datasource
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -175,7 +177,14 @@ func newFakeHistorianServer(t *testing.T, fixture fakeHistorianData) *httptest.S
 	mux.HandleFunc("/api/assets", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		var matched []schemas.Asset
+		uuids := indexedValues(q, "UUIDs")
 		switch {
+		case len(uuids) > 0:
+			for _, u := range uuids {
+				if asset, ok := fixture.assetsByUUID[u]; ok {
+					matched = append(matched, asset)
+				}
+			}
 		case q.Get("Path") != "":
 			if asset, ok := fixture.assetsByPath[q.Get("Path")]; ok {
 				matched = append(matched, asset)
@@ -214,6 +223,19 @@ func newFakeHistorianServer(t *testing.T, fixture fakeHistorianData) *httptest.S
 	})
 
 	return httptest.NewServer(mux)
+}
+
+// indexedValues returns the values of indexed query parameters like "Foo[0]=a&Foo[1]=b"
+// in input order.
+func indexedValues(q url.Values, prefix string) []string {
+	var out []string
+	for i := 0; ; i++ {
+		v := q.Get(fmt.Sprintf("%s[%d]", prefix, i))
+		if v == "" {
+			return out
+		}
+		out = append(out, v)
+	}
 }
 
 // writeJSON encodes body to w. Encode errors here would mean a programming bug in the
