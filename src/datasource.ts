@@ -244,7 +244,18 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
 
   // https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
   multiSelectReplace(value: string | undefined, scopedVars?: ScopedVars): string[] {
-    return this.templateSrv.replace(value, scopedVars, 'csv').split(',')
+    if (value === undefined) {
+      return ['']
+    }
+    if (!this.containsTemplate(value)) {
+      return [value]
+    }
+    // Use ASCII Unit Separator (U+001F) so commas inside resolved values are preserved.
+    const SEP = '\x1F'
+    const replaced = this.templateSrv.replace(value, scopedVars, (v: string | string[]) =>
+      Array.isArray(v) ? v.join(SEP) : v
+    )
+    return replaced.split(SEP)
   }
 
   replace(value: string | undefined, scopedVars?: ScopedVars): string {
@@ -295,7 +306,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   containsTemplate(value: string): boolean {
     // Using our own custom function to check for template variables since the templateSrv.containsTemplate() function
     // does not seem to work with scenes in anything but the latest version of Grafana.
-    return typeof value === 'string' && /\$\{?[_a-zA-Z][_a-zA-Z0-9]*(?::[a-zA-Z0-9_]+)?}?/.test(value)
+    return (
+      typeof value === 'string' &&
+      /\$\{?[_a-zA-Z][_a-zA-Z0-9]*(?::[a-zA-Z0-9_]+)?}?|\[\[[_a-zA-Z][_a-zA-Z0-9]*(?::[a-zA-Z0-9_]+)?\]\]/.test(value)
+    )
   }
 
   async getInfo(): Promise<void> {
