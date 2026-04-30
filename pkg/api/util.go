@@ -54,18 +54,37 @@ func (e *HTTPError) Error() string {
 func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
 	assetUUIDSet := map[uuid.UUID]schemas.Asset{}
 	if util.CheckMinimumVersion(historianInfo, "6.4.0", false) {
+		uuids := make([]string, 0, len(assetStrings))
+		paths := make([]string, 0, len(assetStrings))
 		for _, assetString := range assetStrings {
-			searchKey := "Path"
 			if _, err := uuid.Parse(assetString); err == nil {
-				searchKey = "Keyword"
+				uuids = append(uuids, assetString)
+			} else {
+				paths = append(paths, assetString)
 			}
+		}
+
+		if len(uuids) > 0 {
 			assetQuery := url.Values{}
-			assetQuery.Add(searchKey, assetString)
+			for i, u := range uuids {
+				assetQuery.Add(fmt.Sprintf("UUIDs[%d]", i), u)
+			}
 			assets, err := api.GetAssets(ctx, assetQuery.Encode())
 			if err != nil {
 				return nil, err
 			}
+			for _, asset := range assets {
+				assetUUIDSet[asset.UUID] = asset
+			}
+		}
 
+		for _, path := range paths {
+			assetQuery := url.Values{}
+			assetQuery.Add("Path", path)
+			assets, err := api.GetAssets(ctx, assetQuery.Encode())
+			if err != nil {
+				return nil, err
+			}
 			for _, asset := range assets {
 				assetUUIDSet[asset.UUID] = asset
 			}
