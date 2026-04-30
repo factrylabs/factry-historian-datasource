@@ -212,7 +212,7 @@ assetLoop:
 		return nil, err
 	}
 
-	setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)
+	frames = setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)
 	if measurementQuery.Options.MetadataAsLabels {
 		setFieldLabels(frames)
 	}
