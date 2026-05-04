@@ -62,7 +62,6 @@ func mergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
 		frameMap[getFrameID(aFrame)] = aFrame
 	}
 
-frameLoop:
 	for _, bFrame := range result {
 		bFrameID := getFrameID(bFrame)
 		aFrame, ok := frameMap[bFrameID]
@@ -75,7 +74,7 @@ frameLoop:
 
 			for i := 0; i < len(aFrame.Fields); i++ {
 				if aFrame.Fields[i].Type() != bFrame.Fields[i].Type() {
-					continue frameLoop
+					aFrame.Fields[i] = convertFieldType(aFrame.Fields[i], bFrame.Fields[i].Type())
 				}
 			}
 
@@ -90,6 +89,100 @@ frameLoop:
 	}
 
 	return slices.AppendSeq(make([]*data.Frame, 0, len(frameMap)), maps.Values(frameMap))
+}
+
+// convertLastKnownFramesForAggregation rewrites the value field of last-known
+// frames so they merge cleanly into a result frame produced by the given
+// aggregation. The historian's "last" aggregation preserves the measurement's
+// natural type, but result frames driven by a numeric aggregation (mean, sum,
+// …) are always numeric — so the last-known value field has to be coerced to
+// match before mergeFrames runs.
+func convertLastKnownFramesForAggregation(frames data.Frames, aggregation schemas.AggregationType) data.Frames {
+	for _, frame := range frames {
+		for i, field := range frame.Fields {
+			if field.Name != valueFieldName {
+				continue
+			}
+			frame.Fields[i] = convertFieldForAggregation(field, aggregation)
+		}
+	}
+	return frames
+}
+
+// convertFieldForAggregation returns the value field rewritten to the type the
+// given aggregation produces:
+//   - count: every row becomes 1 so the last-known point contributes a single
+//     observation when merged into a count series.
+//   - other numeric aggregations (integral, mean, median, spread, stddev, sum,
+//     twa): coerced to nullable float64 via convertFieldType.
+//   - first / last / max / min / mode: returned as-is — these preserve the
+//     source measurement's type, so the last-known field already matches.
+func convertFieldForAggregation(field *data.Field, aggregation schemas.AggregationType) *data.Field {
+	switch aggregation {
+	case schemas.Count:
+		countField := data.NewFieldFromFieldType(data.FieldTypeNullableFloat64, field.Len())
+		countField.Name = field.Name
+		countField.Labels = field.Labels
+		countField.Config = field.Config
+		for i := 0; i < field.Len(); i++ {
+			countField.Set(i, new(1.0))
+		}
+		return countField
+	case schemas.Integral, schemas.Mean, schemas.Median, schemas.Spread, schemas.Stddev, schemas.Sum, schemas.TWA:
+		return convertFieldType(field, data.FieldTypeNullableFloat64)
+	default:
+		return field
+	}
+}
+
+// convertFieldType returns a new field with src's name, labels and config but with
+// the given target type. Values whose concrete Go type differs from the target
+// (e.g. a numeric last-known point against a string result series) are dropped to
+// the zero/nil value of the target type so the merge can proceed; values that share
+// the target's underlying type — including the common nullable ↔ non-nullable case —
+// are preserved.
+func convertFieldType(src *data.Field, targetType data.FieldType) *data.Field {
+	dst := data.NewFieldFromFieldType(targetType, src.Len())
+	dst.Name = src.Name
+	dst.Labels = src.Labels
+	dst.Config = src.Config
+	for i := 0; i < src.Len(); i++ {
+		v, ok := src.ConcreteAt(i)
+		if !ok {
+			continue
+		}
+		switch targetType {
+		case data.FieldTypeFloat64:
+			if f, ok := toFloat64(v); ok {
+				dst.Set(i, f)
+			}
+		case data.FieldTypeNullableFloat64:
+			if f, ok := toFloat64(v); ok {
+				dst.Set(i, &f)
+			}
+		case data.FieldTypeString:
+			if s, ok := toString(v); ok {
+				dst.Set(i, s)
+			}
+		case data.FieldTypeNullableString:
+			if s, ok := toString(v); ok {
+				dst.Set(i, &s)
+			}
+		case data.FieldTypeBool:
+			if b, ok := toBool(v); ok {
+				dst.Set(i, b)
+			}
+		case data.FieldTypeNullableBool:
+			if b, ok := toBool(v); ok {
+				dst.Set(i, &b)
+			}
+		default:
+			// other field types (ints, time, json, …) are not produced by the
+			// historian for value fields; leave dst's pre-allocated zero/nil row
+			// in place so callers see a typed-but-empty value.
+		}
+	}
+	return dst
 }
 
 // getFrameSuffix returns the frame name for a given frame

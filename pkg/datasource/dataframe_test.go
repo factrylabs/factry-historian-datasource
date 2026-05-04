@@ -174,3 +174,169 @@ func TestApplyFrameFormat_EmptyDisplayName(t *testing.T) {
 	_, ok := displayField.ConcreteAt(0)
 	assert.False(t, ok, "display name column should be null when no display name is set")
 }
+
+func TestConvertFieldType_NullableToNonNullablePreservesValues(t *testing.T) {
+	t.Parallel()
+	one, two := 1.5, 2.5
+	src := data.NewField("value", nil, []*float64{&one, nil, &two})
+
+	dst := convertFieldType(src, data.FieldTypeFloat64)
+
+	require.Equal(t, data.FieldTypeFloat64, dst.Type())
+	require.Equal(t, 3, dst.Len())
+	assert.InDelta(t, 1.5, dst.At(0), 0)
+	assert.InDelta(t, 0.0, dst.At(1), 0, "nil source value falls back to zero of target type")
+	assert.InDelta(t, 2.5, dst.At(2), 0)
+}
+
+func TestConvertFieldType_BoolToFloat(t *testing.T) {
+	t.Parallel()
+	src := data.NewField("value", nil, []bool{true, false})
+
+	dst := convertFieldType(src, data.FieldTypeFloat64)
+
+	require.Equal(t, data.FieldTypeFloat64, dst.Type())
+	assert.InDelta(t, 1.0, dst.At(0), 0)
+	assert.InDelta(t, 0.0, dst.At(1), 0)
+}
+
+func TestConvertFieldType_FloatToString(t *testing.T) {
+	t.Parallel()
+	src := data.NewField("value", nil, []float64{3.14, 42})
+
+	dst := convertFieldType(src, data.FieldTypeString)
+
+	require.Equal(t, data.FieldTypeString, dst.Type())
+	assert.Equal(t, "3.14", dst.At(0))
+	assert.Equal(t, "42", dst.At(1))
+}
+
+func TestConvertFieldType_UnparseableStringToFloatFallsBackToZero(t *testing.T) {
+	t.Parallel()
+	src := data.NewField("value", nil, []string{"running"})
+
+	dst := convertFieldType(src, data.FieldTypeFloat64)
+
+	require.Equal(t, data.FieldTypeFloat64, dst.Type())
+	assert.InDelta(t, 0.0, dst.At(0), 0, "unparseable strings keep the zero pre-allocated by NewFieldFromFieldType")
+}
+
+func TestConvertFieldType_PreservesNameLabelsConfig(t *testing.T) {
+	t.Parallel()
+	src := data.NewField("value", data.Labels{"k": "v"}, []bool{true})
+	src.Config = &data.FieldConfig{DisplayNameFromDS: "label"}
+
+	dst := convertFieldType(src, data.FieldTypeFloat64)
+
+	assert.Equal(t, "value", dst.Name)
+	assert.Equal(t, data.Labels{"k": "v"}, dst.Labels)
+	require.NotNil(t, dst.Config)
+	assert.Equal(t, "label", dst.Config.DisplayNameFromDS)
+}
+
+// TestMergeFrames_BoolLastKnownIntoFloatResult covers bug 34075: when the
+// lastKnown frame's value type differs from the result frame, mergeFrames must
+// coerce the lastKnown values instead of dropping them silently.
+func TestMergeFrames_BoolLastKnownIntoFloatResult(t *testing.T) {
+	t.Parallel()
+	lastKnown := makeFrame(t, data.NewField("value", nil, []bool{true}), "running")
+	result := makeFrame(t, data.NewField("value", nil, []float64{42}), "running")
+
+	merged := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
+
+	require.Len(t, merged, 1)
+	value, _ := merged[0].FieldByName("value")
+	require.NotNil(t, value)
+	require.Equal(t, data.FieldTypeFloat64, value.Type())
+	require.Equal(t, 2, value.Len())
+	assert.InDelta(t, 1.0, value.At(0), 0, "bool last-known value must coerce to 1.0 on a numeric series")
+	assert.InDelta(t, 42.0, value.At(1), 0)
+}
+
+func TestMergeFrames_SameTypesAppendsRows(t *testing.T) {
+	t.Parallel()
+	lastKnown := makeFrame(t, data.NewField("value", nil, []float64{1}), "v")
+	result := makeFrame(t, data.NewField("value", nil, []float64{2}), "v")
+
+	merged := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
+
+	require.Len(t, merged, 1)
+	value, _ := merged[0].FieldByName("value")
+	require.NotNil(t, value)
+	require.Equal(t, 2, value.Len())
+	assert.InDelta(t, 1.0, value.At(0), 0)
+	assert.InDelta(t, 2.0, value.At(1), 0)
+}
+
+func TestMergeFrames_EmptyInputs(t *testing.T) {
+	t.Parallel()
+	frame := makeFrame(t, data.NewField("value", nil, []float64{1}), "v")
+
+	assert.Equal(t, data.Frames{frame}, mergeFrames(nil, data.Frames{frame}))
+	assert.Equal(t, data.Frames{frame}, mergeFrames(data.Frames{frame}, nil))
+}
+
+func TestConvertFieldForAggregation_CountReplacesValuesWithOne(t *testing.T) {
+	t.Parallel()
+	src := data.NewField("value", data.Labels{"k": "v"}, []bool{true, false})
+	src.Config = &data.FieldConfig{DisplayNameFromDS: "running"}
+
+	dst := convertFieldForAggregation(src, schemas.Count)
+
+	require.Equal(t, data.FieldTypeNullableFloat64, dst.Type())
+	require.Equal(t, 2, dst.Len())
+	for i := 0; i < dst.Len(); i++ {
+		got, ok := dst.ConcreteAt(i)
+		require.True(t, ok)
+		gotFloat, isFloat := got.(float64)
+		require.True(t, isFloat)
+		assert.InDelta(t, 1.0, gotFloat, 0)
+	}
+	assert.Equal(t, "value", dst.Name, "downstream FieldByName lookups need the value name preserved")
+	assert.Equal(t, data.Labels{"k": "v"}, dst.Labels)
+	require.NotNil(t, dst.Config)
+	assert.Equal(t, "running", dst.Config.DisplayNameFromDS)
+}
+
+func TestConvertFieldForAggregation_NumericCoercesToNullableFloat64(t *testing.T) {
+	t.Parallel()
+	src := data.NewField("value", nil, []bool{true, false})
+
+	for _, agg := range []schemas.AggregationType{schemas.Mean, schemas.Sum, schemas.TWA, schemas.Stddev, schemas.Spread, schemas.Median, schemas.Integral} {
+		t.Run(string(agg), func(t *testing.T) {
+			t.Parallel()
+			dst := convertFieldForAggregation(src, agg)
+			require.Equal(t, data.FieldTypeNullableFloat64, dst.Type())
+			got, _ := dst.ConcreteAt(0)
+			gotFloat, isFloat := got.(float64)
+			require.True(t, isFloat)
+			assert.InDelta(t, 1.0, gotFloat, 0)
+		})
+	}
+}
+
+func TestConvertFieldForAggregation_NonNumericReturnsSameField(t *testing.T) {
+	t.Parallel()
+	src := data.NewField("value", nil, []bool{true})
+
+	for _, agg := range []schemas.AggregationType{schemas.First, schemas.Last, schemas.Max, schemas.Min, schemas.Mode} {
+		t.Run(string(agg), func(t *testing.T) {
+			t.Parallel()
+			assert.Same(t, src, convertFieldForAggregation(src, agg),
+				"type-preserving aggregations must leave the field untouched")
+		})
+	}
+}
+
+func TestConvertLastKnownFramesForAggregation_OnlyTouchesValueField(t *testing.T) {
+	t.Parallel()
+	frame := makeFrame(t, data.NewField("value", nil, []bool{true}), "v")
+	timeField := frame.Fields[0]
+
+	convertLastKnownFramesForAggregation(data.Frames{frame}, schemas.Mean)
+
+	assert.Same(t, timeField, frame.Fields[0], "time field must not be rewritten")
+	value, _ := frame.FieldByName("value")
+	require.NotNil(t, value)
+	assert.Equal(t, data.FieldTypeNullableFloat64, value.Type())
+}
