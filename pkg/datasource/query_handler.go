@@ -330,6 +330,10 @@ func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Qu
 		}
 		lastKnowPointResults = append(lastKnowPointResults, lastResult...)
 
+		if options.Aggregation != nil {
+			lastKnowPointResults = convertLastKnownFramesForAggregation(lastKnowPointResults, options.Aggregation.Name)
+		}
+
 		result = mergeFrames(lastKnowPointResults, result)
 		if options.FillInitialEmptyValues {
 			result = fillInitialEmptyIntervals(result, query)
