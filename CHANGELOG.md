@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.2.0
+
+### Changes
+
+- Added a frame format option to control the shape of frames returned by queries.
+- Changed the default event annotation query to ascending order, which better handles events without a stop time.
+- Batched UUID asset lookups into a single request to reduce backend load.
+
+### Bug fixes
+
+- Fixed the last-known point being dropped when its type differed from the result series.
+- Fixed parent event asset name and path resolution when including parent info in event queries.
+- Fixed asset measurement queries returning only one result when multiple properties linked to the same measurement.
+- Fixed asset property names containing commas being split into separate properties, and ensured Grafana's legacy `[[var]]` multi-value syntax expands correctly.
+- Fixed limit field defaults not being initialised in explore views, which caused invalid queries.
+- Fixed `No parent` no longer being displayed when reloading the Asset Variable editor.
+
 ## v3.1.0
 
 ### Changes
