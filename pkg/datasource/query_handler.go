@@ -59,6 +59,15 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 			}
 		}
 
+		if query.HistorianInfo == nil {
+			info, err := ds.API.GetInfo(ctx)
+			if err != nil {
+				response.Error = err
+				return response
+			}
+			query.HistorianInfo = &info
+		}
+
 		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
@@ -92,6 +101,15 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 			return backend.DataResponse{
 				Error: err,
 			}
+		}
+
+		if query.HistorianInfo == nil {
+			info, err := ds.API.GetInfo(ctx)
+			if err != nil {
+				response.Error = err
+				return response
+			}
+			query.HistorianInfo = &info
 		}
 
 		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
