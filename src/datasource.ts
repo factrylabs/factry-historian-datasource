@@ -293,7 +293,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         Arguments: aggregationArguments,
       }
     }
-    options.Limit = this.templatedNumber(options.Limit, 500, scopedVars)
+    options.Limit = this.templatedNumber(options.Limit, 0, scopedVars)
     return options
   }
 
