@@ -19,6 +19,21 @@ func Unique[T comparable](arr []T) bool {
 	return true
 }
 
+// Dedupe returns a copy of arr with duplicate entries removed, preserving the order
+// of first occurrence.
+func Dedupe[T comparable](arr []T) []T {
+	seen := make(map[T]struct{}, len(arr))
+	out := make([]T, 0, len(arr))
+	for _, v := range arr {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out
+}
+
 // Model is an interface for objects with a UUID field
 type Model interface {
 	// GetUUID returns the UUID of the object
