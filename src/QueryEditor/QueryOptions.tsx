@@ -138,8 +138,8 @@ export const QueryOptions = (props: Props): JSX.Element => {
     props.onChange({ ...props.state, GroupBy: groups })
   }
 
-  const onLimitChange = (option: ComboboxOption<string> | null): void => {
-    props.onChange({ ...props.state, Limit: option?.value ?? undefined })
+  const onLimitChange = (event: React.ChangeEvent<HTMLInputElement> | null): void => {
+    props.onChange({ ...props.state, Limit: event?.target.value })
   }
 
   const onPeriodChange = (selected: SelectableValue<string>): void => {
@@ -386,21 +386,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
             tooltip="The maximum amount of values to fetch per measurement"
             labelWidth={labelWidth}
           >
-            <Combobox
-              options={[
-                { value: '10', label: '10' },
-                { value: '25', label: '25' },
-                { value: '100', label: '100' },
-                { value: '500', label: '500' },
-                { value: '1000', label: '1000' },
-                ...props.templateVariables.map((v) => ({ value: v.value ?? '', label: v.label })),
-              ]}
-              value={(props.state.Limit as string) ?? null}
-              onChange={onLimitChange}
-              placeholder="(optional)"
-              createCustomValue
-              isClearable
-            />
+            <Input placeholder="(optional)" onBlur={onLimitChange} defaultValue={props.state.Limit} />
           </InlineField>
         </InlineFieldRow>
       )}

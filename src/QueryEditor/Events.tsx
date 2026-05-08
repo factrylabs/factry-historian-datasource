@@ -1,13 +1,5 @@
 import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
-import {
-  Combobox,
-  ComboboxOption,
-  FieldSet,
-  InlineField,
-  InlineFieldRow,
-  InlineSwitch,
-  RadioButtonGroup,
-} from '@grafana/ui'
+import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input, RadioButtonGroup } from '@grafana/ui'
 import { DateTime } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
@@ -99,8 +91,9 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
-  const onChangeLimit = (option: ComboboxOption<string> | null): void => {
-    setLimit(option?.value ?? undefined)
+  const onChangeLimit = (event: ChangeEvent<HTMLInputElement> | null): void => {
+    const value = event?.target.value
+    setLimit(value === '' ? undefined : value)
   }
 
   const onChangeAssetMeasurementQuery = (query: AssetMeasurementQuery): void => {
@@ -188,20 +181,10 @@ export const Events = (props: Props): JSX.Element => {
                 tooltip="Limit the number of events returned, 0 for no limit"
                 labelWidth={labelWidth}
               >
-                <Combobox
-                  options={[
-                    { value: '10', label: '10' },
-                    { value: '25', label: '25' },
-                    { value: '100', label: '100' },
-                    { value: '500', label: '500' },
-                    { value: '1000', label: '1000' },
-                    ...templateVariables,
-                  ]}
-                  value={(limit as string) ?? null}
-                  onChange={onChangeLimit}
-                  placeholder="(optional)"
-                  createCustomValue
-                  isClearable
+                <Input
+                  value={limit}
+                  onChange={(e) => setLimit(e.currentTarget.value)}
+                  onBlur={onChangeLimit}
                 />
               </InlineField>
             </InlineFieldRow>
