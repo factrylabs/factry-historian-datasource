@@ -53,7 +53,14 @@ func (e *HTTPError) Error() string {
 // GetFilteredAssets returns a map of assets that match the given asset strings
 func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
 	assetUUIDSet := map[uuid.UUID]schemas.Asset{}
-	if util.CheckMinimumVersion(historianInfo, "6.4.0", false) {
+
+	assetStrings = util.Dedupe(assetStrings)
+	if len(assetStrings) == 0 {
+		return assetUUIDSet, nil
+	}
+
+	switch {
+	case util.CheckMinimumVersion(historianInfo, "8.1.0", false):
 		uuids := make([]string, 0, len(assetStrings))
 		paths := make([]string, 0, len(assetStrings))
 		for _, assetString := range assetStrings {
@@ -89,7 +96,23 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 				assetUUIDSet[asset.UUID] = asset
 			}
 		}
-	} else {
+	case util.CheckMinimumVersion(historianInfo, "6.4.0", false):
+		for _, assetString := range assetStrings {
+			searchKey := "Path"
+			if _, err := uuid.Parse(assetString); err == nil {
+				searchKey = "Keyword"
+			}
+			assetQuery := url.Values{}
+			assetQuery.Add(searchKey, assetString)
+			assets, err := api.GetAssets(ctx, assetQuery.Encode())
+			if err != nil {
+				return nil, err
+			}
+			for _, asset := range assets {
+				assetUUIDSet[asset.UUID] = asset
+			}
+		}
+	default:
 		// Deprecated
 		assets, err := api.GetAssets(ctx, "")
 		if err != nil {
