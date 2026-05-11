@@ -1,6 +1,6 @@
 major = 3
-minor = 1
-patch = 0
+minor = 2
+patch = 1
 prerelease =
 project_name=factry-historian-datasource
 
