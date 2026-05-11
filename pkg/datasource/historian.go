@@ -2,8 +2,11 @@ package datasource
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/go-playground/form"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
@@ -23,11 +26,35 @@ const (
 	DefaultHistorianURL string = "http://127.0.0.1:8000"
 )
 
+const historianInfoTTL = 5 * time.Minute
+
 // HistorianDataSource ...
 type HistorianDataSource struct {
 	API             *api.API
 	Decoder         *form.Decoder
 	resourceHandler backend.CallResourceHandler
+
+	infoMu     sync.Mutex
+	info       *schemas.HistorianInfo
+	infoExpiry time.Time
+}
+
+// getHistorianInfo returns the historian info, refreshing the cached value when
+// it is missing or older than historianInfoTTL. The mutex is held across the
+// HTTP call so concurrent callers share a single round-trip.
+func (ds *HistorianDataSource) getHistorianInfo(ctx context.Context) (*schemas.HistorianInfo, error) {
+	ds.infoMu.Lock()
+	defer ds.infoMu.Unlock()
+	if ds.info != nil && time.Now().Before(ds.infoExpiry) {
+		return ds.info, nil
+	}
+	info, err := ds.API.GetInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ds.info = &info
+	ds.infoExpiry = time.Now().Add(historianInfoTTL)
+	return ds.info, nil
 }
 
 // NewDataSource creates a new data source instance
