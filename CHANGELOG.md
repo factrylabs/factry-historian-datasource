@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.2.1
+
+### Bug fixes
+
+- Replace limit number inputs with text inputs again
+- Fix max values default being set to a low value
+- Prevent datasource from trying to use unsupported asset API features when connecting to older Historian versions
+
 ## v3.2.0
 
 ### Changes
