@@ -183,6 +183,10 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 		return nil, err
 	}
 
+	if len(assets) == 0 {
+		return nil, nil
+	}
+
 	assetPropertyQuery := url.Values{}
 
 	for i, assetUUID := range slices.Collect(maps.Keys(assets)) {
