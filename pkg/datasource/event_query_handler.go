@@ -97,36 +97,18 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		}
 	}
 
-	var eventTypeProperties []schemas.EventTypeProperty
-	if util.CheckMinimumVersion(historianInfo, "6.4.0", false) {
-		eventTypeQuery := url.Values{}
-		i := 0
-		for eventTypeUUID := range eventTypeUUIDs {
-			eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
-			i++
-		}
-		if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) {
-			eventTypeQuery.Add("Types[0]", eventQuery.Type)
-		}
-		eventTypeProperties, err = ds.API.GetEventTypeProperties(ctx, eventTypeQuery.Encode())
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		allEventTypeProperties, err := ds.API.GetEventTypeProperties(ctx, "")
-		if err != nil {
-			return nil, err
-		}
-
-		for _, eventTypeProperty := range allEventTypeProperties {
-			if _, ok := eventTypeUUIDs[eventTypeProperty.EventTypeUUID]; !ok {
-				continue
-			}
-			if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) && eventTypeProperty.Type != schemas.EventTypePropertyTypeSimple {
-				continue
-			}
-			eventTypeProperties = append(eventTypeProperties, eventTypeProperty)
-		}
+	eventTypeQuery := url.Values{}
+	i := 0
+	for eventTypeUUID := range eventTypeUUIDs {
+		eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
+		i++
+	}
+	if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) {
+		eventTypeQuery.Add("Types[0]", eventQuery.Type)
+	}
+	eventTypeProperties, err := ds.API.GetEventTypeProperties(ctx, eventTypeQuery.Encode())
+	if err != nil {
+		return nil, err
 	}
 
 	selectedPropertiesSet := map[string]struct{}{}

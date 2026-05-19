@@ -17,14 +17,13 @@ import {
   PropertyDatatype,
   PropertyType,
 } from 'types'
-import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
+import { eventFilterOperators, KnownOperator, needsValue } from 'util/eventFilter'
 import {
   buildLazyCascaderOptions,
   eventTypeUUIDsForProperties,
   fetchLazyChildOptions,
   getChildAssets,
   isLazyLoadingEnabled,
-  isSupportedPropertyType,
   matchedAssets,
   NIL_UUID,
   parentEventTypeUUIDs,
@@ -36,7 +35,6 @@ import {
   templateVariablesToCascaderOptions,
   updateTreeChildren,
 } from './util'
-import { isFeatureEnabled } from 'util/semver'
 import { isRegex, isUUID } from 'util/util'
 import { notifyError } from 'util/notify'
 
@@ -317,17 +315,12 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const getTagsKeyOptions = (eventTypes: string[]): string[] => {
-    const durationFilterSupported = isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0', true)
-    let tagKeyOptions: string[] = []
-    if (durationFilterSupported) {
-      tagKeyOptions = ['duration']
-    }
-    tagKeyOptions = [...tagKeyOptions, ...availableSimpleProperties(eventTypes)]
-
-    if (durationFilterSupported) {
-      tagKeyOptions = [...tagKeyOptions, 'parent:duration']
-    }
-    return [...tagKeyOptions, ...availableSimpleProperties(eventTypes, true).map((k) => `parent:${k}`)]
+    return [
+      'duration',
+      ...availableSimpleProperties(eventTypes),
+      'parent:duration',
+      ...availableSimpleProperties(eventTypes, true).map((k) => `parent:${k}`),
+    ]
   }
 
   const availableSimpleProperties = (eventTypeSelectors: string[], onlyParentProperties = false): string[] => {
@@ -449,10 +442,6 @@ export const EventFilter = (props: Props): JSX.Element => {
     ].concat(templateVariables)
   }
 
-  const getValueFilterOperators = (): KnownOperator[] => {
-    return getValueFilterOperatorsForVersion(props.datasource.historianInfo?.Version ?? '')
-  }
-
   const eventTypeOptions = availableEventTypes()
 
   return (
@@ -468,7 +457,6 @@ export const EventFilter = (props: Props): JSX.Element => {
             >
               <Select
                 options={Object.entries(PropertyType)
-                  .filter(([_, value]) => isSupportedPropertyType(value, props.datasource.historianInfo?.Version ?? ''))
                   .filter(([_, value]) => !props.isAnnotationQuery || value === PropertyType.Simple)
                   .map(([key, value]) => ({ label: key, value }))}
                 value={props.query.Type}
@@ -573,7 +561,7 @@ export const EventFilter = (props: Props): JSX.Element => {
             >
               <TagsSection
                 tags={propertyFilterToQueryTags(props.query.PropertyFilter ?? [])}
-                operators={getValueFilterOperators()}
+                operators={eventFilterOperators}
                 getTagKeyOptions={() => Promise.resolve(getTagsKeyOptions(props.query.EventTypes ?? []))}
                 getTagValueOptions={(key) => {
                   const isParent = key.startsWith('parent:')

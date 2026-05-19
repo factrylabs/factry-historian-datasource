@@ -10,7 +10,7 @@
   "annotations": true,
   "category": "tsdb",
   "info": {
-    "description": "A datasource plugin for Factry Historian",
+    "description": "A datasource plugin for Factry Historian. Requires Factry Historian v7.3.0 or later.",
     "author": {
       "name": "Factry",
       "url": "https://www.factry.io"

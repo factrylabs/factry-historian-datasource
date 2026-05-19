@@ -6,14 +6,12 @@ import { DataSource } from 'datasource'
 import {
   EventTypeFilter,
   EventTypePropertiesFilter,
-  HistorianInfo,
   PropertyDatatype,
   PropertyType,
   fieldWidth,
   labelWidth,
 } from 'types'
-import { debouncePromise, isSupportedPropertyType } from 'QueryEditor/util'
-import { isFeatureEnabled } from 'util/semver'
+import { debouncePromise } from 'QueryEditor/util'
 
 const extraWidefieldWidth = fieldWidth + 10
 
@@ -22,7 +20,6 @@ export function EventTypePropertyFilterRow (props: {
   onChange: (val: EventTypePropertiesFilter) => void
   initialValue?: EventTypePropertiesFilter
   templateVariables: SelectableValue<string>
-  historianInfo?: HistorianInfo | undefined
 }) {
   const [selectedEventTypes, setEventTypes] = useState<Array<SelectableValue<string>>>()
 
@@ -92,32 +89,28 @@ export function EventTypePropertyFilterRow (props: {
             placeholder="Select property type"
             width={extraWidefieldWidth}
             onChange={(value) => onTypeChange(value)}
-            options={Object.entries(PropertyType)
-              .filter(([_, value]) => isSupportedPropertyType(value, props.historianInfo?.Version ?? ''))
-              .map(([key, value]) => {
-                return { label: key, value: value as string }
-              })}
+            options={Object.entries(PropertyType).map(([key, value]) => {
+              return { label: key, value: value as string }
+            })}
             isClearable
             value={props.initialValue?.Types}
           />
         </InlineField>
       </InlineFieldRow>
-      {isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0') && (
-        <InlineFieldRow>
-          <InlineField label={'Datatype'} aria-label={'Datatype'} labelWidth={labelWidth}>
-            <MultiSelect
-              placeholder="Select property datatype"
-              width={extraWidefieldWidth}
-              onChange={(value) => onDatatypeChange(value)}
-              options={Object.entries(PropertyDatatype).map(([key, value]) => {
-                return { label: key, value: value as string }
-              })}
-              isClearable
-              value={props.initialValue?.Datatypes}
-            />
-          </InlineField>
-        </InlineFieldRow>
-      )}
+      <InlineFieldRow>
+        <InlineField label={'Datatype'} aria-label={'Datatype'} labelWidth={labelWidth}>
+          <MultiSelect
+            placeholder="Select property datatype"
+            width={extraWidefieldWidth}
+            onChange={(value) => onDatatypeChange(value)}
+            options={Object.entries(PropertyDatatype).map(([key, value]) => {
+              return { label: key, value: value as string }
+            })}
+            isClearable
+            value={props.initialValue?.Datatypes}
+          />
+        </InlineField>
+      </InlineFieldRow>
     </>
   )
 }

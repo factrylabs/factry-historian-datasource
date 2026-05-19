@@ -22,7 +22,6 @@ import {
   valueFiltersToQueryTags,
 } from './util'
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
-import { isFeatureEnabled } from 'util/semver'
 import { isRegex, isUUID } from 'util/util'
 import { notifyError } from 'util/notify'
 
@@ -309,13 +308,11 @@ export const Assets = (props: Props): JSX.Element => {
             valueFilters={valueFiltersToQueryTags(props.query.Options.ValueFilters ?? [])}
             appIsAlertingType={props.appIsAlertingType}
             datatypes={[]}
-            historianVersion={props.datasource.historianInfo?.Version ?? ''}
             templateVariables={props.templateVariables}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
             onChange={handleChangeMeasurementQueryOptions}
             onChangeSeriesLimit={props.onChangeSeriesLimit}
-            hideDatatypeFilter={!isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0')}
           />
         </>
       )}

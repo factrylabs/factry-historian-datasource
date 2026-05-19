@@ -20,7 +20,6 @@ import {
 import { EventTypePropertyFilterRow } from './EventTypePropertyFilter'
 import { EventTypeFilterRow } from './EventTypeFilter'
 import { PropertyValuesFilterRow } from './PropertyValuesFilter'
-import { isFeatureEnabled } from 'util/semver'
 import { Pagination } from './Pagination'
 
 export function VariableQueryEditor(
@@ -50,20 +49,16 @@ export function VariableQueryEditor(
     }
   }, [loading, props.datasource])
 
-  const queryTypeOptions = () => {
-    const options = [
+  const queryTypeOptions = (): Array<SelectableValue<string>> => {
+    return [
       { label: 'Measurement', value: VariableQueryType.MeasurementQuery },
       { label: 'Asset', value: VariableQueryType.AssetQuery },
       { label: 'Event type', value: VariableQueryType.EventTypeQuery },
       { label: 'Database', value: VariableQueryType.DatabaseQuery },
       { label: 'Event type property', value: VariableQueryType.EventTypePropertyQuery },
       { label: 'Asset property', value: VariableQueryType.AssetPropertyQuery },
-    ] as Array<SelectableValue<string>>
-
-    if (historianInfo !== undefined && isFeatureEnabled(historianInfo.Version, '7.2.0', true)) {
-      options.push({ label: 'Event property values', value: VariableQueryType.PropertyValuesQuery })
-    }
-    return options
+      { label: 'Event property values', value: VariableQueryType.PropertyValuesQuery },
+    ]
   }
 
   return loading ? (
@@ -197,7 +192,6 @@ export function VariableQueryEditor(
           datasource={props.datasource}
           initialValue={props.query.filter}
           templateVariables={templateVariables}
-          historianInfo={historianInfo}
           onChange={(val, valid) => {
             if (props.query.type === VariableQueryType.AssetPropertyQuery) {
               props.onChange({ ...props.query, filter: val, valid: valid })
@@ -232,7 +226,6 @@ export function VariableQueryEditor(
           datasource={props.datasource}
           initialValue={props.query.filter}
           templateVariables={templateVariables}
-          historianInfo={historianInfo}
           onChange={(val) => {
             if (props.query.type === VariableQueryType.EventTypePropertyQuery) {
               props.onChange({ ...props.query, filter: val })
@@ -240,21 +233,19 @@ export function VariableQueryEditor(
           }}
         />
       )}
-      {props.query.type === VariableQueryType.PropertyValuesQuery &&
-        historianInfo &&
-        isFeatureEnabled(historianInfo.Version, '7.2.0', true) && (
-          <PropertyValuesFilterRow
-            datasource={props.datasource}
-            initialValue={props.query.filter}
-            templateVariables={templateVariables}
-            onChange={(val) => {
-              if (props.query.type === VariableQueryType.PropertyValuesQuery) {
-                props.onChange({ ...props.query, filter: val })
-              }
-            }}
-            historianInfo={historianInfo}
-          />
-        )}
+      {props.query.type === VariableQueryType.PropertyValuesQuery && (
+        <PropertyValuesFilterRow
+          datasource={props.datasource}
+          initialValue={props.query.filter}
+          templateVariables={templateVariables}
+          onChange={(val) => {
+            if (props.query.type === VariableQueryType.PropertyValuesQuery) {
+              props.onChange({ ...props.query, filter: val })
+            }
+          }}
+          historianInfo={historianInfo}
+        />
+      )}
     </>
   )
 }

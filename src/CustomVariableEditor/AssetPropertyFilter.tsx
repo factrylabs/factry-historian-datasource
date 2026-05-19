@@ -2,10 +2,9 @@ import React, { useState } from 'react'
 
 import { AsyncMultiSelect, InlineField, InlineFieldRow, MultiSelect } from '@grafana/ui'
 import { DataSource } from 'datasource'
-import { AssetFilter, AssetPropertyFilter, fieldWidth, HistorianInfo, labelWidth, MeasurementDatatype } from 'types'
+import { AssetFilter, AssetPropertyFilter, fieldWidth, labelWidth, MeasurementDatatype } from 'types'
 import { SelectableValue } from '@grafana/data'
 import { MaybeRegexInput } from 'components/util/MaybeRegexInput'
-import { isFeatureEnabled } from 'util/semver'
 import { debouncePromise, sortByLabel, useDebounce } from 'QueryEditor/util'
 
 export function AssetPropertyFilterRow (props: {
@@ -13,7 +12,6 @@ export function AssetPropertyFilterRow (props: {
   onChange: (val: AssetPropertyFilter, valid: boolean) => void
   initialValue?: AssetPropertyFilter
   templateVariables: SelectableValue<string>
-  historianInfo?: HistorianInfo | undefined
 }) {
   const [selectedAssets, setAssets] = useState<Array<SelectableValue<string>>>()
   const [keyword, setKeyword] = useDebounce<string>(props.initialValue?.Keyword ?? '', 500, (value) =>
@@ -90,40 +88,34 @@ export function AssetPropertyFilterRow (props: {
           />
         </InlineField>
       </InlineFieldRow>
-      {props.historianInfo && isFeatureEnabled(props.historianInfo.Version, '7.3.0', true) && (
-        <>
-          <InlineFieldRow>
-            <InlineField
-              label={'Filter by keyword'}
-              aria-label={'Filter by keyword'}
-              labelWidth={labelWidth}
-              tooltip={
-                <div>Searches asset property by name or description, to use a regex surround pattern with /</div>
-              }
-            >
-              <MaybeRegexInput onChange={onKeywordChange} initialValue={keyword} width={fieldWidth} />
-            </InlineField>
-          </InlineFieldRow>
-          <InlineFieldRow>
-            <InlineField
-              label={'Filter by datatype'}
-              aria-label={'Filter by datatype'}
-              labelWidth={labelWidth}
-              tooltip={<div>Searches asset property by datatype</div>}
-            >
-              <MultiSelect
-                placeholder="All datatypes"
-                width={fieldWidth}
-                onChange={(value) => onDatatypesChange(value)}
-                value={props.initialValue?.Datatypes}
-                options={Object.entries(MeasurementDatatype).map(([_, value]) => {
-                  return { label: value, value: value as string }
-                })}
-              />
-            </InlineField>
-          </InlineFieldRow>
-        </>
-      )}
+      <InlineFieldRow>
+        <InlineField
+          label={'Filter by keyword'}
+          aria-label={'Filter by keyword'}
+          labelWidth={labelWidth}
+          tooltip={<div>Searches asset property by name or description, to use a regex surround pattern with /</div>}
+        >
+          <MaybeRegexInput onChange={onKeywordChange} initialValue={keyword} width={fieldWidth} />
+        </InlineField>
+      </InlineFieldRow>
+      <InlineFieldRow>
+        <InlineField
+          label={'Filter by datatype'}
+          aria-label={'Filter by datatype'}
+          labelWidth={labelWidth}
+          tooltip={<div>Searches asset property by datatype</div>}
+        >
+          <MultiSelect
+            placeholder="All datatypes"
+            width={fieldWidth}
+            onChange={(value) => onDatatypesChange(value)}
+            value={props.initialValue?.Datatypes}
+            options={Object.entries(MeasurementDatatype).map(([_, value]) => {
+              return { label: value, value: value as string }
+            })}
+          />
+        </InlineField>
+      </InlineFieldRow>
     </>
   )
 }

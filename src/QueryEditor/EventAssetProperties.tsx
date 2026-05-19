@@ -22,7 +22,6 @@ import {
   updateTreeChildren,
   valueFiltersToQueryTags,
 } from './util'
-import { isFeatureEnabled } from 'util/semver'
 import Cascader, { CascaderOption } from 'components/Cascader/Cascader'
 import { isRegex, isUUID } from 'util/util'
 import { notifyError } from 'util/notify'
@@ -320,12 +319,10 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
             hideGroupBy={props.queryType === 'simple'}
             hideAdvancedOptions={props.queryType === 'simple'}
             aggregationRequired={true}
-            historianVersion={props.datasource.historianInfo?.Version ?? ''}
             getTagKeyOptions={getTagKeyOptions}
             getTagValueOptions={getTagValueOptions}
             onChange={onChangeQueryOptions}
             onChangeSeriesLimit={props.onChangeSeriesLimit}
-            hideDatatypeFilter={!isFeatureEnabled(props.datasource.historianInfo?.Version ?? '', '7.3.0')}
           />
         </>
       )}

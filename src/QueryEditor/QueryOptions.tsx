@@ -18,7 +18,7 @@ import {
 } from '@grafana/ui'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { GroupBySection } from 'components/GroupBySection/GroupBySection'
-import { getAggregationsForVersionAndDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
+import { getAggregationsForDatatypes, getFillTypes, getPeriods, useDebounce } from './util'
 import {
   Aggregation,
   Attributes,
@@ -29,7 +29,6 @@ import {
   MeasurementQueryOptions,
   ValueFilter,
 } from 'types'
-import { isFeatureEnabled } from 'util/semver'
 
 export interface Props {
   state: MeasurementQueryOptions
@@ -44,10 +43,8 @@ export interface Props {
   hideGroupBy?: boolean
   hideTagFilter?: boolean
   hideAdvancedOptions?: boolean
-  hideDatatypeFilter?: boolean
   aggregationRequired?: boolean
   templateVariables: Array<SelectableValue<string>>
-  historianVersion: string
   getTagKeyOptions?: () => Promise<string[]>
   getTagValueOptions?: (key: string) => Promise<string[]>
   onChange: (options: MeasurementQueryOptions) => void
@@ -86,7 +83,7 @@ export const QueryOptions = (props: Props): JSX.Element => {
     datatypes: string[],
     options: MeasurementQueryOptions
   ): Array<SelectableValue<string>> => {
-    const validAggregations = getAggregationsForVersionAndDatatypes(datatypes, props.historianVersion)
+    const validAggregations = getAggregationsForDatatypes(datatypes)
     if (
       options.Aggregation?.Name !== undefined &&
       options.Aggregation?.Name !== 'last' &&
@@ -330,19 +327,17 @@ export const QueryOptions = (props: Props): JSX.Element => {
           />
         </InlineField>
       </InlineFieldRow>
-      {!props.hideDatatypeFilter && (
-        <InlineFieldRow>
-          <InlineField label="Filter datatypes" labelWidth={labelWidth}>
-            <MultiSelect
-              value={props.state.Datatypes}
-              placeholder="all datatypes"
-              options={datatypeOptions}
-              onChange={onChangeDatatypes}
-              isClearable
-            />
-          </InlineField>
-        </InlineFieldRow>
-      )}
+      <InlineFieldRow>
+        <InlineField label="Filter datatypes" labelWidth={labelWidth}>
+          <MultiSelect
+            value={props.state.Datatypes}
+            placeholder="all datatypes"
+            options={datatypeOptions}
+            onChange={onChangeDatatypes}
+            isClearable
+          />
+        </InlineField>
+      </InlineFieldRow>
       {!props.hideTagFilter && (
         <InlineFieldRow>
           <InlineField
@@ -360,25 +355,23 @@ export const QueryOptions = (props: Props): JSX.Element => {
           </InlineField>
         </InlineFieldRow>
       )}
-      {isFeatureEnabled(props.historianVersion, '7.1.0') && (
-        <InlineFieldRow>
-          <InlineField
-            label="Filter values"
-            tooltip="Filter values by one or more conditions (e.g. value > 0)"
-            labelWidth={labelWidth}
-          >
-            <TagsSection
-              tags={props.valueFilters}
-              conditions={['AND', 'OR']}
-              operators={['=', '!=', '>', '>=', '<', '<=']}
-              placeholder="enter a value"
-              getTagKeyOptions={() => Promise.resolve(['value'])}
-              getTagValueOptions={() => Promise.resolve([''])}
-              onChange={handleFilterByValueChange}
-            />
-          </InlineField>
-        </InlineFieldRow>
-      )}
+      <InlineFieldRow>
+        <InlineField
+          label="Filter values"
+          tooltip="Filter values by one or more conditions (e.g. value > 0)"
+          labelWidth={labelWidth}
+        >
+          <TagsSection
+            tags={props.valueFilters}
+            conditions={['AND', 'OR']}
+            operators={['=', '!=', '>', '>=', '<', '<=']}
+            placeholder="enter a value"
+            getTagKeyOptions={() => Promise.resolve(['value'])}
+            getTagValueOptions={() => Promise.resolve([''])}
+            onChange={handleFilterByValueChange}
+          />
+        </InlineField>
+      </InlineFieldRow>
       {!props.hideLimit && (
         <InlineFieldRow>
           <InlineField

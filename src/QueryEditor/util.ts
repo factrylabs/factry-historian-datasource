@@ -15,7 +15,6 @@ import {
   MeasurementQuery,
   MeasurementQueryOptions,
   PropertyDatatype,
-  PropertyType,
   ValueFilter,
 } from 'types'
 import { DataSource } from 'datasource'
@@ -193,17 +192,6 @@ export function getAggregations(): Array<SelectableValue<string>> {
       value: aggregation,
     } as SelectableValue<string>
   })
-}
-
-export function getAggregationsForVersionAndDatatypes(
-  datatypes: string[],
-  version: string
-): Array<SelectableValue<string>> {
-  let selectable = getAggregationsForDatatypes(datatypes)
-  if (!isFeatureEnabled(version, '7.3.0', true)) {
-    return selectable.filter((aggregation) => aggregation.value !== 'twa')
-  }
-  return selectable
 }
 
 export function getAggregationsForDatatypes(datatypes: string[]): Array<SelectableValue<string>> {
@@ -657,11 +645,4 @@ export function migrateMeasurementQuery(query: MeasurementQuery): MeasurementQue
   }
 
   return measurementQuery
-}
-
-export function isSupportedPropertyType(type: PropertyType, version: string): boolean {
-  if (type === PropertyType.PeriodicWithDimension && !isFeatureEnabled(version, '7.2.0', true)) {
-    return false
-  }
-  return true
 }

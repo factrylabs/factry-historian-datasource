@@ -1,5 +1,8 @@
 # <img src="https://raw.githubusercontent.com/factrylabs/factry-historian-datasource/main/src/img/logo.svg" alt="Factry Historian Logo" height="30"> Factry Historian Datasource
 
+> ⚠️ **Minimum supported Factry Historian version: v7.3.0.**
+> Compatibility code for older Historian versions has been removed. If you are running a Historian earlier than v7.3.0, please upgrade before installing or updating this plugin — features such as datatype filtering, regex/`IN`/`IS NULL` event property filters, duration event filters, time-weighted average aggregation and event property value variables will silently fail or return errors on older instances.
+
 The Factry Historian datasource plugin for [Grafana](https://grafana.com) allows you to seamlessly visualize time-series and event data collected and stored by [Factry Historian](https://www.factry.io/historian). Connect your Historian instance and start building dashboards with your industrial data in minutes.
 
 > ⚡ New to Factry Historian?

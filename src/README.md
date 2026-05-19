@@ -3,6 +3,9 @@
 ![Dashboard example](https://raw.githubusercontent.com/factrylabs/factry-historian-datasource/main/src/img/Screen1.png
 )
 
+> ⚠️ **Minimum supported Factry Historian version: v7.3.0.**
+> Compatibility code for older Historian versions has been removed. Please upgrade your Historian before installing or updating this plugin.
+
 The Factry Historian datasource plugin for [Grafana](https://grafana.com) allows you to seamlessly visualize time-series and event data collected and stored by [Factry Historian](https://www.factry.io/historian). Connect your Historian instance and start building dashboards with your industrial data in minutes.
 
 > ⚡ New to Factry Historian?
