@@ -11,7 +11,7 @@ export function AssetPropertyFilterRow (props: {
   datasource: DataSource
   onChange: (val: AssetPropertyFilter, valid: boolean) => void
   initialValue?: AssetPropertyFilter
-  templateVariables: SelectableValue<string>
+  templateVariables: Array<SelectableValue<string>>
 }) {
   const [selectedAssets, setAssets] = useState<Array<SelectableValue<string>>>()
   const [keyword, setKeyword] = useDebounce<string>(props.initialValue?.Keyword ?? '', 500, (value) =>

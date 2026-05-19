@@ -19,7 +19,7 @@ export function EventTypePropertyFilterRow (props: {
   datasource: DataSource
   onChange: (val: EventTypePropertiesFilter) => void
   initialValue?: EventTypePropertiesFilter
-  templateVariables: SelectableValue<string>
+  templateVariables: Array<SelectableValue<string>>
 }) {
   const [selectedEventTypes, setEventTypes] = useState<Array<SelectableValue<string>>>()
 
