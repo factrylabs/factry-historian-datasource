@@ -67,6 +67,10 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		return nil, err
 	}
 
+	if len(events) == 0 {
+		return data.Frames{}, nil
+	}
+
 	// get all unique event types from the events
 	eventTypeUUIDs := map[uuid.UUID]struct{}{}
 	missingParentAssetUUIDs := map[uuid.UUID]struct{}{}
