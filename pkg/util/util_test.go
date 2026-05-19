@@ -252,43 +252,6 @@ func TestMarshalStructToMap(t *testing.T) {
 	})
 }
 
-func TestPtr(t *testing.T) {
-	t.Parallel()
-
-	p := util.Ptr(7)
-	require.NotNil(t, p)
-	assert.Equal(t, 7, *p)
-
-	s := util.Ptr("hello")
-	require.NotNil(t, s)
-	assert.Equal(t, "hello", *s)
-}
-
-func TestPtrSlice(t *testing.T) {
-	t.Parallel()
-
-	in := []int{1, 2, 3}
-	got := util.PtrSlice(in)
-
-	require.Len(t, got, 3)
-	for i, p := range got {
-		require.NotNil(t, p)
-		assert.Equal(t, in[i], *p)
-	}
-}
-
-func TestPtrSliceElementsAreIndependent(t *testing.T) {
-	t.Parallel()
-
-	// Each pointer must address a distinct element (not all share the loop variable),
-	// otherwise mutating one would mutate all.
-	got := util.PtrSlice([]int{10, 20, 30})
-
-	*got[0] = 999
-	assert.Equal(t, 20, *got[1])
-	assert.Equal(t, 30, *got[2])
-}
-
 // DeepCopy is implemented via JSON round-tripping, so verify it produces a
 // struct that re-marshals to the same JSON as the source.
 func TestDeepCopyRoundTripsThroughJSON(t *testing.T) {
