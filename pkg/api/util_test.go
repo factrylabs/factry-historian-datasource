@@ -201,56 +201,25 @@ func TestGetFilteredAssets(t *testing.T) {
 		}
 	})
 
-	t.Run("v6.4.0 issues per-asset Keyword and Path requests", func(t *testing.T) {
-		t.Parallel()
-		srv, requests := startServer(t)
-		client := newClient(t, srv.URL)
-
-		info := &schemas.HistorianInfo{Version: "v6.4.0"}
-		result, err := client.GetFilteredAssets(context.Background(),
-			[]string{a1UUID.String(), "site/a2"}, info)
-		require.NoError(t, err)
-		assert.Contains(t, result, a1UUID)
-		assert.Contains(t, result, a2UUID)
-
-		require.Len(t, *requests, 2, "v6.4 branch must issue one request per input")
-		assert.Equal(t, a1UUID.String(), (*requests)[0].query.Get("Keyword"))
-		assert.Empty(t, indexedQuery((*requests)[0].query, "UUIDs"), "v6.4 branch must not use the v8 UUIDs[i] form")
-		assert.Equal(t, "site/a2", (*requests)[1].query.Get("Path"))
-	})
-
-	t.Run("v7.x stays on per-asset Keyword/Path", func(t *testing.T) {
+	t.Run("v7.x issues per-asset Keyword/Path requests", func(t *testing.T) {
 		t.Parallel()
 		srv, requests := startServer(t)
 		client := newClient(t, srv.URL)
 
 		info := &schemas.HistorianInfo{Version: "v7.5.3"}
-		_, err := client.GetFilteredAssets(context.Background(), []string{a1UUID.String()}, info)
-		require.NoError(t, err)
-
-		require.Len(t, *requests, 1)
-		assert.Equal(t, a1UUID.String(), (*requests)[0].query.Get("Keyword"))
-		assert.Empty(t, indexedQuery((*requests)[0].query, "UUIDs"))
-	})
-
-	t.Run("legacy below v6.4.0 fetches all and filters in memory", func(t *testing.T) {
-		t.Parallel()
-		srv, requests := startServer(t)
-		client := newClient(t, srv.URL)
-
-		info := &schemas.HistorianInfo{Version: "v6.3.0"}
 		result, err := client.GetFilteredAssets(context.Background(),
 			[]string{a1UUID.String(), "site/a2"}, info)
 		require.NoError(t, err)
 		assert.Contains(t, result, a1UUID)
 		assert.Contains(t, result, a2UUID)
-		assert.NotContains(t, result, a3UUID)
 
-		require.Len(t, *requests, 1, "deprecated branch must issue a single unfiltered call")
-		assert.Empty(t, (*requests)[0].rawQuery, "deprecated request must carry no query params")
+		require.Len(t, *requests, 2, "pre-v8 branch must issue one request per input")
+		assert.Equal(t, a1UUID.String(), (*requests)[0].query.Get("Keyword"))
+		assert.Empty(t, indexedQuery((*requests)[0].query, "UUIDs"), "pre-v8 branch must not use the v8 UUIDs[i] form")
+		assert.Equal(t, "site/a2", (*requests)[1].query.Get("Path"))
 	})
 
-	t.Run("nil historian info falls back to legacy branch", func(t *testing.T) {
+	t.Run("nil historian info uses per-asset Keyword/Path branch", func(t *testing.T) {
 		t.Parallel()
 		srv, requests := startServer(t)
 		client := newClient(t, srv.URL)
@@ -260,15 +229,15 @@ func TestGetFilteredAssets(t *testing.T) {
 		assert.Contains(t, result, a1UUID)
 
 		require.Len(t, *requests, 1)
-		assert.Empty(t, (*requests)[0].rawQuery)
+		assert.Equal(t, "site/a1", (*requests)[0].query.Get("Path"))
 	})
 
-	t.Run("v6.4.0 deduplicates repeated asset strings", func(t *testing.T) {
+	t.Run("pre-v8 deduplicates repeated asset strings", func(t *testing.T) {
 		t.Parallel()
 		srv, requests := startServer(t)
 		client := newClient(t, srv.URL)
 
-		info := &schemas.HistorianInfo{Version: "v6.4.0"}
+		info := &schemas.HistorianInfo{Version: "v7.3.0"}
 		result, err := client.GetFilteredAssets(context.Background(),
 			[]string{a1UUID.String(), "site/a2", a1UUID.String(), "site/a2"}, info)
 		require.NoError(t, err)

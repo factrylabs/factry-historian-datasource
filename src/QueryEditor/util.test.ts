@@ -5,7 +5,6 @@ import {
   fetchLazyChildOptions,
   getAggregations,
   getAggregationsForDatatypes,
-  getAggregationsForVersionAndDatatypes,
   isLazyLoadingEnabled,
   matchedAssets,
   migrateMeasurementQuery,
@@ -279,23 +278,6 @@ describe('getAggregationsForDatatypes', () => {
     const all = getAggregations()
     const result = getAggregationsForDatatypes([])
     expect(result).toHaveLength(all.length)
-  })
-})
-
-describe('getAggregationsForVersionAndDatatypes', () => {
-  it('excludes twa for versions before 7.3.0', () => {
-    const result = getAggregationsForVersionAndDatatypes([], '7.2.0')
-    expect(result.map((r) => r.value)).not.toContain('twa')
-  })
-
-  it('includes twa for version 7.3.0', () => {
-    const result = getAggregationsForVersionAndDatatypes([], '7.3.0')
-    expect(result.map((r) => r.value)).toContain('twa')
-  })
-
-  it('includes twa for versions after 7.3.0', () => {
-    const result = getAggregationsForVersionAndDatatypes([], '8.0.0')
-    expect(result.map((r) => r.value)).toContain('twa')
   })
 })
 

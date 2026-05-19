@@ -15,7 +15,6 @@ import (
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
-	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -184,28 +183,19 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 		return nil, err
 	}
 
-	var assetProperties []schemas.AssetProperty
-	canFilterAssetProperties := util.CheckMinimumVersion(historianInfo, "6.3.0", false)
-	if canFilterAssetProperties {
-		assetPropertyQuery := url.Values{}
+	assetPropertyQuery := url.Values{}
 
-		for i, assetUUID := range slices.Collect(maps.Keys(assets)) {
-			assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID.String())
-		}
+	for i, assetUUID := range slices.Collect(maps.Keys(assets)) {
+		assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID.String())
+	}
 
-		for i, datatype := range assetMeasurementQuery.Options.Datatypes {
-			assetPropertyQuery.Add(fmt.Sprintf("Datatypes[%d]", i), datatype)
-		}
+	for i, datatype := range assetMeasurementQuery.Options.Datatypes {
+		assetPropertyQuery.Add(fmt.Sprintf("Datatypes[%d]", i), datatype)
+	}
 
-		assetProperties, err = ds.API.GetAssetProperties(ctx, assetPropertyQuery.Encode())
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		assetProperties, err = ds.API.GetAssetProperties(ctx, "")
-		if err != nil {
-			return nil, err
-		}
+	assetProperties, err := ds.API.GetAssetProperties(ctx, assetPropertyQuery.Encode())
+	if err != nil {
+		return nil, err
 	}
 
 	measurementUUIDs := map[string]struct{}{}
