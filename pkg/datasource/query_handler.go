@@ -326,10 +326,11 @@ func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Qu
 		lastKnowPointResults := data.Frames{}
 
 		if len(lastPointQuery.Tags) == 0 {
-			lastPointQuery.Tags = make(map[string]string)
-			lastPointQuery.Tags["status"] = "Good"
-
-			// If unfiltered query last point for each resulting data frame
+			// Unfiltered query: fetch the last known point for each result frame
+			// using that frame's own labels. A status filter is deliberately not
+			// applied here: the historian echoes any filter tag back as a groupby
+			// label, which would give the last-known frame a different identity than
+			// the result series and surface it as a spurious extra series.
 			for _, frame := range result {
 				getLastQueryForFrame := getLastQueryForFrame(frame, query)
 				lastResult, err := ds.API.MeasurementQuery(ctx, getLastQueryForFrame)
@@ -339,14 +340,15 @@ func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Qu
 
 				lastKnowPointResults = append(lastKnowPointResults, lastResult...)
 			}
+		} else {
+			// Tag-filtered query: a single last-known query carrying the same tags
+			// merges cleanly into the filtered result series.
+			lastResult, err := ds.API.MeasurementQuery(ctx, lastPointQuery)
+			if err != nil {
+				return nil, err
+			}
+			lastKnowPointResults = append(lastKnowPointResults, lastResult...)
 		}
-
-		// OtherFrames
-		lastResult, err := ds.API.MeasurementQuery(ctx, lastPointQuery)
-		if err != nil {
-			return nil, err
-		}
-		lastKnowPointResults = append(lastKnowPointResults, lastResult...)
 
 		if options.Aggregation != nil {
 			lastKnowPointResults = convertLastKnownFramesForAggregation(lastKnowPointResults, options.Aggregation.Name)
