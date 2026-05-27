@@ -21,8 +21,7 @@ import (
 
 // queryResponseFrame builds a single frame carrying the metadata getFrameID relies on
 // (MeasurementUUID + optional groupby Labels) so it survives the arrow round-trip.
-func queryResponseFrame(t *testing.T, measurementUUID string, labels map[string]interface{}, values []float64) *data.Frame {
-	t.Helper()
+func queryResponseFrame(measurementUUID string, labels map[string]interface{}, values []float64) *data.Frame {
 	times := make([]time.Time, len(values))
 	for i := range values {
 		times[i] = time.Unix(int64(i*60), 0)
@@ -42,44 +41,54 @@ func queryResponseFrame(t *testing.T, measurementUUID string, labels map[string]
 	return frame
 }
 
+// writeFramesResponse marshals frames into the protobuf DataResponse the historian client
+// expects. Errors are surfaced as a 500 so the calling goroutine's MeasurementQuery returns
+// an error (testify must not be called from this handler goroutine).
+func writeFramesResponse(w http.ResponseWriter, frames data.Frames) {
+	arrowBytes, err := frames.MarshalArrow()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	out, err := proto.Marshal(&arrow_pb.DataResponse{Frames: arrowBytes})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write(out)
+}
+
 // TestHandleQuery_IncludeLastKnownPoint_NoTags_SingleSeries reproduces the duplicate-series bug:
 // with "include last known point" enabled and no tag filter, handleQuery must return a single
 // merged series. The historian echoes any query tag back as a groupby label, so the catch-all
 // status=Good last-known query (which should only run when the user supplied tags) produces a
 // spurious second series {status: Good}.
 func TestHandleQuery_IncludeLastKnownPoint_NoTags_SingleSeries(t *testing.T) {
+	t.Parallel()
+
 	var mu sync.Mutex
 	var queries []schemas.Query
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
-
+		body, _ := io.ReadAll(r.Body)
 		var q schemas.Query
-		require.NoError(t, json.Unmarshal(body, &q))
+		_ = json.Unmarshal(body, &q)
 
 		mu.Lock()
 		queries = append(queries, q)
 		mu.Unlock()
 
-		var frames data.Frames
 		switch {
 		case q.Aggregation == nil:
 			// Main query: the real series, no groupby labels.
-			frames = data.Frames{queryResponseFrame(t, "uuid-1", nil, []float64{10, 20, 30})}
+			writeFramesResponse(w, data.Frames{queryResponseFrame("uuid-1", nil, []float64{10, 20, 30})})
 		case q.Tags["status"] == "Good":
 			// Catch-all last-known query: the historian echoes the status tag as a label.
-			frames = data.Frames{queryResponseFrame(t, "uuid-1", map[string]interface{}{"status": "Good"}, []float64{5})}
+			writeFramesResponse(w, data.Frames{queryResponseFrame("uuid-1", map[string]interface{}{"status": "Good"}, []float64{5})})
 		default:
 			// Per-frame last-known query: same identity as the main series.
-			frames = data.Frames{queryResponseFrame(t, "uuid-1", nil, []float64{5})}
+			writeFramesResponse(w, data.Frames{queryResponseFrame("uuid-1", nil, []float64{5})})
 		}
-
-		arrowBytes, err := frames.MarshalArrow()
-		require.NoError(t, err)
-		out, err := proto.Marshal(&arrow_pb.DataResponse{Frames: arrowBytes})
-		require.NoError(t, err)
-		_, _ = w.Write(out)
 	}))
 	defer srv.Close()
 
@@ -114,31 +123,25 @@ func TestHandleQuery_IncludeLastKnownPoint_NoTags_SingleSeries(t *testing.T) {
 // supplies tags, handleQuery issues exactly one last-known query carrying those tags (and no
 // per-frame queries).
 func TestHandleQuery_IncludeLastKnownPoint_WithTags_RunsSingleLastQuery(t *testing.T) {
+	t.Parallel()
+
 	var mu sync.Mutex
 	var lastQueries []schemas.Query
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
-
+		body, _ := io.ReadAll(r.Body)
 		var q schemas.Query
-		require.NoError(t, json.Unmarshal(body, &q))
+		_ = json.Unmarshal(body, &q)
 
-		var frames data.Frames
 		if q.Aggregation == nil {
-			frames = data.Frames{queryResponseFrame(t, "uuid-1", nil, []float64{10, 20, 30})}
-		} else {
-			mu.Lock()
-			lastQueries = append(lastQueries, q)
-			mu.Unlock()
-			frames = data.Frames{queryResponseFrame(t, "uuid-1", nil, []float64{5})}
+			writeFramesResponse(w, data.Frames{queryResponseFrame("uuid-1", nil, []float64{10, 20, 30})})
+			return
 		}
 
-		arrowBytes, err := frames.MarshalArrow()
-		require.NoError(t, err)
-		out, err := proto.Marshal(&arrow_pb.DataResponse{Frames: arrowBytes})
-		require.NoError(t, err)
-		_, _ = w.Write(out)
+		mu.Lock()
+		lastQueries = append(lastQueries, q)
+		mu.Unlock()
+		writeFramesResponse(w, data.Frames{queryResponseFrame("uuid-1", nil, []float64{5})})
 	}))
 	defer srv.Close()
 
