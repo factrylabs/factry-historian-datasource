@@ -158,6 +158,10 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
       return props.overrideAssets[0]
     }
 
+    if (isRegex(props.overrideAssets[0])) {
+      return props.overrideAssets[0]
+    }
+
     return ''
   }
 
