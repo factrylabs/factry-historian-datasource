@@ -39,6 +39,7 @@ const createMockDatasource = () =>
   ({
     getAssets: jest.fn().mockResolvedValue([]),
     getAssetProperties: jest.fn().mockResolvedValue([]),
+    multiSelectReplace: jest.fn((value?: string) => (value ? [value] : [])),
   }) as unknown as DataSource
 
 const renderComponent = (overrideAssets: string[]) =>
@@ -46,7 +47,6 @@ const renderComponent = (overrideAssets: string[]) =>
     <EventAssetProperties
       datasource={createMockDatasource()}
       seriesLimit={0}
-      selectedAssets={[]}
       overrideAssets={overrideAssets}
       selectedAssetProperties={[]}
       queryType="simple"

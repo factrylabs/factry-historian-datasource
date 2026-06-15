@@ -171,6 +171,12 @@ export interface AssetFilter extends ResourceFilter {
   Path?: string
   ParentUUIDs?: string[]
   UseAssetPath?: boolean
+  UUIDs?: string[]
+  // Lazy-load flags, only honoured by historian >= v8.2.0.
+  IncludeAncestors?: boolean
+  IncludeHasChildren?: boolean
+  IncludeHasAssetProperties?: boolean
+  IncludeHasEventConfigurations?: boolean
 }
 
 export interface AssetPropertyFilter extends ResourceFilter {
@@ -267,6 +273,11 @@ export interface Asset {
   ParentUUID?: string
   Parent?: Asset
   AssetPath?: string
+  // Populated by historian >= v8.2.0 when the matching Include* flag is requested.
+  Ancestors?: string[]
+  HasChildren?: boolean
+  HasAssetProperties?: boolean
+  HasEventConfigurations?: boolean
 }
 
 export interface AssetProperty {

@@ -15,7 +15,164 @@ import {
   PropertyType,
   ValueFilter,
 } from 'types'
+import { DataSource } from 'datasource'
 import { isFeatureEnabled } from 'util/semver'
+import { isRegex, isUUID } from 'util/util'
+
+export const NIL_UUID = '00000000-0000-0000-0000-000000000000'
+
+// Lazy loading of the asset tree relies on GET /assets features added in
+// historian v8.2.0 (nil-UUID ParentUUIDs sentinel for roots, IncludeHasChildren
+// and IncludeHasAssetProperties). On older historians we fall back to eagerly
+// loading the full asset tree.
+export const LAZY_LOADING_MIN_VERSION = '8.2.0'
+
+export function isLazyLoadingEnabled(version: string): boolean {
+  // Unknown version (info not loaded or unreachable): take the eager fallback,
+  // it works on every historian. Non-semver debug builds still count as newest.
+  if (!version) {
+    return false
+  }
+  return isFeatureEnabled(version, LAZY_LOADING_MIN_VERSION)
+}
+
+// Resolves the cascader label for a selected asset from an already-loaded
+// asset list (eager, pre-v8.2.0 path). Matches resolveAssetLabel behaviour:
+// falls back to Name when no AssetPath, keeps template variables and regex
+// visible, hides UUIDs from other datasources.
+export function eagerAssetLabel(selectedValue: string | undefined, assets: Asset[]): string {
+  if (!selectedValue) {
+    return ''
+  }
+  const asset = assets.find((e) => e.UUID === selectedValue)
+  if (asset) {
+    return asset.AssetPath || asset.Name
+  }
+  if (selectedValue.startsWith('$') || isRegex(selectedValue)) {
+    return selectedValue
+  }
+  return ''
+}
+
+export function templateVariablesToCascaderOptions(
+  templateVariables: Array<SelectableValue<string>>
+): CascaderOption[] {
+  return templateVariables.map((e) => ({
+    value: e.value,
+    label: e.label ?? '',
+    isLeaf: true,
+  }))
+}
+
+export async function resolveAssetLabel(
+  datasource: DataSource,
+  selectedValue: string | undefined
+): Promise<{ label: string; asset?: Asset }> {
+  if (!selectedValue) {
+    return { label: '' }
+  }
+
+  // Keep template variables and regex visible in the input.
+  if (selectedValue.startsWith('$') || isRegex(selectedValue)) {
+    return { label: selectedValue }
+  }
+
+  if (isUUID(selectedValue)) {
+    const results = await datasource.getAssets({ UUIDs: [selectedValue] })
+    const asset = results.find((a) => a.UUID === selectedValue)
+    if (asset) {
+      return { label: asset.AssetPath || asset.Name, asset }
+    }
+  }
+
+  return { label: '' }
+}
+
+export async function searchAssetsAndProperties(
+  datasource: DataSource,
+  keyword: string,
+  includeProperties = true
+): Promise<Array<SelectableValue<string[]>>> {
+  if (!keyword || keyword.length < 2) {
+    return []
+  }
+
+  const [assets, properties] = await Promise.all([
+    datasource.getAssets({ Keyword: keyword, UseAssetPath: true }),
+    includeProperties ? datasource.getAssetProperties({ Keyword: keyword }) : Promise.resolve([]),
+  ])
+
+  const matchedProperties = properties.filter((prop) =>
+    prop.Name.toLowerCase().includes(keyword.toLowerCase())
+  )
+
+  const assetMap = new Map(assets.map((a) => [a.UUID, a]))
+  const missingParentUUIDs = [...new Set(
+    matchedProperties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid))
+  )]
+  if (missingParentUUIDs.length > 0) {
+    const parentAssets = await datasource.getAssets({ UUIDs: missingParentUUIDs })
+    for (const asset of parentAssets) {
+      assetMap.set(asset.UUID, asset)
+    }
+  }
+
+  const assetResults: Array<SelectableValue<string[]>> = assets.map((asset) => ({
+    label: `📦 ${asset.AssetPath || asset.Name}`,
+    value: [asset.UUID],
+  }))
+
+  const propertyResults: Array<SelectableValue<string[]>> = matchedProperties.map((prop) => {
+    const parentAsset = assetMap.get(prop.AssetUUID)
+    const parentLabel = parentAsset?.AssetPath || parentAsset?.Name || ''
+    return {
+      label: `${parentLabel ? '📦 ' + parentLabel + '\\' : ''}📏 ${prop.Name}`,
+      value: [prop.AssetUUID, prop.UUID],
+      description: parentLabel,
+    }
+  })
+
+  return assetResults.concat(propertyResults)
+}
+
+// Resolves a cascader selection (UUID, regex, or template variable) to the
+// concrete assets it refers to (lazy, >= v8.2.0 path).
+export async function resolveSelectedAssets(datasource: DataSource, asset: string): Promise<Asset[]> {
+  if (isUUID(asset)) {
+    return (await datasource.getAssets({ UUIDs: [asset] })).filter((a) => a.UUID === asset)
+  }
+  if (isRegex(asset)) {
+    const candidates = await datasource.getAssets({ Keyword: asset })
+    return matchedAssets(datasource.multiSelectReplace(asset), candidates)
+  }
+  // Template variable: expand to UUIDs.
+  const uuids = datasource.multiSelectReplace(asset).filter(isUUID)
+  return uuids.length > 0 ? datasource.getAssets({ UUIDs: uuids }) : []
+}
+
+// Fetches the child options of an asset node for lazy loading: child assets
+// and, when requested, the asset properties of the parent as leaf options.
+export async function fetchLazyChildOptions(
+  datasource: DataSource,
+  parentUUID: string,
+  includeProperties: boolean
+): Promise<CascaderOption[]> {
+  const [children, properties] = await Promise.all([
+    datasource.getAssets({
+      ParentUUIDs: [parentUUID],
+      IncludeHasChildren: true,
+      ...(includeProperties && { IncludeHasAssetProperties: true }),
+    }),
+    includeProperties ? datasource.getAssetProperties({ AssetUUIDs: [parentUUID] }) : Promise.resolve([]),
+  ])
+  const childAssetOptions = buildLazyCascaderOptions(children, [])
+  const propertyOptions: CascaderOption[] = properties.map((prop) => ({
+    label: `📏 ${prop.Name}`,
+    value: prop.UUID,
+    isLeaf: true,
+  }))
+  return childAssetOptions.concat(propertyOptions)
+}
 
 export function selectable(store: Array<SelectableValue<string>>, value?: string): SelectableValue<string> {
   if (value === undefined) {
@@ -173,6 +330,64 @@ export function getChildAssets(
     })
 
   return result.sort(sortByLabel)
+}
+
+export function buildLazyCascaderOptions(
+  assets: Asset[],
+  assetProperties: AssetProperty[] = []
+): CascaderOption[] {
+  const result: CascaderOption[] = assets.map((asset) => {
+    const properties: CascaderOption[] = assetProperties
+      .filter((prop) => prop.AssetUUID === asset.UUID)
+      .map((prop) => ({
+        label: `📏 ${prop.Name}`,
+        value: prop.UUID,
+        isLeaf: true,
+      }))
+
+    // historian >= v8.2.0 returns HasChildren / HasAssetProperties when the
+    // matching Include* flag is requested. When present, mark assets without
+    // children or properties as leaves so they don't show a dead expand arrow.
+    // When absent (older historian), keep the optimistic expandable default.
+    const hasFlags = asset.HasChildren !== undefined || asset.HasAssetProperties !== undefined
+    const isLeaf = hasFlags && !asset.HasChildren && !asset.HasAssetProperties && properties.length === 0
+
+    return {
+      label: `📦 ${asset.Name}`,
+      value: asset.UUID,
+      items: properties.length > 0 ? properties : undefined,
+      isLeaf,
+    }
+  })
+
+  return result.sort(sortByLabel)
+}
+
+export function updateTreeChildren(
+  options: CascaderOption[],
+  parentUUID: string,
+  children: CascaderOption[]
+): CascaderOption[] {
+  let changed = false
+  const result = options.map((option) => {
+    if (option.value === parentUUID) {
+      changed = true
+      if (children.length === 0) {
+        return { ...option, items: undefined, isLeaf: true }
+      }
+      return { ...option, items: children }
+    }
+    if (option.items && option.items.length > 0) {
+      const updatedItems = updateTreeChildren(option.items, parentUUID, children)
+      if (updatedItems !== option.items) {
+        changed = true
+        return { ...option, items: updatedItems }
+      }
+    }
+    return option
+  })
+  // Preserve structural sharing: only clone the path to the updated node.
+  return changed ? result : options
 }
 
 export function findOption(

@@ -55,6 +55,15 @@ type Asset struct {
 	Description string
 	Status      string
 	AssetPath   string
+
+	// Lazy-load fields, only populated by historian >= v8.2.0 when the matching
+	// Include* query flag is requested. Pointers/omitempty keep them absent from
+	// the response when not requested, so the frontend can tell "leaf" (false)
+	// from "flag not requested" (nil) instead of treating every node as a leaf.
+	Ancestors              []string `json:"Ancestors,omitempty"`
+	HasChildren            *bool    `json:"HasChildren,omitempty"`
+	HasAssetProperties     *bool    `json:"HasAssetProperties,omitempty"`
+	HasEventConfigurations *bool    `json:"HasEventConfigurations,omitempty"`
 }
 
 // AssetProperty has the fields of an asset property that are used by the data source
