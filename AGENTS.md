@@ -330,6 +330,11 @@ Runs on push to `main` and PRs to `main`:
 7. **Sign plugin** (if `GRAFANA_ACCESS_POLICY_TOKEN` is set)
 8. Package and archive
 
+### Code scanning (`.github/workflows/codeql.yml`)
+
+Runs CodeQL analysis for `javascript-typescript` on pushes and pull requests to `main`, plus a weekly scheduled scan.  
+The workflow requires `security-events: write` permission to upload analysis results.
+
 ### Release (`.github/workflows/release.yml`)
 
 Triggered by tags matching `v*`:
