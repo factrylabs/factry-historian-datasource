@@ -7,7 +7,7 @@ import { SelectableValue } from '@grafana/data'
 
 import { Icon, Input, Themeable2, withTheme2 } from '@grafana/ui'
 
-import { onChangeCascader } from './optionMappings'
+import { onChangeCascader, onLoadDataCascader } from './optionMappings'
 import { Autocomplete } from '../Autocomplete/Autocomplete'
 import { findOption } from 'QueryEditor/util'
 
@@ -40,6 +40,10 @@ export interface CascaderProps extends Themeable2 {
   /** Don't show what is selected in the cascader input/search. Useful when input is used just as search and the
       cascader is hidden after selection. */
   hideActiveLevelLabel?: boolean
+  /** Callback to lazily load children when a node is expanded */
+  loadData?: (selectOptions: CascaderOption[]) => void
+  /** Callback for API-driven search-as-you-type. When provided, replaces local filtering. */
+  onSearchAsync?: (keyword: string) => Promise<Array<SelectableValue<string[]>>>
 }
 
 interface CascaderState {
@@ -51,6 +55,7 @@ interface CascaderState {
   activeSuggestion: number
   filteredSuggestions: string[]
   showSuggestions: boolean
+  searchResults: Array<SelectableValue<string[]>>
 }
 
 export interface CascaderOption {
@@ -69,6 +74,8 @@ export interface CascaderOption {
   title?: string
   /**  Children will be shown in a submenu. Use 'items' instead, as 'children' exist to ensure backwards compatibility.*/
   children?: CascaderOption[]
+  /** When true, the node cannot be expanded (no expand arrow). Used for lazy loading. */
+  isLeaf?: boolean
 }
 
 const disableDivFocus = css(`
@@ -78,6 +85,10 @@ const disableDivFocus = css(`
 `)
 
 const DEFAULT_SEPARATOR = '/'
+
+// Strip the asset/property type prefixes from option labels for display.
+const ASSET_PREFIX = /📦 /g
+const PROPERTY_PREFIX = /📏 /g
 
 export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   constructor(props: CascaderProps) {
@@ -92,10 +103,19 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       activeSuggestion: 0,
       filteredSuggestions: [],
       showSuggestions: false,
+      searchResults: [],
     }
   }
 
   static defaultProps = { changeOnSelect: true }
+
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+  componentWillUnmount() {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer)
+    }
+  }
 
   flattenOptions = (options: CascaderOption[], optionPath: CascaderOption[] = []) => {
     let selectOptions: Array<SelectableValue<string[]>> = []
@@ -190,25 +210,87 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     this.props.onBlur?.()
   }
 
-  handleChange(e: any) {
-    const suggestions: string[] = this.getSearchableOptions(this.props.options).map((e) => e.label || '')
+  handleChange = (e: any) => {
     const userInput: string = e.target.value
-    const filteredSuggestions: string[] = suggestions.filter(
-      (suggestion) => suggestion.toLowerCase().indexOf(userInput.toLowerCase()) > -1
-    )
 
     this.setState({
       activeLabel: userInput,
       focusCascade: userInput.length === 0,
-      showSuggestions: true,
-      filteredSuggestions: filteredSuggestions,
     })
     this.props.onSelect(userInput)
+
+    if (this.props.onSearchAsync) {
+      if (this.searchDebounceTimer) {
+        clearTimeout(this.searchDebounceTimer)
+      }
+      if (userInput.length < 2) {
+        this.setState({ showSuggestions: false, filteredSuggestions: [], searchResults: [] })
+        return
+      }
+      this.searchDebounceTimer = setTimeout(() => {
+        this.props.onSearchAsync!(userInput)
+          .then((results) => {
+            // Ignore stale responses: the input changed while this request was in flight.
+            if (this.state.activeLabel !== userInput) {
+              return
+            }
+            this.setState({
+              showSuggestions: true,
+              filteredSuggestions: results.map((r) => r.label || ''),
+              searchResults: results,
+            })
+          })
+          .catch((error) => {
+            console.error('Async search failed:', error)
+            this.setState({ showSuggestions: false, filteredSuggestions: [], searchResults: [] })
+          })
+      }, 300)
+    } else {
+      const suggestions: string[] = this.getSearchableOptions(this.props.options).map((e) => e.label || '')
+      const filteredSuggestions: string[] = suggestions.filter(
+        (suggestion) => suggestion.toLowerCase().indexOf(userInput.toLowerCase()) > -1
+      )
+      this.setState({
+        showSuggestions: true,
+        filteredSuggestions: filteredSuggestions,
+      })
+    }
+  }
+
+  // Select an async search result: fire onSelect with (asset) or (asset, property)
+  // and reset the suggestion state, showing the description (asset path) for properties.
+  selectAsyncSearchResult = (result: SelectableValue<string[]> | undefined, fallbackLabel: string) => {
+    if (result && result.value && result.value.length > 0) {
+      if (result.value.length >= 2) {
+        this.props.onSelect(result.value[result.value.length - 2], result.value[result.value.length - 1])
+      } else {
+        this.props.onSelect(result.value[result.value.length - 1])
+      }
+    }
+    let displayLabel = fallbackLabel.replace(ASSET_PREFIX, '').replace(PROPERTY_PREFIX, '')
+    // When a property is selected, show only the asset path
+    if (result && result.value && result.value.length >= 2 && result.description) {
+      displayLabel = result.description
+    }
+    this.setState({
+      activeSuggestion: 0,
+      filteredSuggestions: [],
+      showSuggestions: false,
+      activeLabel: displayLabel,
+      searchResults: [],
+    })
   }
 
   onClickSuggestion = (e: any) => {
-    const option = findOption(this.getSearchableOptions(this.props.options), e.currentTarget.innerText)
-    let activeLabel: string = option?.label || e.currentTarget.innerText
+    const clickedLabel = e.currentTarget.innerText
+    if (this.props.onSearchAsync && this.state.searchResults.length > 0) {
+      const result = this.state.searchResults.find((r) => r.label === clickedLabel)
+      this.selectAsyncSearchResult(result, clickedLabel)
+      return
+    }
+
+    const option = findOption(this.getSearchableOptions(this.props.options), clickedLabel)
+    let activeLabel: string = option?.label || clickedLabel
     if (option && option.value && option.value.length > 0) {
       if (option.singleLabel?.startsWith('📏 ')) {
         activeLabel = activeLabel.substring(0, activeLabel.length - (option.singleLabel.length + 2))
@@ -228,6 +310,12 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   onKeyDown = (e: any) => {
     const { activeSuggestion, filteredSuggestions } = this.state
     if (e.keyCode === 13) {
+      if (this.props.onSearchAsync && this.state.searchResults.length > 0) {
+        const result = this.state.searchResults[activeSuggestion]
+        this.selectAsyncSearchResult(result, result?.label || filteredSuggestions[activeSuggestion] || '')
+        return
+      }
+
       const option = findOption(this.getSearchableOptions(this.props.options), filteredSuggestions[activeSuggestion])
       let activeLabel: string = option?.label || filteredSuggestions[activeSuggestion]
       if (option && option.value && option.value.length > 0) {
@@ -282,6 +370,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
           expandIcon={null}
           open={focusCascade}
           dropdownClassName={styles.dropdown}
+          loadData={this.props.loadData ? onLoadDataCascader(this.props.loadData) : undefined}
           allowClear
         >
           <div className={disableDivFocus}>
@@ -290,9 +379,9 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
               width={width}
               placeholder={placeholder}
               onBlur={this.onBlurCascade}
-              value={activeLabel?.replace(new RegExp('📦 ', 'g'), '')}
+              value={activeLabel?.replace(ASSET_PREFIX, '')}
               onKeyDown={this.onKeyDown}
-              onChange={this.handleChange.bind(this)}
+              onChange={this.handleChange}
               onFocus={this.openCascade}
               suffix={
                 focusCascade ? (

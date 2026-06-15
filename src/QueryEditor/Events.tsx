@@ -1,11 +1,11 @@
-import React, { ChangeEvent, FormEvent, useCallback, useEffect, useState } from 'react'
+import React, { ChangeEvent, FormEvent, useState } from 'react'
 import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input, RadioButtonGroup } from '@grafana/ui'
 import { DateTime } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
-import { defaultQueryOptions, matchedAssets, tagsToQueryTags, useDebounce } from './util'
+import { defaultQueryOptions, tagsToQueryTags, useDebounce } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
-import { Asset, AssetMeasurementQuery, EventQuery, labelWidth, PropertyType, TimeRange } from 'types'
+import { AssetMeasurementQuery, EventQuery, labelWidth, PropertyType, TimeRange } from 'types'
 import { EventFilter } from './EventFilter'
 import { DateRangePicker } from 'components/util/DateRangePicker'
 
@@ -21,8 +21,6 @@ export interface Props {
 }
 
 export const Events = (props: Props): JSX.Element => {
-  const [loading, setLoading] = useState(true)
-  const [assets, setAssets] = useState<Asset[]>([])
   const [ordering, setOrdering] = useState(props.query.Ascending ? 'ascending' : 'descending')
   const [limit, setLimit] = useDebounce<number | string | undefined>(
     props.query.Limit,
@@ -41,25 +39,6 @@ export const Events = (props: Props): JSX.Element => {
     .map((e) => {
       return { label: `$${e.name}`, value: `$${e.name}` }
     })
-
-  const fetchAll = useCallback(async () => {
-    const assets = await props.datasource.getAssets()
-    setAssets(assets)
-  }, [props.datasource])
-
-  useEffect(() => {
-    if (loading) {
-      ;(async () => {
-        await fetchAll()
-        setLoading(false)
-      })()
-    }
-  }, [loading, fetchAll])
-
-  const getSelectedAssets = (selected: string | undefined, assets: Asset[]): Asset[] => {
-    const replacedAssets = props.datasource.multiSelectReplace(selected, {})
-    return matchedAssets(replacedAssets, assets)
-  }
 
   const onChangeOverrideTimeRange = (event: ChangeEvent<HTMLInputElement>): void => {
     let updatedQuery = {
@@ -123,117 +102,94 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
-  const selectedAsset = (assets: string[], overrideAssets: string[]): string => {
-    if (overrideAssets.length > 0) {
-      return overrideAssets[0]
-    }
-    if (assets.length > 0) {
-      return assets[0]
-    }
-    return ''
-  }
-
   return (
     <>
-      {!loading && (
-        <>
-          <FieldSet label="Event query">
-            <EventFilter
-              query={props.query}
-              datasource={props.datasource}
-              isAnnotationQuery={props.isAnnotationQuery}
-              multiSelectProperties={true}
-              onChangeQuery={onChangeEventFilter}
+      <FieldSet label="Event query">
+        <EventFilter
+          query={props.query}
+          datasource={props.datasource}
+          isAnnotationQuery={props.isAnnotationQuery}
+          multiSelectProperties={true}
+          onChangeQuery={onChangeEventFilter}
+        />
+        <InlineFieldRow>
+          <InlineField
+            label="Include Parent Event"
+            tooltip={`Adds the simple properties of the parent event as ${
+              props.query.Type === PropertyType.Simple ? 'fields' : 'labels'
+            }`}
+            labelWidth={labelWidth}
+          >
+            <InlineSwitch value={props.query.IncludeParentInfo} onChange={onChangeIncludeParentInfo} />
+          </InlineField>
+        </InlineFieldRow>
+        <InlineFieldRow>
+          <InlineField label="Override time range" labelWidth={labelWidth}>
+            <div>
+              <InlineSwitch
+                label="Override time range"
+                value={props.query.OverrideTimeRange}
+                onChange={onChangeOverrideTimeRange}
+              />
+            </div>
+          </InlineField>
+        </InlineFieldRow>
+        {props.query.OverrideTimeRange && (
+          <DateRangePicker
+            override={props.query.OverrideTimeRange}
+            dateTimeRange={props.query.TimeRange}
+            onChange={onChangeTimeRange}
+            datasource={props.datasource}
+          />
+        )}
+        <InlineFieldRow>
+          <InlineField
+            label="Limit"
+            tooltip="Limit the number of events returned, 0 for no limit"
+            labelWidth={labelWidth}
+          >
+            <Input value={limit} onChange={(e) => setLimit(e.currentTarget.value)} onBlur={onChangeLimit} />
+          </InlineField>
+        </InlineFieldRow>
+        <InlineFieldRow>
+          <InlineField
+            label="Order by time"
+            labelWidth={labelWidth}
+            tooltip="In what way returned data should be ordered in time"
+          >
+            <RadioButtonGroup
+              options={[
+                { label: 'Ascending', value: 'ascending' },
+                { label: 'Descending', value: 'descending' },
+              ]}
+              onChange={onChangeOrder}
+              value={ordering}
             />
-            <InlineFieldRow>
-              <InlineField
-                label="Include Parent Event"
-                tooltip={`Adds the simple properties of the parent event as ${
-                  props.query.Type === PropertyType.Simple ? 'fields' : 'labels'
-                }`}
-                labelWidth={labelWidth}
-              >
-                <InlineSwitch value={props.query.IncludeParentInfo} onChange={onChangeIncludeParentInfo} />
-              </InlineField>
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField label="Override time range" labelWidth={labelWidth}>
-                <div>
-                  <InlineSwitch
-                    label="Override time range"
-                    value={props.query.OverrideTimeRange}
-                    onChange={onChangeOverrideTimeRange}
-                  />
-                </div>
-              </InlineField>
-            </InlineFieldRow>
-            {props.query.OverrideTimeRange && (
-              <DateRangePicker
-                override={props.query.OverrideTimeRange}
-                dateTimeRange={props.query.TimeRange}
-                onChange={onChangeTimeRange}
-                datasource={props.datasource}
-              />
-            )}
-            <InlineFieldRow>
-              <InlineField
-                label="Limit"
-                tooltip="Limit the number of events returned, 0 for no limit"
-                labelWidth={labelWidth}
-              >
-                <Input
-                  value={limit}
-                  onChange={(e) => setLimit(e.currentTarget.value)}
-                  onBlur={onChangeLimit}
-                />
-              </InlineField>
-            </InlineFieldRow>
-            <InlineFieldRow>
-              <InlineField
-                label="Order by time"
-                labelWidth={labelWidth}
-                tooltip="In what way returned data should be ordered in time"
-              >
-                <RadioButtonGroup
-                  options={[
-                    { label: 'Ascending', value: 'ascending' },
-                    { label: 'Descending', value: 'descending' },
-                  ]}
-                  onChange={onChangeOrder}
-                  value={ordering}
-                />
-              </InlineField>
-            </InlineFieldRow>
-          </FieldSet>
-          <FieldSet label="Fetch Asset Properties">
-            <InlineFieldRow>
-              <InlineField label="Enabled" labelWidth={labelWidth}>
-                <InlineSwitch value={props.query.QueryAssetProperties} onChange={onChangeQueryAssetProperties} />
-              </InlineField>
-            </InlineFieldRow>
-            {props.query.QueryAssetProperties && (
-              <EventAssetProperties
-                appIsAlertingType={props.appIsAlertingType ?? false}
-                datasource={props.datasource}
-                seriesLimit={props.seriesLimit}
-                queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
-                selectedAssetProperties={props.query.AssetProperties ?? []}
-                overrideAssets={props.query.OverrideAssets ?? []}
-                selectedAssets={getSelectedAssets(
-                  selectedAsset(props.query.Assets, props.query.OverrideAssets ?? []),
-                  assets
-                )}
-                templateVariables={templateVariables}
-                tags={tagsToQueryTags(props.query.Options?.Tags)}
-                queryType={props.query.Type}
-                onChangeAssetMeasurementQuery={onChangeAssetMeasurementQuery}
-                onChangeSeriesLimit={props.onChangeSeriesLimit}
-                onOpenMenu={fetchAll}
-              />
-            )}
-          </FieldSet>
-        </>
-      )}
+          </InlineField>
+        </InlineFieldRow>
+      </FieldSet>
+      <FieldSet label="Fetch Asset Properties">
+        <InlineFieldRow>
+          <InlineField label="Enabled" labelWidth={labelWidth}>
+            <InlineSwitch value={props.query.QueryAssetProperties} onChange={onChangeQueryAssetProperties} />
+          </InlineField>
+        </InlineFieldRow>
+        {props.query.QueryAssetProperties && (
+          <EventAssetProperties
+            appIsAlertingType={props.appIsAlertingType ?? false}
+            datasource={props.datasource}
+            seriesLimit={props.seriesLimit}
+            queryOptions={props.query.Options ?? defaultQueryOptions(props.appIsAlertingType ?? false)}
+            selectedAssetProperties={props.query.AssetProperties ?? []}
+            overrideAssets={props.query.OverrideAssets ?? []}
+            templateVariables={templateVariables}
+            tags={tagsToQueryTags(props.query.Options?.Tags)}
+            queryType={props.query.Type}
+            onChangeAssetMeasurementQuery={onChangeAssetMeasurementQuery}
+            onChangeSeriesLimit={props.onChangeSeriesLimit}
+          />
+        )}
+      </FieldSet>
     </>
   )
 }

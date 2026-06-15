@@ -296,6 +296,78 @@ func TestGetFilteredAssets(t *testing.T) {
 	})
 }
 
+func TestGetAssets(t *testing.T) {
+	t.Parallel()
+
+	t.Run("forwards query and preserves lazy-load fields from historian", func(t *testing.T) {
+		t.Parallel()
+
+		var (
+			gotPath  string
+			gotQuery url.Values
+		)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotPath = r.URL.Path
+			gotQuery = r.URL.Query()
+			_, _ = w.Write([]byte(`[{
+				"UUID": "11111111-1111-1111-1111-111111111111",
+				"Name": "Line 1",
+				"AssetPath": "Line 1",
+				"HasChildren": true,
+				"HasAssetProperties": false,
+				"HasEventConfigurations": true,
+				"Ancestors": ["22222222-2222-2222-2222-222222222222"]
+			}]`))
+		}))
+		t.Cleanup(srv.Close)
+
+		client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+		require.NoError(t, err)
+
+		assets, err := client.GetAssets(context.Background(),
+			"ParentUUIDs[0]=00000000-0000-0000-0000-000000000000&IncludeHasChildren=true&IncludeHasAssetProperties=true")
+		require.NoError(t, err)
+
+		// The Include* flags must reach historian, otherwise it never returns the
+		// HasChildren/HasAssetProperties fields the lazy cascader depends on.
+		assert.Equal(t, "/api/assets", gotPath)
+		assert.Equal(t, "00000000-0000-0000-0000-000000000000", gotQuery.Get("ParentUUIDs[0]"))
+		assert.Equal(t, "true", gotQuery.Get("IncludeHasChildren"))
+		assert.Equal(t, "true", gotQuery.Get("IncludeHasAssetProperties"))
+
+		require.Len(t, assets, 1)
+		a := assets[0]
+		require.NotNil(t, a.HasChildren)
+		assert.True(t, *a.HasChildren)
+		require.NotNil(t, a.HasAssetProperties)
+		assert.False(t, *a.HasAssetProperties, "a real leaf must decode as false, not be lost")
+		require.NotNil(t, a.HasEventConfigurations)
+		assert.True(t, *a.HasEventConfigurations)
+		assert.Equal(t, []string{"22222222-2222-2222-2222-222222222222"}, a.Ancestors)
+	})
+
+	t.Run("leaves lazy-load fields nil when historian omits them", func(t *testing.T) {
+		t.Parallel()
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`[{"UUID":"11111111-1111-1111-1111-111111111111","Name":"Line 1","AssetPath":"Line 1"}]`))
+		}))
+		t.Cleanup(srv.Close)
+
+		client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+		require.NoError(t, err)
+
+		assets, err := client.GetAssets(context.Background(), "")
+		require.NoError(t, err)
+
+		require.Len(t, assets, 1)
+		assert.Nil(t, assets[0].HasChildren)
+		assert.Nil(t, assets[0].HasAssetProperties)
+		assert.Nil(t, assets[0].HasEventConfigurations)
+		assert.Nil(t, assets[0].Ancestors)
+	})
+}
+
 // indexedQuery returns values for the indexed parameter form Foo[0]=a&Foo[1]=b in input order.
 func indexedQuery(q url.Values, prefix string) []string {
 	var out []string

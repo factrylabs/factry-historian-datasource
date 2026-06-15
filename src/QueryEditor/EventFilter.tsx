@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { InlineField, InlineFieldRow, MultiSelect, Select } from '@grafana/ui'
 import type { SelectableValue } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
-import { default as Cascader } from 'components/Cascader/Cascader'
+import { default as Cascader, CascaderOption } from 'components/Cascader/Cascader'
 import { QueryTag, TagsSection } from 'components/TagsSection/TagsSection'
 import { toSelectableValue } from 'components/TagsSection/util'
 import { DataSource } from 'datasource'
@@ -18,7 +18,21 @@ import {
   PropertyType,
 } from 'types'
 import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
-import { getChildAssets, isSupportedPropertyType, matchedAssets, propertyFilterToQueryTags } from './util'
+import {
+  buildLazyCascaderOptions,
+  fetchLazyChildOptions,
+  getChildAssets,
+  isLazyLoadingEnabled,
+  isSupportedPropertyType,
+  matchedAssets,
+  NIL_UUID,
+  propertyFilterToQueryTags,
+  resolveAssetLabel,
+  resolveSelectedAssets,
+  searchAssetsAndProperties,
+  templateVariablesToCascaderOptions,
+  updateTreeChildren,
+} from './util'
 import { isFeatureEnabled } from 'util/semver'
 import { isRegex, isUUID } from 'util/util'
 
@@ -31,45 +45,106 @@ export interface Props {
 }
 
 export const EventFilter = (props: Props): JSX.Element => {
+  const lazyEnabled = isLazyLoadingEnabled(props.datasource.historianInfo?.Version ?? '')
+
   const [loading, setLoading] = useState(true)
+  // Full asset list, only populated in the eager (pre-v8.2.0) fallback.
   const [assets, setAssets] = useState<Asset[]>([])
+  // Assets matching the current selection, used to filter event types by event
+  // configuration. Resolved server-side in the lazy path so we never fetch the
+  // whole asset list.
+  const [selectedAssets, setSelectedAssets] = useState<Asset[]>([])
+  const [assetOptions, setAssetOptions] = useState<CascaderOption[]>([])
   const [eventTypes, setEventTypes] = useState<EventType[]>([])
   const [eventTypeProperties, setEventTypeProperties] = useState<EventTypeProperty[]>([])
   const [eventConfigurations, setEventConfigurations] = useState<EventConfiguration[]>([])
+  const [initialLabel, setInitialLabel] = useState('')
   const templateVariables = getTemplateSrv()
     .getVariables()
     .map((e) => {
       return { label: `$${e.name}`, value: `$${e.name}` }
     })
-  const assetOptions = getChildAssets(null, assets).concat(templateVariables)
+
+  const fetchRootAssets = useCallback(async () => {
+    const rootAssets = await props.datasource.getAssets({
+      ParentUUIDs: [NIL_UUID],
+      IncludeHasChildren: true,
+    })
+    const options = buildLazyCascaderOptions(rootAssets, []).concat(
+      templateVariablesToCascaderOptions(templateVariables)
+    )
+    setAssetOptions(options)
+  }, [props.datasource, templateVariables])
+
+  const fetchEventData = useCallback(async () => {
+    const [types, typeProperties, configurations] = await Promise.all([
+      props.datasource.getEventTypes(),
+      props.datasource.getEventTypeProperties(),
+      props.datasource.getEventConfigurations(),
+    ])
+    setEventTypes(types)
+    setEventTypeProperties(typeProperties)
+    setEventConfigurations(configurations)
+  }, [props.datasource])
 
   const fetchAll = useCallback(async () => {
-    const assets = await props.datasource.getAssets()
-    setAssets(assets)
-    const eventTypes = await props.datasource.getEventTypes()
-    setEventTypes(eventTypes)
-    const eventTypeProperties = await props.datasource.getEventTypeProperties()
-    setEventTypeProperties(eventTypeProperties)
-    const eventConfigurations = await props.datasource.getEventConfigurations()
-    setEventConfigurations(eventConfigurations)
-  }, [props.datasource])
+    const selectedValue = props.query.Assets?.[0] ?? ''
+    if (lazyEnabled) {
+      // Resolve only the current selection server-side instead of pulling the
+      // full asset list, which is prohibitively slow with many assets.
+      const [resolved] = await Promise.all([
+        resolveSelectedAssets(props.datasource, selectedValue),
+        fetchRootAssets(),
+        fetchEventData(),
+      ])
+      setSelectedAssets(resolved)
+    } else {
+      // Eager fallback (pre-v8.2.0): the full asset list is needed both to build
+      // the tree and to resolve the selection for event-type filtering.
+      const allAssets = await props.datasource.getAssets()
+      setAssets(allAssets)
+      setAssetOptions(getChildAssets(null, allAssets).concat(templateVariablesToCascaderOptions(templateVariables)))
+      setSelectedAssets(matchedAssets(props.datasource.multiSelectReplace(selectedValue, {}), allAssets))
+      await fetchEventData()
+    }
+  }, [props.datasource, lazyEnabled, fetchRootAssets, fetchEventData, templateVariables, props.query.Assets])
 
   useEffect(() => {
     if (loading) {
       ;(async () => {
-        await fetchAll()
+        const resolved = resolveAssetLabel(props.datasource, props.query.Assets?.[0])
+        await Promise.all([fetchAll(), resolved.then(({ label }) => setInitialLabel(label))])
         setLoading(false)
       })()
     }
-  }, [loading, fetchAll])
+  }, [loading, fetchAll, props.datasource, props.query.Assets])
 
-  const getSelectedAssets = (selected: string | undefined, assets: Asset[]): Asset[] => {
-    const replacedAssets = props.datasource.multiSelectReplace(selected, {})
-    return matchedAssets(replacedAssets, assets)
-  }
+  const handleLoadData = useCallback(
+    (selectOptions: CascaderOption[]) => {
+      const targetOption = selectOptions[selectOptions.length - 1]
+      const parentUUID = targetOption.value
 
-  const availableEventTypes = (selectedAsset: string | undefined): Array<SelectableValue<string>> => {
-    const selectedAssets = getSelectedAssets(selectedAsset, assets)
+      // Already loaded (or known leaf): don't refetch on every expand.
+      if (targetOption.isLeaf || (targetOption.items && targetOption.items.length > 0)) {
+        return
+      }
+
+      fetchLazyChildOptions(props.datasource, parentUUID, false)
+        .then((children) => setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, children)))
+        .catch((error) => {
+          console.error('Failed to load child assets:', error)
+        })
+    },
+    [props.datasource]
+  )
+
+  const handleSearchAsync = useCallback(
+    // This tree only selects assets, so leave the properties out of the search results.
+    (keyword: string) => searchAssetsAndProperties(props.datasource, keyword, false),
+    [props.datasource]
+  )
+
+  const availableEventTypes = (): Array<SelectableValue<string>> => {
     return eventTypes
       .filter((e) =>
         eventConfigurations.some(
@@ -88,16 +163,14 @@ export const EventFilter = (props: Props): JSX.Element => {
       )
   }
 
-  const filterEventTypes = (selectedEventTypes: string[], asset: string): string[] => {
-    const selectedAssets = getSelectedAssets(asset, assets)
+  const filterEventTypesByAssets = (selectedEventTypes: string[], assetsToMatch: Asset[]): string[] => {
     return selectedEventTypes.filter((et) => {
-      // if there is a templated event type selected, we don't filter any out
       if (props.datasource.containsTemplate(et)) {
         return true
       }
 
       return eventConfigurations.some(
-        (ec) => selectedAssets.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === et
+        (ec) => assetsToMatch.find((a) => a.UUID === ec.AssetUUID) && ec.EventTypeUUID === et
       )
     })
   }
@@ -116,10 +189,7 @@ export const EventFilter = (props: Props): JSX.Element => {
       return e.value || ''
     })
 
-    const filteredEventTypes = filterEventTypes(
-      selectedEventTypes,
-      props.query.Assets?.length ? props.query.Assets[0] : ''
-    )
+    const filteredEventTypes = filterEventTypesByAssets(selectedEventTypes, selectedAssets)
     const filteredProperties = filterProperties(
       props.query.Properties ?? [],
       filteredEventTypes,
@@ -144,12 +214,13 @@ export const EventFilter = (props: Props): JSX.Element => {
     })
   }
 
-  const onAssetChange = (value: string): void => {
+  const applyAssetChange = async (value: string): Promise<void> => {
     if (!isUUID(value) && !isRegex(value) && !props.datasource.containsTemplate(value)) {
       if (!props.query.Assets || props.query.Assets.length === 0) {
         return
       }
 
+      setSelectedAssets([])
       props.onChangeQuery({
         ...props.query,
         Assets: [],
@@ -158,7 +229,13 @@ export const EventFilter = (props: Props): JSX.Element => {
       })
       return
     }
-    const filteredEventTypes = filterEventTypes(props.query.EventTypes ?? [], value)
+    // Resolve the new selection to concrete assets (server-side when lazy) so we
+    // can filter the existing event types/properties down to the valid ones.
+    const resolvedAssets = lazyEnabled
+      ? await resolveSelectedAssets(props.datasource, value)
+      : matchedAssets(props.datasource.multiSelectReplace(value, {}), assets)
+    setSelectedAssets(resolvedAssets)
+    const filteredEventTypes = filterEventTypesByAssets(props.query.EventTypes ?? [], resolvedAssets)
     const filteredProperties = filterProperties(
       props.query.Properties ?? [],
       filteredEventTypes,
@@ -169,6 +246,14 @@ export const EventFilter = (props: Props): JSX.Element => {
       Assets: [value],
       EventTypes: filteredEventTypes,
       Properties: filteredProperties,
+    })
+  }
+
+  // The Cascader's onSelect expects a void handler, so kick off the async work
+  // and log any rejection instead of letting it surface as an unhandled rejection.
+  const onAssetChange = (value: string): void => {
+    applyAssetChange(value).catch((error) => {
+      console.error('Failed to handle asset selection:', error)
     })
   }
 
@@ -339,28 +424,22 @@ export const EventFilter = (props: Props): JSX.Element => {
     })
   }
 
-  const getDisplayedEventTypes = (eventTypes: string[], selectedAsset: string | undefined): string[] => {
-    // Filter out UUIDs from other datasources, only show those that exist or are template variables
-    const available = availableEventTypes(selectedAsset)
+  const getDisplayedEventTypes = (eventTypes: string[]): string[] => {
+    const available = availableEventTypes()
     return eventTypes.filter((eventTypeUUID) => {
-      // Keep template variables
       if (eventTypeUUID.startsWith('$')) {
         return true
       }
-      // Only show event types that exist in current datasource
       return available.some((option) => option.value === eventTypeUUID)
     })
   }
 
   const getDisplayedProperties = (properties: string[], eventTypes: string[], includeParentInfo: boolean): string[] => {
-    // Filter out properties from other datasources
     const available = availableProperties(eventTypes, includeParentInfo)
     return properties.filter((property) => {
-      // Keep template variables
       if (property.startsWith('$')) {
         return true
       }
-      // Only show properties that exist in current datasource
       return available.some((option) => option.value === property)
     })
   }
@@ -381,28 +460,6 @@ export const EventFilter = (props: Props): JSX.Element => {
     return ['true', 'false']
   }
 
-  const initialLabel = (): string => {
-    if (!props.query.Assets || props.query.Assets.length === 0) {
-      return ''
-    }
-
-    const asset = assets.find((e) => e.UUID === props.query.Assets[0])
-    if (asset) {
-      return asset.AssetPath || ''
-    }
-
-    // Don't display UUIDs from other datasources - hide them but preserve in query
-    // Allow template variables to be displayed
-    if (props.query.Assets[0].startsWith('$')) {
-      return props.query.Assets[0]
-    }
-
-    if (isRegex(props.query.Assets[0])) {
-      return props.query.Assets[0]
-    }
-
-    return ''
-  }
   const availableStatuses = (): Array<SelectableValue<string>> => {
     return [
       toSelectableValue('processed'),
@@ -446,12 +503,22 @@ export const EventFilter = (props: Props): JSX.Element => {
             >
               <Cascader
                 initialValue={props.query.Assets?.length ? props.query.Assets[0] : ''}
-                initialLabel={initialLabel()}
+                initialLabel={initialLabel}
                 options={assetOptions}
                 displayAllSelectedLevels
                 onSelect={onAssetChange}
-                onOpen={fetchAll}
+                onOpen={() => {
+                  if (lazyEnabled) {
+                    if (assetOptions.length === 0) {
+                      fetchRootAssets()
+                    }
+                    return
+                  }
+                  fetchAll()
+                }}
                 separator="\\"
+                loadData={lazyEnabled ? handleLoadData : undefined}
+                onSearchAsync={lazyEnabled ? handleSearchAsync : undefined}
               />
             </InlineField>
           </InlineFieldRow>
@@ -464,13 +531,10 @@ export const EventFilter = (props: Props): JSX.Element => {
               tooltip="Specify one or more event type to work with"
             >
               <MultiSelect
-                value={getDisplayedEventTypes(
-                  props.query.EventTypes ?? [],
-                  props.query.Assets?.length ? props.query.Assets[0] : ''
-                )}
-                options={availableEventTypes(props.query.Assets?.length ? props.query.Assets[0] : '')}
+                value={getDisplayedEventTypes(props.query.EventTypes ?? [])}
+                options={availableEventTypes()}
                 onChange={onSelectEventTypes}
-                onOpenMenu={fetchAll}
+                onOpenMenu={fetchEventData}
               />
             </InlineField>
           </InlineFieldRow>
@@ -490,7 +554,7 @@ export const EventFilter = (props: Props): JSX.Element => {
                   )}
                   options={availableProperties(props.query.EventTypes ?? [], props.query.IncludeParentInfo ?? false)}
                   onChange={onSelectProperties}
-                  onOpenMenu={fetchAll}
+                  onOpenMenu={fetchEventData}
                 />
               </InlineField>
             ) : (

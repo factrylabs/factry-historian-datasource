@@ -167,3 +167,76 @@ describe('Cascader.setInitialValue', () => {
     expect(result).toEqual({ rcValue: [], activeLabel: 'custom-value' })
   })
 })
+
+describe('Cascader.loadData', () => {
+  it('stores loadData prop for rc-cascader wiring', () => {
+    const loadData = jest.fn()
+    const cascader = new Cascader(makeProps({ loadData }))
+    expect(cascader.props.loadData).toBe(loadData)
+  })
+})
+
+describe('Cascader.onSearchAsync', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('calls onSearchAsync instead of local filtering when provided', async () => {
+    const onSearchAsync = jest.fn().mockResolvedValue([
+      { label: 'Factory\\Pump-01', value: ['uuid-1'] },
+    ])
+    const cascader = new Cascader(makeProps({ onSearchAsync }))
+
+    const event = { target: { value: 'Pump' } }
+    cascader.handleChange(event)
+
+    jest.advanceTimersByTime(300)
+    await Promise.resolve() // flush microtask
+
+    expect(onSearchAsync).toHaveBeenCalledWith('Pump')
+  })
+
+  it('does not call onSearchAsync for short input', () => {
+    const onSearchAsync = jest.fn().mockResolvedValue([])
+    const cascader = new Cascader(makeProps({ onSearchAsync }))
+
+    const event = { target: { value: 'P' } }
+    cascader.handleChange(event)
+
+    jest.advanceTimersByTime(300)
+
+    expect(onSearchAsync).not.toHaveBeenCalled()
+  })
+
+  it('debounces onSearchAsync calls', () => {
+    const onSearchAsync = jest.fn().mockResolvedValue([])
+    const cascader = new Cascader(makeProps({ onSearchAsync }))
+
+    cascader.handleChange({ target: { value: 'Pu' } })
+    cascader.handleChange({ target: { value: 'Pum' } })
+    cascader.handleChange({ target: { value: 'Pump' } })
+
+    jest.advanceTimersByTime(300)
+
+    expect(onSearchAsync).toHaveBeenCalledTimes(1)
+    expect(onSearchAsync).toHaveBeenCalledWith('Pump')
+  })
+
+  it('does not have onSearchAsync by default', () => {
+    const options: CascaderOption[] = [
+      { label: 'Alpha', value: 'alpha' },
+      { label: 'Beta', value: 'beta' },
+    ]
+    const cascader = new Cascader(makeProps({ options }))
+    // Without onSearchAsync, handleChange uses local filtering via getSearchableOptions
+    expect(cascader.props.onSearchAsync).toBeUndefined()
+    // Verify getSearchableOptions still works for local filtering
+    const searchable = cascader.getSearchableOptions(options)
+    expect(searchable).toHaveLength(2)
+    expect(searchable.map((s) => s.label)).toEqual(['Alpha', 'Beta'])
+  })
+})
