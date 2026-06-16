@@ -1,6 +1,7 @@
 import {
   buildLazyCascaderOptions,
   debouncePromise,
+  fetchLazyChildOptions,
   getAggregations,
   getAggregationsForDatatypes,
   getAggregationsForVersionAndDatatypes,
@@ -8,6 +9,9 @@ import {
   matchedAssets,
   migrateMeasurementQuery,
   propertyFilterToQueryTags,
+  resolveAssetLabel,
+  resolveSelectedAssets,
+  searchAssetsAndProperties,
   selectable,
   sortByLabel,
   sortByName,
@@ -16,6 +20,175 @@ import {
   valueFiltersToQueryTags,
 } from './util'
 import { AggregationName, Asset, AssetProperty, MeasurementQuery } from 'types'
+import { DataSource } from 'datasource'
+
+const UUID = '11111111-1111-1111-1111-111111111111'
+const PARENT = '22222222-2222-2222-2222-222222222222'
+
+// Minimal DataSource stub exposing only the methods the lazy helpers call.
+function makeDS(overrides: Record<string, jest.Mock> = {}): DataSource {
+  return {
+    getAssets: jest.fn().mockResolvedValue([]),
+    getAssetProperties: jest.fn().mockResolvedValue([]),
+    multiSelectReplace: jest.fn((value: string) => [value]),
+    ...overrides,
+  } as unknown as DataSource
+}
+
+describe('resolveAssetLabel', () => {
+  it('returns an empty label for an empty selection without fetching', async () => {
+    const ds = makeDS()
+    expect(await resolveAssetLabel(ds, undefined)).toEqual({ label: '' })
+    expect(ds.getAssets).not.toHaveBeenCalled()
+  })
+
+  it('keeps template variables and regex visible without fetching', async () => {
+    const ds = makeDS()
+    expect(await resolveAssetLabel(ds, '$asset')).toEqual({ label: '$asset' })
+    expect(await resolveAssetLabel(ds, '/pump.*/')).toEqual({ label: '/pump.*/' })
+    expect(ds.getAssets).not.toHaveBeenCalled()
+  })
+
+  it('resolves a UUID to its asset path (falling back to name)', async () => {
+    const withPath = { UUID, Name: 'Pump', AssetPath: 'Line 1\\Pump' } as Asset
+    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([withPath]) })
+    expect(await resolveAssetLabel(ds, UUID)).toEqual({ label: 'Line 1\\Pump', asset: withPath })
+    expect(ds.getAssets).toHaveBeenCalledWith({ UUIDs: [UUID] })
+
+    const noPath = { UUID, Name: 'Pump' } as Asset
+    const ds2 = makeDS({ getAssets: jest.fn().mockResolvedValue([noPath]) })
+    expect((await resolveAssetLabel(ds2, UUID)).label).toBe('Pump')
+  })
+
+  it('returns an empty label when the UUID is not found', async () => {
+    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([]) })
+    expect(await resolveAssetLabel(ds, UUID)).toEqual({ label: '' })
+  })
+})
+
+describe('resolveSelectedAssets', () => {
+  it('fetches a UUID selection by UUIDs', async () => {
+    const asset = { UUID, Name: 'Pump' } as Asset
+    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([asset]) })
+    expect(await resolveSelectedAssets(ds, UUID)).toEqual([asset])
+    expect(ds.getAssets).toHaveBeenCalledWith({ UUIDs: [UUID] })
+  })
+
+  it('resolves a regex selection via keyword search, then matches by regex', async () => {
+    const a1 = { UUID: 'u1', Name: 'pump-1', AssetPath: 'pump-1' } as Asset
+    const a2 = { UUID: 'u2', Name: 'valve-1', AssetPath: 'valve-1' } as Asset
+    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([a1, a2]) })
+    expect(await resolveSelectedAssets(ds, '/pump.*/')).toEqual([a1])
+    expect(ds.getAssets).toHaveBeenCalledWith({ Keyword: '/pump.*/' })
+  })
+
+  it('expands a template variable to UUIDs', async () => {
+    const asset = { UUID, Name: 'Pump' } as Asset
+    const ds = makeDS({
+      getAssets: jest.fn().mockResolvedValue([asset]),
+      multiSelectReplace: jest.fn(() => [UUID]),
+    })
+    expect(await resolveSelectedAssets(ds, '$asset')).toEqual([asset])
+    expect(ds.getAssets).toHaveBeenCalledWith({ UUIDs: [UUID] })
+  })
+
+  it('returns empty (without fetching) when a template expands to no UUIDs', async () => {
+    const ds = makeDS({ multiSelectReplace: jest.fn(() => ['not-a-uuid']) })
+    expect(await resolveSelectedAssets(ds, '$asset')).toEqual([])
+    expect(ds.getAssets).not.toHaveBeenCalled()
+  })
+})
+
+describe('fetchLazyChildOptions', () => {
+  it('requests Include flags and maps child assets plus property leaves', async () => {
+    const child = { UUID: 'c1', Name: 'Child' } as Asset
+    const prop = { UUID: 'p1', Name: 'Speed', AssetUUID: PARENT } as AssetProperty
+    const ds = makeDS({
+      getAssets: jest.fn().mockResolvedValue([child]),
+      getAssetProperties: jest.fn().mockResolvedValue([prop]),
+    })
+
+    const opts = await fetchLazyChildOptions(ds, PARENT, true)
+
+    expect(ds.getAssets).toHaveBeenCalledWith({
+      ParentUUIDs: [PARENT],
+      IncludeHasChildren: true,
+      IncludeHasAssetProperties: true,
+    })
+    expect(ds.getAssetProperties).toHaveBeenCalledWith({ AssetUUIDs: [PARENT] })
+    expect(opts).toHaveLength(2)
+    expect(opts.find((o) => o.value === 'p1')).toMatchObject({ label: '📏 Speed', value: 'p1', isLeaf: true })
+  })
+
+  it('skips property fetching when includeProperties is false', async () => {
+    const child = { UUID: 'c1', Name: 'Child' } as Asset
+    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([child]) })
+
+    const opts = await fetchLazyChildOptions(ds, PARENT, false)
+
+    expect(ds.getAssets).toHaveBeenCalledWith({ ParentUUIDs: [PARENT], IncludeHasChildren: true })
+    expect(ds.getAssetProperties).not.toHaveBeenCalled()
+    expect(opts).toHaveLength(1)
+    expect(opts[0]).toMatchObject({ label: '📦 Child', value: 'c1' })
+  })
+})
+
+describe('searchAssetsAndProperties', () => {
+  it('returns empty for short keywords without fetching', async () => {
+    const ds = makeDS()
+    expect(await searchAssetsAndProperties(ds, 'a')).toEqual([])
+    expect(ds.getAssets).not.toHaveBeenCalled()
+  })
+
+  it('returns asset and property results from the backend without re-filtering', async () => {
+    const asset = { UUID: 'a1', Name: 'Pump', AssetPath: 'Line\\Pump' } as Asset
+    const prop = { UUID: 'p1', Name: 'Speed', AssetUUID: 'a1' } as AssetProperty
+    const ds = makeDS({
+      getAssets: jest.fn().mockResolvedValue([asset]),
+      getAssetProperties: jest.fn().mockResolvedValue([prop]),
+    })
+
+    const res = await searchAssetsAndProperties(ds, 'pump')
+
+    expect(ds.getAssets).toHaveBeenCalledWith({ Keyword: 'pump', UseAssetPath: true })
+    expect(ds.getAssetProperties).toHaveBeenCalledWith({ Keyword: 'pump' })
+    expect(res).toEqual([
+      { label: '📦 Line\\Pump', value: ['a1'] },
+      { label: '📦 Line\\Pump\\📏 Speed', value: ['a1', 'p1'], description: 'Line\\Pump' },
+    ])
+  })
+
+  it('keeps a property whose name does not contain the keyword (regex/description backend match)', async () => {
+    // The client used to drop these, breaking regex searches; the backend already filtered.
+    const asset = { UUID: 'a1', Name: 'Pump', AssetPath: 'Pump' } as Asset
+    const prop = { UUID: 'p1', Name: 'Speed', AssetUUID: 'a1' } as AssetProperty
+    const ds = makeDS({
+      getAssets: jest.fn().mockResolvedValue([asset]),
+      getAssetProperties: jest.fn().mockResolvedValue([prop]),
+    })
+
+    const res = await searchAssetsAndProperties(ds, '/spe.*/')
+
+    expect(res.some((r) => r.value?.[r.value.length - 1] === 'p1')).toBe(true)
+  })
+
+  it('fetches missing parent assets for properties absent from the asset results', async () => {
+    const prop = { UUID: 'p1', Name: 'Speed', AssetUUID: 'parent-1' } as AssetProperty
+    const parent = { UUID: 'parent-1', Name: 'Pump', AssetPath: 'Line\\Pump' } as Asset
+    const getAssets = jest
+      .fn()
+      .mockResolvedValueOnce([]) // keyword asset search returns nothing
+      .mockResolvedValueOnce([parent]) // missing-parent lookup by UUIDs
+    const ds = makeDS({ getAssets, getAssetProperties: jest.fn().mockResolvedValue([prop]) })
+
+    const res = await searchAssetsAndProperties(ds, 'speed')
+
+    expect(getAssets).toHaveBeenNthCalledWith(2, { UUIDs: ['parent-1'] })
+    expect(res).toEqual([
+      { label: '📦 Line\\Pump\\📏 Speed', value: ['parent-1', 'p1'], description: 'Line\\Pump' },
+    ])
+  })
+})
 
 describe('selectable', () => {
   const store = [

@@ -35,6 +35,7 @@ import {
 } from './util'
 import { isFeatureEnabled } from 'util/semver'
 import { isRegex, isUUID } from 'util/util'
+import { notifyError } from 'util/notify'
 
 export interface Props {
   query: EventQuery
@@ -132,7 +133,9 @@ export const EventFilter = (props: Props): JSX.Element => {
       fetchLazyChildOptions(props.datasource, parentUUID, false)
         .then((children) => setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, children)))
         .catch((error) => {
-          console.error('Failed to load child assets:', error)
+          // Clear the node's loading state so the cascader spinner stops.
+          setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, []))
+          notifyError('Failed to load child assets', error)
         })
     },
     [props.datasource]
@@ -253,7 +256,7 @@ export const EventFilter = (props: Props): JSX.Element => {
   // and log any rejection instead of letting it surface as an unhandled rejection.
   const onAssetChange = (value: string): void => {
     applyAssetChange(value).catch((error) => {
-      console.error('Failed to handle asset selection:', error)
+      notifyError('Failed to handle asset selection', error)
     })
   }
 
@@ -424,8 +427,7 @@ export const EventFilter = (props: Props): JSX.Element => {
     })
   }
 
-  const getDisplayedEventTypes = (eventTypes: string[]): string[] => {
-    const available = availableEventTypes()
+  const getDisplayedEventTypes = (eventTypes: string[], available: Array<SelectableValue<string>>): string[] => {
     return eventTypes.filter((eventTypeUUID) => {
       if (eventTypeUUID.startsWith('$')) {
         return true
@@ -472,6 +474,8 @@ export const EventFilter = (props: Props): JSX.Element => {
   const getValueFilterOperators = (): KnownOperator[] => {
     return getValueFilterOperatorsForVersion(props.datasource.historianInfo?.Version ?? '')
   }
+
+  const eventTypeOptions = availableEventTypes()
 
   return (
     <>
@@ -531,8 +535,8 @@ export const EventFilter = (props: Props): JSX.Element => {
               tooltip="Specify one or more event type to work with"
             >
               <MultiSelect
-                value={getDisplayedEventTypes(props.query.EventTypes ?? [])}
-                options={availableEventTypes()}
+                value={getDisplayedEventTypes(props.query.EventTypes ?? [], eventTypeOptions)}
+                options={eventTypeOptions}
                 onChange={onSelectEventTypes}
                 onOpenMenu={fetchEventData}
               />

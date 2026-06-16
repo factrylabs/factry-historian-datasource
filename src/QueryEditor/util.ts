@@ -102,13 +102,12 @@ export async function searchAssetsAndProperties(
     includeProperties ? datasource.getAssetProperties({ Keyword: keyword }) : Promise.resolve([]),
   ])
 
-  const matchedProperties = properties.filter((prop) =>
-    prop.Name.toLowerCase().includes(keyword.toLowerCase())
-  )
-
+  // Properties come back already keyword-filtered by the backend (regex match on
+  // name when the keyword is a regex, ILIKE on name/description otherwise), so
+  // they are used as-is.
   const assetMap = new Map(assets.map((a) => [a.UUID, a]))
   const missingParentUUIDs = [...new Set(
-    matchedProperties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid))
+    properties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid))
   )]
   if (missingParentUUIDs.length > 0) {
     const parentAssets = await datasource.getAssets({ UUIDs: missingParentUUIDs })
@@ -122,7 +121,7 @@ export async function searchAssetsAndProperties(
     value: [asset.UUID],
   }))
 
-  const propertyResults: Array<SelectableValue<string[]>> = matchedProperties.map((prop) => {
+  const propertyResults: Array<SelectableValue<string[]>> = properties.map((prop) => {
     const parentAsset = assetMap.get(prop.AssetUUID)
     const parentLabel = parentAsset?.AssetPath || parentAsset?.Name || ''
     return {

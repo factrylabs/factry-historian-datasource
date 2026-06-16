@@ -24,6 +24,7 @@ import {
 import { Asset, AssetMeasurementQuery, AssetProperty, labelWidth, MeasurementQueryOptions } from 'types'
 import { isFeatureEnabled } from 'util/semver'
 import { isRegex, isUUID } from 'util/util'
+import { notifyError } from 'util/notify'
 
 export interface Props {
   query: AssetMeasurementQuery
@@ -110,7 +111,9 @@ export const Assets = (props: Props): JSX.Element => {
       fetchLazyChildOptions(props.datasource, parentUUID, true)
         .then((children) => setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, children)))
         .catch((error) => {
-          console.error('Failed to load child assets or properties:', error)
+          // Clear the node's loading state so the cascader spinner stops.
+          setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, []))
+          notifyError('Failed to load child assets or properties', error)
         })
     },
     [props.datasource]
@@ -185,7 +188,7 @@ export const Assets = (props: Props): JSX.Element => {
   // and log any rejection instead of letting it surface as an unhandled rejection.
   const onAssetChange = (asset: string, property?: string): void => {
     applyAssetChange(asset, property).catch((error) => {
-      console.error('Failed to handle asset selection:', error)
+      notifyError('Failed to handle asset selection', error)
     })
   }
 
