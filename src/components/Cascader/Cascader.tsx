@@ -117,27 +117,26 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     }
   }
 
-  flattenOptions = (options: CascaderOption[], optionPath: CascaderOption[] = []) => {
-    let selectOptions: Array<SelectableValue<string[]>> = []
+  flattenOptions = (
+    options: CascaderOption[],
+    optionPath: CascaderOption[] = [],
+    acc: Array<SelectableValue<string[]>> = []
+  ) => {
+    const separator = this.props.separator || ` ${DEFAULT_SEPARATOR} `
     for (const option of options) {
-      const cpy = [...optionPath]
-      cpy.push(option)
-      if (!option.items || option.items.length === 0) {
-        selectOptions.push({
-          singleLabel: cpy[cpy.length - 1].label,
-          label: cpy.map((o) => o.label).join(this.props.separator || ` ${DEFAULT_SEPARATOR} `),
-          value: cpy.map((o) => o.value),
-        })
-      } else {
-        selectOptions.push({
-          singleLabel: cpy[cpy.length - 1].label,
-          label: cpy.map((o) => o.label).join(this.props.separator || ` ${DEFAULT_SEPARATOR} `),
-          value: cpy.map((o) => o.value),
-        })
-        selectOptions = [...selectOptions, ...this.flattenOptions(option.items, cpy)]
+      const cpy = [...optionPath, option]
+      acc.push({
+        singleLabel: option.label,
+        label: cpy.map((o) => o.label).join(separator),
+        value: cpy.map((o) => o.value),
+      })
+      // Recurse into children, accumulating into the shared array so flattening
+      // stays linear in the number of options.
+      if (option.items && option.items.length > 0) {
+        this.flattenOptions(option.items, cpy, acc)
       }
     }
-    return selectOptions
+    return acc
   }
 
   getSearchableOptions = memoizeOne((options: CascaderOption[]) => this.flattenOptions(options))
@@ -356,8 +355,6 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
     const { focusCascade, rcValue, activeLabel, activeSuggestion, filteredSuggestions, showSuggestions } = this.state
     const { theme } = this.props
     const styles = getCascaderStyles(theme)
-
-    this.getSearchableOptions(options)
 
     return (
       <>

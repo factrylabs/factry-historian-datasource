@@ -25,6 +25,7 @@ import {
 import { isFeatureEnabled } from 'util/semver'
 import Cascader, { CascaderOption } from 'components/Cascader/Cascader'
 import { isRegex, isUUID } from 'util/util'
+import { notifyError } from 'util/notify'
 
 export interface Props {
   datasource: DataSource
@@ -115,7 +116,9 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
       fetchLazyChildOptions(props.datasource, parentUUID, true)
         .then((children) => setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, children)))
         .catch((error) => {
-          console.error('Failed to load child assets or properties:', error)
+          // Clear the node's loading state so the cascader spinner stops.
+          setAssetOptions((prev) => updateTreeChildren(prev, parentUUID, []))
+          notifyError('Failed to load child assets or properties', error)
         })
     },
     [props.datasource]
@@ -182,7 +185,7 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
   // and log any rejection instead of letting it surface as an unhandled rejection.
   const onAssetChange = (asset: string, property?: string): void => {
     applyAssetChange(asset, property).catch((error) => {
-      console.error('Failed to handle asset selection:', error)
+      notifyError('Failed to handle asset selection', error)
     })
   }
 
