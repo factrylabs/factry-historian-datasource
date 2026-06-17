@@ -261,3 +261,48 @@ func concreteString(t *testing.T, frame *data.Frame, name string) string {
 	}
 	return *v
 }
+
+// TestAppendAssetPropertyValue covers the asset-property value merge in event
+// queries. The production logs showed a recovered panic
+// ("interface conversion: interface {} is *float64, not *string") when the
+// declared destination column type and the concrete value type disagreed. The
+// merge must convert across types and must never panic on a mismatch.
+func TestAppendAssetPropertyValue(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		dstType data.FieldType
+		value   interface{}
+		want    interface{}
+	}{
+		{"string<-float", data.FieldTypeNullableString, new(1.5), new("1.5")},
+		{"string<-bool", data.FieldTypeNullableString, new(true), new("true")},
+		{"string<-string", data.FieldTypeNullableString, new("hello"), new("hello")},
+		{"string<-int64", data.FieldTypeNullableString, new(int64(42)), new("42")},
+		{"string<-int32", data.FieldTypeNullableString, new(int32(7)), new("7")},
+		{"string<-uint64", data.FieldTypeNullableString, new(uint64(9)), new("9")},
+		{"string<-float32", data.FieldTypeNullableString, new(float32(2.5)), new("2.5")},
+		{"string<-time", data.FieldTypeNullableString, new(time.Date(2026, 6, 16, 12, 0, 0, 0, time.UTC)), new("2026-06-16T12:00:00Z")},
+		{"string<-nil", data.FieldTypeNullableString, (*float64)(nil), (*string)(nil)},
+		{"string<-nil-int64", data.FieldTypeNullableString, (*int64)(nil), (*string)(nil)},
+		{"float<-float", data.FieldTypeNullableFloat64, new(2.5), new(2.5)},
+		// Mismatches that previously panicked: unconvertible -> nil, no panic.
+		{"float<-string", data.FieldTypeNullableFloat64, new("nope"), (*float64)(nil)},
+		{"bool<-float", data.FieldTypeNullableBool, new(1.0), (*bool)(nil)},
+		{"bool<-bool", data.FieldTypeNullableBool, new(false), new(false)},
+		{"nil value", data.FieldTypeNullableString, nil, (*string)(nil)},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dst := data.NewFieldFromFieldType(tc.dstType, 0)
+			require.NotPanics(t, func() {
+				appendAssetPropertyValue(dst, tc.value)
+			})
+			require.Equal(t, 1, dst.Len())
+			assert.Equal(t, tc.want, dst.At(0))
+		})
+	}
+}
