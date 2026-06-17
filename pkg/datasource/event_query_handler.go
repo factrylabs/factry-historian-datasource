@@ -256,13 +256,18 @@ func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Fram
 				continue
 			}
 
-			fieldType, ok := assetPropertyFieldTypes[name]
-			if !ok {
-				assetPropertyFieldTypes[name] = frame.Fields[1].Type()
+			valueField, idx := frame.FieldByName(valueFieldName)
+			if idx == -1 {
 				continue
 			}
 
-			if fieldType != frame.Fields[1].Type() {
+			fieldType, ok := assetPropertyFieldTypes[name]
+			if !ok {
+				assetPropertyFieldTypes[name] = valueField.Type()
+				continue
+			}
+
+			if fieldType != valueField.Type() {
 				assetPropertyFieldTypes[name] = data.FieldTypeNullableString
 			}
 		}

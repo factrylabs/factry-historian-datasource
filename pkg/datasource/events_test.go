@@ -306,3 +306,25 @@ func TestAppendAssetPropertyValue(t *testing.T) {
 		})
 	}
 }
+
+// TestGetAssetPropertyFieldTypes_UsesNamedValueField asserts the declared
+// column type is taken from the named "value" field, not the positional
+// Fields[1]. When frame formatting reorders/inserts fields (so Fields[1] is a
+// string metric-name column while "value" stays float), the positional lookup
+// previously declared the column as string, manufacturing a declared!=actual
+// mismatch against the merge loop (which reads FieldByName("value")).
+func TestGetAssetPropertyFieldTypes_UsesNamedValueField(t *testing.T) {
+	t.Parallel()
+
+	frame := data.NewFrame("",
+		data.NewField("time", nil, []*time.Time{}),
+		data.NewField("metricName", nil, []*string{}), // Fields[1] is a string column
+		data.NewField(valueFieldName, nil, []*float64{}),
+	)
+	frame.Meta = &data.FrameMeta{Custom: map[string]interface{}{"AssetProperty": "Pressure"}}
+
+	got := getAssetPropertyFieldTypes(map[uuid.UUID]data.Frames{uuid.New(): {frame}}, false)
+
+	assert.Equal(t, data.FieldTypeNullableFloat64, got["Pressure"],
+		"declared type must come from the named value field, not positional Fields[1]")
+}
