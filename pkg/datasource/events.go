@@ -432,6 +432,100 @@ func fillFields(prefix string, fieldByColumn map[string]*data.Field, event *sche
 	}
 }
 
+// appendAssetPropertyValue appends an asset-property value (taken from the
+// "value" field of an asset-property frame) to dst, converting between types
+// when the declared destination column type differs from the concrete value
+// type. It never panics on a type mismatch: unconvertible combinations append
+// nil. This guards against asset-property frames whose declared field type and
+// concrete element type disagree, which previously caused a recovered
+// "interface conversion" panic during event queries.
+func appendAssetPropertyValue(dst *data.Field, value interface{}) {
+	if value == nil {
+		dst.Append(nil)
+		return
+	}
+
+	switch dst.Type() {
+	case data.FieldTypeNullableString:
+		dst.Append(nullableStringFromValue(value))
+	case data.FieldTypeNullableFloat64:
+		if v, ok := value.(*float64); ok {
+			dst.Append(v)
+			return
+		}
+		dst.Append((*float64)(nil))
+	case data.FieldTypeNullableBool:
+		if v, ok := value.(*bool); ok {
+			dst.Append(v)
+			return
+		}
+		dst.Append((*bool)(nil))
+	default:
+		// Asset-property columns are only ever created as nullable
+		// string/float64/bool. For any other destination type, only append
+		// when the concrete types already match to avoid a panic.
+		if dst.Type() == data.FieldTypeFor(value) {
+			dst.Append(value)
+			return
+		}
+		dst.Append(nil)
+	}
+}
+
+// formatPointer formats a non-string pointer value to a *string, returning nil
+// for nil pointers.
+func formatPointer[T any](v *T) *string {
+	if v == nil {
+		return nil
+	}
+	s := fmt.Sprintf("%v", *v)
+	return &s
+}
+
+// nullableStringFromValue converts a pointer value of any supported type to a
+// *string, returning nil for nil pointers.
+func nullableStringFromValue(value interface{}) *string {
+	switch v := value.(type) {
+	case *string:
+		return v
+	case *bool:
+		if v == nil {
+			return nil
+		}
+		s := strconv.FormatBool(*v)
+		return &s
+	case *time.Time:
+		if v == nil {
+			return nil
+		}
+		s := v.Format(time.RFC3339)
+		return &s
+	case *float64:
+		return formatPointer(v)
+	case *float32:
+		return formatPointer(v)
+	case *int64:
+		return formatPointer(v)
+	case *int32:
+		return formatPointer(v)
+	case *int16:
+		return formatPointer(v)
+	case *int8:
+		return formatPointer(v)
+	case *uint64:
+		return formatPointer(v)
+	case *uint32:
+		return formatPointer(v)
+	case *uint16:
+		return formatPointer(v)
+	case *uint8:
+		return formatPointer(v)
+	default:
+		s := fmt.Sprintf("%v", v)
+		return &s
+	}
+}
+
 func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, assets []schemas.Asset, eventType schemas.EventType, selectedProperties map[string]struct{}, eventTypes map[uuid.UUID]schemas.EventType, events []schemas.Event, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) *data.Frame {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
@@ -541,25 +635,11 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 				}
 
 				found = true
-				wantedType := field.Type()
-				actualType := valueField.Type()
-				value := valueField.At(0)
-
-				if wantedType == actualType {
-					field.Append(value)
-				} else {
-					stringValue := ""
-
-					switch actualType {
-					case data.FieldTypeNullableFloat64:
-						stringValue = fmt.Sprintf("%v", *value.(*float64))
-					case data.FieldTypeNullableBool:
-						stringValue = strconv.FormatBool(*value.(*bool))
-					case data.FieldTypeNullableString:
-						stringValue = *value.(*string)
-					}
-					field.Append(&stringValue)
+				if valueField.Len() == 0 {
+					field.Append(nil)
+					break
 				}
+				appendAssetPropertyValue(field, valueField.At(0))
 			}
 			if !found {
 				field.Append(nil)
