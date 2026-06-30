@@ -6,11 +6,35 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
+	"github.com/grafana/grafana-plugin-sdk-go/build/buildinfo"
 )
+
+// clientName is the fallback plugin name used in the User-Agent header for dev
+// and test builds. Production builds take the name from the plugin.json "id"
+// the SDK embeds at compile time (see clientIdentifier).
+const clientName = "factry-historian-datasource"
 
 // API is used to communicate with the historian API
 type API struct {
 	client *http.Client
+}
+
+// clientIdentifier returns the "<name>/<version>" string sent in the User-Agent
+// header so Historian can attribute traffic by client type and version. Both
+// come from the build info the SDK embeds at compile time (name from
+// plugin.json "id", version from package.json) and fall back to clientName and
+// "unknown" for dev builds where the build info is absent.
+func clientIdentifier() string {
+	name, version := clientName, "unknown"
+	if info, err := buildinfo.GetBuildInfo(); err == nil {
+		if info.PluginID != "" {
+			name = info.PluginID
+		}
+		if info.Version != "" {
+			version = info.Version
+		}
+	}
+	return name + "/" + version
 }
 
 // baseURLRoundTripper wraps an http.RoundTripper to prepend a base URL to all requests
@@ -48,6 +72,7 @@ func NewAPIWithToken(baseURL string, token string, organization string) (*API, e
 	headers := http.Header{
 		"x-organization-uuid": []string{organization},
 		"Authorization":       []string{"Bearer " + token},
+		"User-Agent":          []string{clientIdentifier()},
 	}
 	parsedBaseURL, err := url.Parse(baseURL)
 	if err != nil {

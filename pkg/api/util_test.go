@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 
@@ -366,6 +367,35 @@ func TestGetAssets(t *testing.T) {
 		assert.Nil(t, assets[0].HasEventConfigurations)
 		assert.Nil(t, assets[0].Ancestors)
 	})
+}
+
+func TestClientIdentificationHeaders(t *testing.T) {
+	t.Parallel()
+
+	var gotHeader http.Header
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotHeader = r.Header.Clone()
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+	require.NoError(t, err)
+
+	_, err = client.GetAssets(context.Background(), "")
+	require.NoError(t, err)
+
+	// Historian attributes incoming traffic by client: every request carries an
+	// identifying User-Agent. Version is empty in tests (no build info), so
+	// assert the name prefix.
+	const prefix = "factry-historian-datasource/"
+	userAgent := gotHeader.Get("User-Agent")
+	assert.True(t, strings.HasPrefix(userAgent, prefix),
+		"User-Agent %q must identify the datasource", userAgent)
+
+	// The existing auth/org headers must keep flowing alongside the new one.
+	assert.Equal(t, "Bearer tok", gotHeader.Get("Authorization"))
+	assert.Equal(t, "org", gotHeader.Get("X-Organization-Uuid"))
 }
 
 // indexedQuery returns values for the indexed parameter form Foo[0]=a&Foo[1]=b in input order.
