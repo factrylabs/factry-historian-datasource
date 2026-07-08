@@ -245,6 +245,10 @@ func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWrite
 	if parsedUUID, err := uuid.Parse(eventTypeProperty); err == nil {
 		eventTypePropertyUUID = parsedUUID
 	} else {
+		if len(request.Properties) == 0 {
+			return nil, errors.New("a property name is required via the Properties parameter")
+		}
+
 		queryString := "Types[0]=" + request.Type + "&"
 		var queryStringBuilder strings.Builder
 		for i := range request.EventTypes {
