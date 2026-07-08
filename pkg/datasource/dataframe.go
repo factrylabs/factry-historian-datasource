@@ -672,24 +672,32 @@ func setFieldConfig(frame *data.Frame, useEngineeringSpecs bool) {
 	}
 }
 
+func isGoodFrame(frame *data.Frame) bool {
+	if frame == nil || frame.Meta == nil {
+		return false
+	}
+
+	custom, ok := frame.Meta.Custom.(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	labels, ok := custom["Labels"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	status, ok := labels["status"]
+	if !ok {
+		return false
+	}
+
+	return status == "Good"
+}
+
 func sortByStatus(frames data.Frames) data.Frames {
-	sort.Slice(frames, func(i, _ int) bool {
-		custom, ok := frames[i].Meta.Custom.(map[string]interface{})
-		if !ok {
-			return false
-		}
-
-		labels, ok := custom["Labels"].(map[string]interface{})
-		if !ok {
-			return false
-		}
-
-		status, ok := labels["status"]
-		if !ok {
-			return false
-		}
-
-		return status == "Good"
+	sort.SliceStable(frames, func(i, j int) bool {
+		return isGoodFrame(frames[i]) && !isGoodFrame(frames[j])
 	})
 	return frames
 }
