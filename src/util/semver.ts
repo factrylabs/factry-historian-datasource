@@ -62,9 +62,12 @@ function comparePreRelease(a: string, b: string): number {
   const aParts = a.split('.')
   const bParts = b.split('.')
 
-  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-    const aPart = aParts[i] || ''
-    const bPart = bParts[i] || ''
+  // Only compare the identifiers the two versions share; padding the shorter
+  // list would invert precedence.
+  const shared = Math.min(aParts.length, bParts.length)
+  for (let i = 0; i < shared; i++) {
+    const aPart = aParts[i]
+    const bPart = bParts[i]
 
     // Compare numeric parts
     const aIsNum = /^\d+$/.test(aPart)
@@ -87,7 +90,9 @@ function comparePreRelease(a: string, b: string): number {
     }
   }
 
-  return 0
+  // All shared identifiers are equal: the larger set has higher precedence
+  // (SemVer item 11.4.4), so the shorter pre-release is lower.
+  return aParts.length - bParts.length
 }
 
 // Helper function to compare two semantic version strings
