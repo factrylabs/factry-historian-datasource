@@ -285,6 +285,9 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
           })
         )
       }
+      default: {
+        return of({ data: [] })
+      }
     }
   }
 }

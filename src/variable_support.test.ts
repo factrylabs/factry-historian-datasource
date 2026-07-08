@@ -103,3 +103,14 @@ describe('PropertyValuesQuery interpolates EventFilter.Statuses', () => {
     expect(filter?.EventFilter?.Statuses).toEqual(['Good'])
   })
 })
+
+// VariableSupport.query must have a default branch: an unknown saved variable
+// type should return an observable instead of undefined, so Grafana shows a
+// clean error rather than crashing on `.subscribe` of undefined.
+describe('unknown variable query type', () => {
+  it('returns an observable instead of undefined', () => {
+    const vs = new VariableSupport(makeDataAPIStub({}))
+    const request = makeVariableRequest({ refId: 'A', type: 'bogus', valid: true })
+    expect(vs.query(request)).toBeDefined()
+  })
+})
