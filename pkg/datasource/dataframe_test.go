@@ -340,3 +340,39 @@ func TestConvertLastKnownFramesForAggregation_OnlyTouchesValueField(t *testing.T
 	require.NotNil(t, value)
 	assert.Equal(t, data.FieldTypeNullableFloat64, value.Type())
 }
+
+// With FillInitialEmptyValues enabled and IncludeLastKnownPoint disabled,
+// deleteFirstRow removes row 0 of every frame. A frame that got no last-known
+// point merged in (its measurement started recording inside the query window)
+// must not lose its first real sample.
+func TestDeleteFirstRowKeepsFramesWithoutLastKnownPoint(t *testing.T) {
+	t.Parallel()
+
+	lastKnown := measurementFrame("m-a", 1)
+	resultA := measurementFrame("m-a", 2)
+	resultB := measurementFrame("m-b", 2) // no last-known counterpart
+
+	lastKnownFrameIDs := map[string]struct{}{getFrameID(lastKnown): {}}
+	merged := mergeFrames(data.Frames{lastKnown}, data.Frames{resultA, resultB})
+	out := deleteFirstRow(merged, lastKnownFrameIDs)
+
+	var frameB *data.Frame
+	for _, frame := range out {
+		if getMeasurementUUIDFromFrame(frame) == "m-b" {
+			frameB = frame
+		}
+	}
+	require.NotNil(t, frameB)
+	assert.Equal(t, 2, frameB.Rows(),
+		"a frame that had no last-known point prepended must not lose its first real sample")
+}
+
+// deleteFirstRow must not panic on a zero-row frame.
+func TestDeleteFirstRowEmptyFrameDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	empty := measurementFrame("m-empty", 0)
+	assert.NotPanics(t, func() {
+		deleteFirstRow(data.Frames{empty}, map[string]struct{}{getFrameID(empty): {}})
+	})
+}
