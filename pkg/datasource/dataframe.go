@@ -486,9 +486,17 @@ func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Fra
 	return frames
 }
 
-func deleteFirstRow(frames data.Frames) data.Frames {
+// deleteFirstRow removes the first row of every frame whose ID is in
+// lastKnownFrameIDs, i.e. frames that had a last-known row prepended by
+// mergeFrames. Other frames keep their first real sample.
+func deleteFirstRow(frames data.Frames, lastKnownFrameIDs map[string]struct{}) data.Frames {
 	for _, frame := range frames {
-		frame.DeleteRow(0)
+		if _, ok := lastKnownFrameIDs[getFrameID(frame)]; !ok {
+			continue
+		}
+		if frame.Rows() > 0 {
+			frame.DeleteRow(0)
+		}
 	}
 	return frames
 }
