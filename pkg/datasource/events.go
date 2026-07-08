@@ -640,6 +640,7 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 					break
 				}
 				appendAssetPropertyValue(field, valueField.At(0))
+				break
 			}
 			if !found {
 				field.Append(nil)

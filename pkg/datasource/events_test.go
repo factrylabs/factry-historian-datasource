@@ -414,3 +414,53 @@ func TestTrendFrameParentStopTimeLabel(t *testing.T) {
 	assert.Equal(t, stopTime.Format(time.RFC3339), propertyField.Labels[parentEventPrefix+StopTimeColumnName],
 		"Parent_StopTime label must carry the parent's stop time")
 }
+
+// The per-event asset-property fill loop must break after a successful append.
+// When one asset property yields multiple frames (e.g. GroupBy status produces
+// a Good and a Bad frame), the column must not get two values for one event row
+// and misalign the table.
+func TestEventTableColumnsStayAlignedWithMultipleFramesPerProperty(t *testing.T) {
+	t.Parallel()
+
+	eventTypeUUID := uuid.New()
+	eventUUID := uuid.New()
+	events := []schemas.Event{{
+		UUID:          eventUUID,
+		AssetUUID:     uuid.New(),
+		EventTypeUUID: eventTypeUUID,
+		StartTime:     time.Unix(0, 0).UTC(),
+	}}
+	eventTypes := []schemas.EventType{{BaseModel: schemas.BaseModel{UUID: eventTypeUUID, Name: "batch"}}}
+
+	makeAssetPropertyFrame := func(value float64, status string) *data.Frame {
+		frame := data.NewFrame("",
+			data.NewField("time", nil, []time.Time{time.Unix(10, 0).UTC()}),
+			data.NewField(valueFieldName, nil, []*float64{&value}),
+		)
+		frame.Meta = &data.FrameMeta{
+			Custom: map[string]interface{}{
+				"AssetProperty": "temperature",
+				"Labels":        map[string]interface{}{"status": status},
+			},
+		}
+		return frame
+	}
+
+	frames, err := EventQueryResultToDataFrame(false, false, nil, events, eventTypes, nil,
+		map[string]struct{}{},
+		map[string]data.FieldType{"temperature": data.FieldTypeNullableFloat64},
+		map[uuid.UUID]data.Frames{eventUUID: {
+			makeAssetPropertyFrame(1.0, "Good"),
+			makeAssetPropertyFrame(2.0, "Bad"),
+		}})
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+
+	rowCounts := map[string]int{}
+	for _, field := range frames[0].Fields {
+		rowCounts[field.Name] = field.Len()
+	}
+	for name, count := range rowCounts {
+		assert.Equal(t, 1, count, "field %q must have exactly one row per event", name)
+	}
+}
