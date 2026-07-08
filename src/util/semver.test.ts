@@ -89,3 +89,10 @@ describe('isFeatureEnabled fails closed on unknown versions', () => {
     expect(isFeatureEnabled('', '99.0.0')).toBe(false)
   })
 })
+
+describe('semverCompare pre-release precedence', () => {
+  it('orders 1.0.0-alpha before 1.0.0-alpha.1', () => {
+    expect(semverCompare('1.0.0-alpha', '1.0.0-alpha.1')).toBeLessThan(0)
+    expect(semverCompare('1.0.0-alpha.1', '1.0.0-alpha')).toBeGreaterThan(0)
+  })
+})
