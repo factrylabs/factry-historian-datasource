@@ -35,7 +35,7 @@ export function migrateEventTypePropertiesValuesFilter(
     ...rest,
     EventFilter: {
       ...rest.EventFilter,
-      Properties: rest.EventFilter?.Properties ?? [],
+      Properties: [...(rest.EventFilter?.Properties ?? [])],
     },
   }
 
