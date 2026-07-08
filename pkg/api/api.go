@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
 	"github.com/grafana/grafana-plugin-sdk-go/build/buildinfo"
@@ -67,19 +68,38 @@ func (b *baseURLRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 	return b.next.RoundTrip(req)
 }
 
-// NewAPIWithToken creates a new instance of API using a token
-func NewAPIWithToken(baseURL string, token string, organization string) (*API, error) {
+// Options describes how to configure the historian API client
+type Options struct {
+	URL                string
+	Token              string
+	Organization       string
+	Timeout            time.Duration
+	QueryTimeout       time.Duration
+	InsecureSkipVerify bool
+}
+
+// NewAPIWithOptions creates a new instance of API from the given options
+func NewAPIWithOptions(options Options) (*API, error) {
 	headers := http.Header{
-		"x-organization-uuid": []string{organization},
-		"Authorization":       []string{"Bearer " + token},
+		"x-organization-uuid": []string{options.Organization},
+		"Authorization":       []string{"Bearer " + options.Token},
 		"User-Agent":          []string{clientIdentifier()},
 	}
-	parsedBaseURL, err := url.Parse(baseURL)
+	parsedBaseURL, err := url.Parse(options.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := httpclient.New(httpclient.Options{
+	timeouts := httpclient.DefaultTimeoutOptions
+	if options.QueryTimeout > 0 {
+		timeouts.Timeout = options.QueryTimeout
+	}
+	if options.Timeout > 0 {
+		timeouts.DialTimeout = options.Timeout
+	}
+
+	clientOptions := httpclient.Options{
+		Timeouts: &timeouts,
 		Middlewares: []httpclient.Middleware{
 			httpclient.MiddlewareFunc(func(_ httpclient.Options, next http.RoundTripper) http.RoundTripper {
 				return &baseURLRoundTripper{
@@ -89,11 +109,25 @@ func NewAPIWithToken(baseURL string, token string, organization string) (*API, e
 				}
 			}),
 		},
-	})
+	}
+	if options.InsecureSkipVerify {
+		clientOptions.TLS = &httpclient.TLSOptions{InsecureSkipVerify: true}
+	}
+
+	client, err := httpclient.New(clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	api := &API{client}
 	return api, nil
+}
+
+// NewAPIWithToken creates a new instance of API using a token
+func NewAPIWithToken(baseURL string, token string, organization string) (*API, error) {
+	return NewAPIWithOptions(Options{
+		URL:          baseURL,
+		Token:        token,
+		Organization: organization,
+	})
 }
