@@ -242,7 +242,7 @@ func TestMergeFrames_BoolLastKnownIntoFloatResult(t *testing.T) {
 	lastKnown := makeFrame(t, data.NewField("value", nil, []bool{true}), "running")
 	result := makeFrame(t, data.NewField("value", nil, []float64{42}), "running")
 
-	merged := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
+	merged, _ := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
 
 	require.Len(t, merged, 1)
 	value, _ := merged[0].FieldByName("value")
@@ -258,7 +258,7 @@ func TestMergeFrames_SameTypesAppendsRows(t *testing.T) {
 	lastKnown := makeFrame(t, data.NewField("value", nil, []float64{1}), "v")
 	result := makeFrame(t, data.NewField("value", nil, []float64{2}), "v")
 
-	merged := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
+	merged, _ := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
 
 	require.Len(t, merged, 1)
 	value, _ := merged[0].FieldByName("value")
@@ -272,8 +272,10 @@ func TestMergeFrames_EmptyInputs(t *testing.T) {
 	t.Parallel()
 	frame := makeFrame(t, data.NewField("value", nil, []float64{1}), "v")
 
-	assert.Equal(t, data.Frames{frame}, mergeFrames(nil, data.Frames{frame}))
-	assert.Equal(t, data.Frames{frame}, mergeFrames(data.Frames{frame}, nil))
+	mergedFromResult, _ := mergeFrames(nil, data.Frames{frame})
+	assert.Equal(t, data.Frames{frame}, mergedFromResult)
+	mergedFromLastKnown, _ := mergeFrames(data.Frames{frame}, nil)
+	assert.Equal(t, data.Frames{frame}, mergedFromLastKnown)
 }
 
 func TestConvertFieldForAggregation_CountReplacesValuesWithOne(t *testing.T) {
@@ -353,7 +355,7 @@ func TestDeleteFirstRowKeepsFramesWithoutLastKnownPoint(t *testing.T) {
 	resultB := measurementFrame("m-b", 2) // no last-known counterpart
 
 	lastKnownFrameIDs := map[string]struct{}{getFrameID(lastKnown): {}}
-	merged := mergeFrames(data.Frames{lastKnown}, data.Frames{resultA, resultB})
+	merged, _ := mergeFrames(data.Frames{lastKnown}, data.Frames{resultA, resultB})
 	out := deleteFirstRow(merged, lastKnownFrameIDs)
 
 	var frameB *data.Frame
@@ -416,4 +418,52 @@ func TestSortByStatusNilMetaDoesNotPanic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		sortByStatus(data.Frames{frameA, frameB})
 	})
+}
+
+// mergeFrames must not drop the entire result frame when the last-known frame
+// with the same ID has a different field count; the panel would otherwise
+// silently show only the stale last-known point.
+func TestMergeFramesFieldCountMismatchKeepsResultRows(t *testing.T) {
+	t.Parallel()
+
+	lastKnown := measurementFrame("m-a", 1)
+	result := measurementFrame("m-a", 2)
+	result.Fields = append(result.Fields, data.NewField("extra", nil, []*string{nil, nil}))
+
+	merged, _ := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
+
+	totalRows := 0
+	for _, frame := range merged {
+		totalRows += frame.Rows()
+	}
+	assert.GreaterOrEqual(t, totalRows, 2,
+		"the main query result must not be discarded on a field-count mismatch with the last-known frame")
+}
+
+// mergeFrames reports the set of frames that actually received a last-known row
+// at row 0. A frame kept because of a field-count mismatch starts with a real
+// sample, so it must be excluded from that set and not trimmed by
+// deleteFirstRow.
+func TestMergeFramesFieldCountMismatchNotMarkedForTrimming(t *testing.T) {
+	t.Parallel()
+
+	// Same measurement UUID => same frame ID, but different field counts.
+	lastKnown := measurementFrame("m-a", 1)
+	lastKnown.Fields = append(lastKnown.Fields, data.NewField("extra", nil, []*float64{new(1.0)}))
+	result := measurementFrame("m-a", 2) // time + value only
+
+	merged, prepended := mergeFrames(data.Frames{lastKnown}, data.Frames{result})
+
+	_, marked := prepended[getFrameID(result)]
+	require.False(t, marked, "a frame kept because of a field-count mismatch carries no prepended last-known row")
+
+	out := deleteFirstRow(merged, prepended)
+	var frame *data.Frame
+	for _, f := range out {
+		if getMeasurementUUIDFromFrame(f) == "m-a" {
+			frame = f
+		}
+	}
+	require.NotNil(t, frame)
+	assert.Equal(t, 2, frame.Rows(), "a field-count-mismatch frame must keep its first real sample")
 }

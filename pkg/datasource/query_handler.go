@@ -363,16 +363,11 @@ func (ds *HistorianDataSource) handleQuery(ctx context.Context, query schemas.Qu
 			lastKnowPointResults = convertLastKnownFramesForAggregation(lastKnowPointResults, options.Aggregation.Name)
 		}
 
-		// Track which frames get a last-known row prepended, before mergeFrames
-		// mutates the last-known frames. Empty last-known frames prepend nothing.
-		framesWithLastKnownPoint := map[string]struct{}{}
-		for _, frame := range lastKnowPointResults {
-			if frame.Rows() > 0 {
-				framesWithLastKnownPoint[getFrameID(frame)] = struct{}{}
-			}
-		}
-
-		result = mergeFrames(lastKnowPointResults, result)
+		// mergeFrames reports which frames actually received a last-known row at
+		// row 0, so deleteFirstRow trims only those and never a frame's first
+		// real sample.
+		var framesWithLastKnownPoint map[string]struct{}
+		result, framesWithLastKnownPoint = mergeFrames(lastKnowPointResults, result)
 		if options.FillInitialEmptyValues {
 			result = fillInitialEmptyIntervals(result, query)
 		}

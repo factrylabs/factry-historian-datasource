@@ -47,14 +47,30 @@ func getLabelsFromFrame(frame *data.Frame) map[string]interface{} {
 	return labels
 }
 
-// mergeFrames merges 2 set of frames based on the metadata and name of each frame
-func mergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
+// mergeFrames merges 2 set of frames based on the metadata and name of each
+// frame. It also returns the set of frame IDs that ended up with a last-known
+// row at row 0, so the caller can trim exactly those frames when the last-known
+// point must not be shown. A frame is reported only when a last-known row was
+// actually prepended: frames kept because of a field-count mismatch, or result
+// frames with no last-known counterpart, start with a real sample at row 0 and
+// are excluded.
+func mergeFrames(lastKnown data.Frames, result data.Frames) (merged data.Frames, prepended map[string]struct{}) {
+	prepended = map[string]struct{}{}
 	if len(lastKnown) == 0 {
-		return result
+		return result, prepended
+	}
+
+	// Every non-empty last-known frame contributes a last-known row at row 0.
+	// This holds for standalone last-known frames and for successful merges; the
+	// merge loop below removes any ID whose last-known frame is discarded.
+	for _, aFrame := range lastKnown {
+		if aFrame.Rows() > 0 {
+			prepended[getFrameID(aFrame)] = struct{}{}
+		}
 	}
 
 	if len(result) == 0 {
-		return lastKnown
+		return lastKnown, prepended
 	}
 
 	frameMap := make(map[string]*data.Frame)
@@ -69,6 +85,12 @@ func mergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
 			frameMap[bFrameID] = bFrame
 		} else {
 			if len(aFrame.Fields) != len(bFrame.Fields) {
+				// Shape mismatch: keep the fresh result frame instead of the
+				// stale last-known frame so real query data is never dropped.
+				// Row 0 is now a real sample, not a last-known point, so this
+				// frame must not be trimmed.
+				frameMap[bFrameID] = bFrame
+				delete(prepended, bFrameID)
 				continue
 			}
 
@@ -88,7 +110,7 @@ func mergeFrames(lastKnown data.Frames, result data.Frames) data.Frames {
 		}
 	}
 
-	return slices.AppendSeq(make([]*data.Frame, 0, len(frameMap)), maps.Values(frameMap))
+	return slices.AppendSeq(make([]*data.Frame, 0, len(frameMap)), maps.Values(frameMap)), prepended
 }
 
 // convertLastKnownFramesForAggregation rewrites the value field of last-known
