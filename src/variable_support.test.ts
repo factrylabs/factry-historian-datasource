@@ -48,3 +48,21 @@ describe('variable query without a filter returns empty data', () => {
     expect(() => vs.query(request)).not.toThrow()
   })
 })
+
+// A pre-v2.2.0 "Event property values" variable (filter with
+// EventTypePropertyUUID, no PropertyFilter) is migrated to an EventFilter
+// without PropertyFilter; reading `.PropertyFilter.length` behind an optional
+// chain that stops at EventFilter must not throw a TypeError.
+describe('PropertyValuesQuery works for migrated pre-v2.2.0 filters', () => {
+  it('does not throw when the migrated filter has no PropertyFilter', () => {
+    const vs = new VariableSupport(makeDataAPIStub({}))
+    const request = makeVariableRequest({
+      refId: 'A',
+      type: VariableQueryType.PropertyValuesQuery,
+      valid: true,
+      filter: { EventTypePropertyUUID: 'prop-uuid' },
+    })
+
+    expect(() => vs.query(request)).not.toThrow()
+  })
+})
