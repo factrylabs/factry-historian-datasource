@@ -589,7 +589,7 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 	parentFieldsAdded := make(map[string]bool) // Track added fields for parent event types
 
 	for i := range events {
-		if events[i].ParentUUID != nil {
+		if events[i].ParentUUID != nil && events[i].Parent != nil {
 			if includeParentInfo {
 				parentEvent := *events[i].Parent
 				_, parentEventTypeExists := eventTypes[parentEvent.EventTypeUUID]

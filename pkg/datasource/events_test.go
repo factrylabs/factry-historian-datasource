@@ -328,3 +328,27 @@ func TestGetAssetPropertyFieldTypes_UsesNamedValueField(t *testing.T) {
 	assert.Equal(t, data.FieldTypeNullableFloat64, got["Pressure"],
 		"declared type must come from the named value field, not positional Fields[1]")
 }
+
+// dataFrameForEventType dereferences events[i].Parent guarded only by
+// ParentUUID != nil. An event whose parent is not embedded in the response
+// must not panic the query.
+func TestEventWithParentUUIDButNoParentDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	eventTypeUUID := uuid.New()
+	parentUUID := uuid.New()
+	events := []schemas.Event{{
+		UUID:          uuid.New(),
+		AssetUUID:     uuid.New(),
+		EventTypeUUID: eventTypeUUID,
+		StartTime:     time.Unix(0, 0).UTC(),
+		ParentUUID:    &parentUUID,
+		Parent:        nil, // parent not preloaded
+	}}
+	eventTypes := []schemas.EventType{{BaseModel: schemas.BaseModel{UUID: eventTypeUUID, Name: "batch"}}}
+
+	assert.NotPanics(t, func() {
+		_, _ = EventQueryResultToDataFrame(true, false, nil, events, eventTypes, nil,
+			map[string]struct{}{}, map[string]data.FieldType{}, map[uuid.UUID]data.Frames{})
+	})
+}
