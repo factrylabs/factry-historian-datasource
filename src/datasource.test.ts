@@ -311,3 +311,11 @@ describe('DataSource.applyTemplateVariables tolerates a missing AssetProperties'
     expect(() => ds.applyTemplateVariables(target, {})).not.toThrow()
   })
 })
+
+describe('DataSource.filterQuery rejects targets without a queryType', () => {
+  it('filters out a target that has no queryType', () => {
+    const ds = makeDataSource(makeTemplateSrv({}))
+    const target = { refId: 'A', query: makeEventQuery() } as unknown as Query
+    expect(ds.filterQuery(target)).toBe(false)
+  })
+})
