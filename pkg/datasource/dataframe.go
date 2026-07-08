@@ -446,7 +446,7 @@ func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, 
 func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Frames {
 	for _, frame := range frames {
 		valueField, _ := frame.FieldByName(valueFieldName)
-		if valueField == nil {
+		if valueField == nil || valueField.Len() == 0 {
 			continue
 		}
 
@@ -470,6 +470,9 @@ func fillInitialEmptyIntervals(frames data.Frames, query schemas.Query) data.Fra
 			}
 			if query.End == nil {
 				return frames
+			}
+			if query.Aggregation == nil {
+				continue
 			}
 			duration, err := time.ParseDuration(query.Aggregation.Period)
 			if err != nil {

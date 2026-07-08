@@ -376,3 +376,31 @@ func TestDeleteFirstRowEmptyFrameDoesNotPanic(t *testing.T) {
 		deleteFirstRow(data.Frames{empty}, map[string]struct{}{getFrameID(empty): {}})
 	})
 }
+
+// fillInitialEmptyIntervals must not panic on a zero-row frame
+// (valueField.ConcreteAt(0) without a length check).
+func TestFillInitialEmptyIntervalsEmptyFrameDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	empty := measurementFrame("m-empty", 0)
+	assert.NotPanics(t, func() {
+		fillInitialEmptyIntervals(data.Frames{empty}, schemas.Query{})
+	})
+}
+
+// fillInitialEmptyIntervals must not dereference query.Aggregation when it is
+// nil and a frame has exactly one row. FillInitialEmptyValues without an
+// aggregation is expressible in saved query JSON and via the HTTP API.
+func TestFillInitialEmptyIntervalsNilAggregationDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	oneRow := measurementFrame("m-one", 1)
+	end := time.Unix(3600, 0).UTC()
+	assert.NotPanics(t, func() {
+		fillInitialEmptyIntervals(data.Frames{oneRow}, schemas.Query{
+			Start: time.Unix(0, 0).UTC(),
+			End:   &end,
+			// Aggregation deliberately nil
+		})
+	})
+}
