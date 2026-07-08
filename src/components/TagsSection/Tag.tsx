@@ -7,11 +7,11 @@ import { KnownCondition, KnownOperator, operatorsWithoutValue } from '../../util
 import { getCondition, getOperator, isRegex, toSelectableValue } from './util'
 
 function adjustOperatorIfNeeded(currentOperator: string, newTagValue: string): string {
-  const isCurrentOperatorRegex = currentOperator === '=~' || currentOperator === '!~'
+  const isCurrentOperatorRegex = currentOperator === '~' || currentOperator === '!~'
   const isNewTagValueRegex = isRegex(newTagValue)
 
   if (isNewTagValueRegex) {
-    return isCurrentOperatorRegex ? currentOperator : '=~'
+    return isCurrentOperatorRegex ? currentOperator : '~'
   } else {
     return isCurrentOperatorRegex ? '=' : currentOperator
   }

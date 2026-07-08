@@ -6,7 +6,7 @@ export function toSelectableValue<T extends string>(t: T): SelectableValue<T> {
 }
 
 export function getOperator(tag: QueryTag): string {
-  return tag.operator ?? (isRegex(tag.value) ? '=~' : '=')
+  return tag.operator ?? (isRegex(tag.value) ? '~' : '=')
 }
 
 export function getCondition(tag: QueryTag, isFirst: boolean): string | undefined {
