@@ -1,7 +1,7 @@
 import { dateTime } from '@grafana/data'
 
 import { VariableSupport, DataAPI } from './variable_support'
-import { VariableQueryType } from './types'
+import { EventQuery, VariableQueryType } from './types'
 
 // Minimal DataAPI stub that captures the filter passed to the distinct
 // property-value lookup and resolves $status to "Good".
@@ -30,6 +30,19 @@ function makeVariableRequest(target: Record<string, unknown>) {
     scopedVars: {},
     range: { from: dateTime('2026-01-01T00:00:00Z'), to: dateTime('2026-01-02T00:00:00Z') },
   } as never
+}
+
+function makeEventQuery(overrides?: Partial<EventQuery>): EventQuery {
+  return {
+    Type: 'simple',
+    Assets: [],
+    EventTypes: [],
+    Statuses: [],
+    Properties: [],
+    PropertyFilter: [],
+    QueryAssetProperties: false,
+    ...overrides,
+  } as EventQuery
 }
 
 // Every variable query branch does JSON.parse(JSON.stringify(target.filter));
@@ -64,5 +77,29 @@ describe('PropertyValuesQuery works for migrated pre-v2.2.0 filters', () => {
     })
 
     expect(() => vs.query(request)).not.toThrow()
+  })
+})
+
+// The PropertyValuesQuery variable path interpolates Assets, EventTypes,
+// Properties and PropertyFilter but must also interpolate EventFilter.Statuses,
+// otherwise a $status variable is sent literally and the variable returns no
+// values.
+describe('PropertyValuesQuery interpolates EventFilter.Statuses', () => {
+  it('resolves template variables in Statuses', () => {
+    const captured: { filter?: unknown } = {}
+    const vs = new VariableSupport(makeDataAPIStub(captured))
+    const request = makeVariableRequest({
+      refId: 'A',
+      type: VariableQueryType.PropertyValuesQuery,
+      valid: true,
+      filter: {
+        EventFilter: makeEventQuery({ Statuses: ['$status'], Properties: ['prop-uuid'] }),
+      },
+    })
+
+    vs.query(request)
+
+    const filter = captured.filter as { EventFilter?: EventQuery } | undefined
+    expect(filter?.EventFilter?.Statuses).toEqual(['Good'])
   })
 })
