@@ -451,8 +451,11 @@ func fillQueryVariables(query string, databaseType string, timeRange backend.Tim
 
 	if databaseType == "Influx" {
 		timeFilter = fmt.Sprintf("time >= %vns AND time < %vns", timeRange.From.UnixNano(), timeRange.To.UnixNano())
-		intervalNano := interval.Nanoseconds()
-		intervalStr = fmt.Sprintf("TIME(%vns, %vns)", intervalNano, timeRange.From.UnixNano()%intervalNano)
+		// Callers that omit intervalMs (direct API queries, some alerting payloads)
+		// have a zero interval; guard the modulo to avoid a divide-by-zero panic.
+		if intervalNano := interval.Nanoseconds(); intervalNano > 0 {
+			intervalStr = fmt.Sprintf("TIME(%vns, %vns)", intervalNano, timeRange.From.UnixNano()%intervalNano)
+		}
 	}
 
 	query = strings.ReplaceAll(query, "$timeFilter", timeFilter)
