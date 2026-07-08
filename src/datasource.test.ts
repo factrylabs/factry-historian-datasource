@@ -261,3 +261,36 @@ describe('DataSource.applyTemplateVariables', () => {
     })
   })
 })
+
+describe('DataSource.applyTemplateVariables interpolates event query Options', () => {
+  it('replaces variables in Tags, ValueFilters and Aggregation of an event query', () => {
+    const ds = makeDataSource(makeTemplateSrv({ status: 'Good', threshold: '42', period: '1m' }))
+    const target: Query = {
+      refId: 'A',
+      queryType: 'EventQuery',
+      query: makeEventQuery({
+        QueryAssetProperties: true,
+        Options: {
+          Tags: { status: '$status' },
+          ValueFilters: [{ Value: '$threshold', Operator: '>', Condition: 'AND' }],
+          Aggregation: { Name: 'mean', Period: '$period' },
+          GroupBy: [],
+          IncludeLastKnownPoint: false,
+          FillInitialEmptyValues: false,
+          UseEngineeringSpecs: false,
+          DisplayDatabaseName: false,
+          DisplayDescription: false,
+          MetadataAsLabels: false,
+          TruncateInterval: false,
+        },
+      } as Partial<EventQuery>),
+    } as Query
+
+    const result = ds.applyTemplateVariables(target, {})
+    const eventQuery = result.query as EventQuery
+
+    expect(eventQuery.Options?.Tags).toEqual({ status: 'Good' })
+    expect(eventQuery.Options?.ValueFilters?.[0].Value).toBe('42')
+    expect(eventQuery.Options?.Aggregation?.Period).toBe('1m')
+  })
+})

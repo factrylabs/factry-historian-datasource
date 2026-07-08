@@ -151,6 +151,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     eventQuery.PropertyFilter = this.replaceEventPropertyFilter(eventQuery.PropertyFilter, scopedVars)
     eventQuery.Limit = this.templatedNumber(eventQuery.Limit, 500, scopedVars)
 
+    if (eventQuery.Options) {
+      eventQuery.Options = this.templateReplaceQueryOptions(eventQuery.Options, scopedVars)
+    }
+
     if (eventQuery.QueryAssetProperties) {
       eventQuery.OverrideAssets = eventQuery.OverrideAssets?.filter((e) => e !== '').flatMap((e) =>
         this.multiSelectReplace(e, scopedVars)
