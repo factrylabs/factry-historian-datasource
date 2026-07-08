@@ -162,7 +162,7 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 				labels[parentPrefix+StartTimeColumnName] = parentEvent.StartTime.Format(time.RFC3339)
 				labels[parentPrefix+StopTimeColumnName] = ""
 				if parentEvent.StopTime != nil {
-					eventLabels[parentPrefix+StopTimeColumnName] = parentEvent.StopTime.Format(time.RFC3339)
+					labels[parentPrefix+StopTimeColumnName] = parentEvent.StopTime.Format(time.RFC3339)
 				}
 				labels[parentPrefix+AssetUUIDColumnName] = parentEvent.AssetUUID.String()
 				labels[parentPrefix+AssetColumnName] = uuidToAssetMap[parentEvent.AssetUUID].Name

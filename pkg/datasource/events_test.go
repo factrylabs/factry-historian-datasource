@@ -352,3 +352,65 @@ func TestEventWithParentUUIDButNoParentDoesNotPanic(t *testing.T) {
 			map[string]struct{}{}, map[string]data.FieldType{}, map[uuid.UUID]data.Frames{})
 	})
 }
+
+// In EventQueryResultToTrendDataFrame the parent stop time must be written to
+// labels, not eventLabels, so the Parent_StopTime label on periodic property
+// columns carries the parent's stop time instead of being empty.
+func TestTrendFrameParentStopTimeLabel(t *testing.T) {
+	t.Parallel()
+
+	eventTypeUUID := uuid.New()
+	parentEventTypeUUID := uuid.New()
+	stopTime := time.Unix(500, 0).UTC()
+
+	parent := schemas.Event{
+		UUID:          uuid.New(),
+		AssetUUID:     uuid.New(),
+		EventTypeUUID: parentEventTypeUUID,
+		StartTime:     time.Unix(0, 0).UTC(),
+		StopTime:      &stopTime,
+	}
+	event := schemas.Event{
+		UUID:          uuid.New(),
+		AssetUUID:     uuid.New(),
+		EventTypeUUID: eventTypeUUID,
+		StartTime:     time.Unix(100, 0).UTC(),
+		Parent:        &parent,
+		Properties: &schemas.EventProperties{
+			Properties: schemas.Attributes{
+				"profile": map[string]interface{}{
+					"t": []interface{}{0.0, 1.0},
+					"v": []interface{}{1.0, 2.0},
+				},
+			},
+		},
+	}
+
+	eventTypes := map[uuid.UUID]schemas.EventType{
+		eventTypeUUID:       {BaseModel: schemas.BaseModel{UUID: eventTypeUUID, Name: "batch"}},
+		parentEventTypeUUID: {BaseModel: schemas.BaseModel{UUID: parentEventTypeUUID, Name: "order"}},
+	}
+	properties := map[uuid.UUID][]schemas.EventTypeProperty{
+		eventTypeUUID: {{
+			BaseModel:     schemas.BaseModel{UUID: uuid.New(), Name: "profile"},
+			Datatype:      schemas.EventTypePropertyDatatypeNumber,
+			Type:          schemas.EventTypePropertyTypePeriodic,
+			EventTypeUUID: eventTypeUUID,
+		}},
+	}
+
+	frames, err := EventQueryResultToTrendDataFrame(true, nil, []schemas.Event{event}, eventTypes,
+		properties, map[string]struct{}{}, map[uuid.UUID]data.Frames{}, false)
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+
+	var propertyField *data.Field
+	for _, field := range frames[0].Fields {
+		if field.Name != "Offset" {
+			propertyField = field
+		}
+	}
+	require.NotNil(t, propertyField, "expected a periodic property column")
+	assert.Equal(t, stopTime.Format(time.RFC3339), propertyField.Labels[parentEventPrefix+StopTimeColumnName],
+		"Parent_StopTime label must carry the parent's stop time")
+}
