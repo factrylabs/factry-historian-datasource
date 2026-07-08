@@ -60,10 +60,26 @@ func (b *baseURLRoundTripper) RoundTrip(req *http.Request) (*http.Response, erro
 
 	// Only modify relative URLs
 	if !req.URL.IsAbs() {
-		// Combine base URL with request path
+		// Combine base URL with request path. Join the escaped paths so
+		// percent-escaped segments (tag keys, UUIDs) survive the rewrite.
 		req.URL.Scheme = b.baseURL.Scheme
 		req.URL.Host = b.baseURL.Host
-		req.URL.Path = strings.TrimSuffix(b.baseURL.Path, "/") + "/" + strings.TrimPrefix(req.URL.Path, "/")
+		joinedEscaped := strings.TrimSuffix(b.baseURL.EscapedPath(), "/") + "/" + strings.TrimPrefix(req.URL.EscapedPath(), "/")
+		joined, err := url.PathUnescape(joinedEscaped)
+		if err != nil {
+			// EscapedPath always yields a valid encoding, so this should
+			// never happen; fall back to joining the decoded paths.
+			joined = strings.TrimSuffix(b.baseURL.Path, "/") + "/" + strings.TrimPrefix(req.URL.Path, "/")
+			joinedEscaped = joined
+		}
+		req.URL.Path = joined
+		// Per net/url convention, RawPath is only set when it differs from
+		// the default encoding of Path.
+		if joinedEscaped != joined {
+			req.URL.RawPath = joinedEscaped
+		} else {
+			req.URL.RawPath = ""
+		}
 	}
 	return b.next.RoundTrip(req)
 }
