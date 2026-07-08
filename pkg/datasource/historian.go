@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"time"
 
@@ -67,7 +68,21 @@ func NewDataSource(_ context.Context, s backend.DataSourceInstanceSettings) (ins
 	historianDataSource := &HistorianDataSource{
 		Decoder: form.NewDecoder(),
 	}
-	historianDataSource.API, err = api.NewAPIWithToken(settings.URL, settings.Token, settings.Organization)
+	apiOptions := api.Options{
+		URL:                settings.URL,
+		Token:              settings.Token,
+		Organization:       settings.Organization,
+		InsecureSkipVerify: settings.InsecureSkipVerify,
+	}
+	// Timeout settings are stored as strings of seconds; keep the client
+	// defaults when they fail to parse.
+	if seconds, err := strconv.Atoi(settings.Timeout); err == nil && seconds > 0 {
+		apiOptions.Timeout = time.Duration(seconds) * time.Second
+	}
+	if seconds, err := strconv.Atoi(settings.QueryTimeout); err == nil && seconds > 0 {
+		apiOptions.QueryTimeout = time.Duration(seconds) * time.Second
+	}
+	historianDataSource.API, err = api.NewAPIWithOptions(apiOptions)
 	if err != nil {
 		return nil, err
 	}
