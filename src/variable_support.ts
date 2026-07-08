@@ -43,6 +43,12 @@ export interface DataAPI {
   replace(value: string | undefined, scopedVars: ScopedVars): string
 }
 
+// Deep-clones a filter, returning undefined when there is nothing to clone so
+// the `if (!filter)` guards below stay reachable instead of parsing undefined.
+function cloneFilter<T>(filter: T | undefined): T | undefined {
+  return filter === undefined ? undefined : (JSON.parse(JSON.stringify(filter)) as T)
+}
+
 export class VariableSupport extends CustomVariableSupport<DataSource> {
   constructor(private readonly dataAPI: DataAPI) {
     super()
@@ -61,13 +67,13 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
 
     switch (queryType) {
       case VariableQueryType.MeasurementQuery: {
-        const filter = {
-          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as MeasurementFilter | undefined),
-          ScopedVars: request.scopedVars,
-        }
-
-        if (!filter) {
+        const parsed = cloneFilter(request.targets[0].filter) as MeasurementFilter | undefined
+        if (!parsed) {
           return of({ data: [] })
+        }
+        const filter = {
+          ...parsed,
+          ScopedVars: request.scopedVars,
         }
 
         let pagination: Pagination = {
@@ -106,14 +112,14 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case VariableQueryType.AssetQuery: {
-        const filter = {
-          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as AssetFilter | undefined),
-          ScopedVars: request.scopedVars,
-        }
-
         // Don't allow empty filter to not query too much data
-        if (!filter) {
+        const parsed = cloneFilter(request.targets[0].filter) as AssetFilter | undefined
+        if (!parsed) {
           return of({ data: [] })
+        }
+        const filter = {
+          ...parsed,
+          ScopedVars: request.scopedVars,
         }
         const useAssetPath = filter.UseAssetPath ?? false
         return from(this.dataAPI.getAssets(filter)).pipe(
@@ -128,12 +134,13 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case VariableQueryType.EventTypeQuery: {
-        const filter = {
-          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypeFilter | undefined),
-          ScopedVars: request.scopedVars,
-        }
-        if (!filter) {
+        const parsed = cloneFilter(request.targets[0].filter) as EventTypeFilter | undefined
+        if (!parsed) {
           return of({ data: [] })
+        }
+        const filter = {
+          ...parsed,
+          ScopedVars: request.scopedVars,
         }
         return from(this.dataAPI.getEventTypes(filter)).pipe(
           map((values) => {
@@ -142,12 +149,13 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case VariableQueryType.DatabaseQuery: {
-        const filter = {
-          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as TimeseriesDatabaseFilter | undefined),
-          ScopedVars: request.scopedVars,
-        }
-        if (!filter) {
+        const parsed = cloneFilter(request.targets[0].filter) as TimeseriesDatabaseFilter | undefined
+        if (!parsed) {
           return of({ data: [] })
+        }
+        const filter = {
+          ...parsed,
+          ScopedVars: request.scopedVars,
         }
         return from(this.dataAPI.getTimeseriesDatabases(filter)).pipe(
           map((values) => {
@@ -156,12 +164,13 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case VariableQueryType.EventTypePropertyQuery: {
-        const filter = {
-          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as EventTypePropertiesFilter | undefined),
-          ScopedVars: request.scopedVars,
-        }
-        if (!filter) {
+        const parsed = cloneFilter(request.targets[0].filter) as EventTypePropertiesFilter | undefined
+        if (!parsed) {
           return of({ data: [] })
+        }
+        const filter = {
+          ...parsed,
+          ScopedVars: request.scopedVars,
         }
         return forkJoin({
           eventTypes: this.dataAPI.getEventTypes(),
@@ -182,12 +191,13 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case VariableQueryType.AssetPropertyQuery: {
-        const filter = {
-          ...(JSON.parse(JSON.stringify(request.targets[0].filter)) as AssetPropertyFilter | undefined),
-          ScopedVars: request.scopedVars,
-        }
-        if (!filter) {
+        const parsed = cloneFilter(request.targets[0].filter) as AssetPropertyFilter | undefined
+        if (!parsed) {
           return of({ data: [] })
+        }
+        const filter = {
+          ...parsed,
+          ScopedVars: request.scopedVars,
         }
         if (filter.AssetUUIDs) {
           filter.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.dataAPI.multiSelectReplace(e, request.scopedVars))
@@ -199,7 +209,7 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         )
       }
       case VariableQueryType.PropertyValuesQuery: {
-        const rawFilter = JSON.parse(JSON.stringify(request.targets[0].filter)) as
+        const rawFilter = cloneFilter(request.targets[0].filter) as
           | EventTypePropertiesValuesFilter
           | OldEventTypePropertiesValuesFilter
           | undefined
