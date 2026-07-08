@@ -72,16 +72,11 @@ func comparePreRelease(a, b string) int {
 	aParts := strings.Split(a, ".")
 	bParts := strings.Split(b, ".")
 
-	maxLen := max(len(bParts), len(aParts))
+	minLen := min(len(aParts), len(bParts))
 
-	for i := range maxLen {
-		var aPart, bPart string
-		if i < len(aParts) {
-			aPart = aParts[i]
-		}
-		if i < len(bParts) {
-			bPart = bParts[i]
-		}
+	for i := range minLen {
+		aPart := aParts[i]
+		bPart := bParts[i]
 
 		aIsNum := isNumeric(aPart)
 		bIsNum := isNumeric(bPart)
@@ -105,7 +100,8 @@ func comparePreRelease(a, b string) int {
 		}
 	}
 
-	return 0
+	// All shared identifiers are equal: the larger set has higher precedence.
+	return len(aParts) - len(bParts)
 }
 
 // SemverCompare compares two semantic versions
