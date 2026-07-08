@@ -111,7 +111,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       case 'AssetMeasurementQuery': {
         const q = JSON.parse(JSON.stringify(query)) as AssetMeasurementQuery
         q.Assets = q.Assets?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
-        q.AssetProperties = q.AssetProperties.flatMap((e) => this.multiSelectReplace(e, scopedVars))
+        q.AssetProperties = q.AssetProperties?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
         q.Options = this.templateReplaceQueryOptions(q.Options, scopedVars)
         q.Options.ValueFilters = q.Options.ValueFilters?.filter((e) => e.Value !== 'enter a value')
         return q

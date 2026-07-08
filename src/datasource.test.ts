@@ -294,3 +294,20 @@ describe('DataSource.applyTemplateVariables interpolates event query Options', (
     expect(eventQuery.Options?.Aggregation?.Period).toBe('1m')
   })
 })
+
+describe('DataSource.applyTemplateVariables tolerates a missing AssetProperties', () => {
+  it('does not throw for an asset measurement query without AssetProperties', () => {
+    const ds = makeDataSource(makeTemplateSrv({}))
+    const target = {
+      refId: 'A',
+      queryType: 'AssetMeasurementQuery',
+      query: {
+        Assets: ['asset-uuid'],
+        // AssetProperties deliberately missing (old/hand-edited dashboard JSON)
+        Options: { GroupBy: [], Tags: {} },
+      },
+    } as unknown as Query
+
+    expect(() => ds.applyTemplateVariables(target, {})).not.toThrow()
+  })
+})
