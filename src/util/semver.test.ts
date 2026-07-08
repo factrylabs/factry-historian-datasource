@@ -83,3 +83,9 @@ describe('isFeatureEnabled', () => {
     expect(isFeatureEnabled('7.3.0-alpha', '7.3.0')).toBe(false)
   })
 })
+
+describe('isFeatureEnabled fails closed on unknown versions', () => {
+  it('does not enable version-gated features for an empty version', () => {
+    expect(isFeatureEnabled('', '99.0.0')).toBe(false)
+  })
+})
