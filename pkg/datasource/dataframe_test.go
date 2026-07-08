@@ -404,3 +404,16 @@ func TestFillInitialEmptyIntervalsNilAggregationDoesNotPanic(t *testing.T) {
 		})
 	})
 }
+
+// sortByStatus must tolerate a nil frame.Meta and use a valid stable ordering
+// instead of a comparator that ignores its second argument.
+func TestSortByStatusNilMetaDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	frameA := data.NewFrame("a", data.NewField("time", nil, []time.Time{}))
+	frameB := data.NewFrame("b", data.NewField("time", nil, []time.Time{}))
+	// Meta deliberately nil on both frames.
+	assert.NotPanics(t, func() {
+		sortByStatus(data.Frames{frameA, frameB})
+	})
+}
