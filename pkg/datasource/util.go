@@ -51,10 +51,9 @@ func handleJSON(f func(http.ResponseWriter, *http.Request) (interface{}, error))
 			return
 		}
 		// Set the content type and write the response
+		rw.Header().Set("Content-Type", "application/json")
 		if _, err := rw.Write(jsonResponse); err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 		}
-		rw.Header().Set("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 	}
 }
