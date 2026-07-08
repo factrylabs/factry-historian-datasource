@@ -319,3 +319,18 @@ describe('DataSource.filterQuery rejects targets without a queryType', () => {
     expect(ds.filterQuery(target)).toBe(false)
   })
 })
+
+describe('DataSource.applyTemplateVariables seriesLimit falls back on an empty variable', () => {
+  it('uses the default seriesLimit when the variable resolves to ""', () => {
+    const ds = makeDataSource(makeTemplateSrv({ lim: '' }))
+    const target = {
+      refId: 'A',
+      queryType: 'EventQuery',
+      seriesLimit: '$lim',
+      query: makeEventQuery(),
+    } as unknown as Query
+
+    const result = ds.applyTemplateVariables(target, {})
+    expect(result.seriesLimit).toBe(50)
+  })
+})

@@ -524,7 +524,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
 
   // Replace template variables in the provided value and convert it to a number, of valid
   templatedNumber(raw: number | string | undefined, defaultValue: number, scopedVars?: ScopedVars): number {
-    const replaced = typeof raw === 'string' ? Number(this.templateSrv.replace(raw, scopedVars)) : raw
-    return typeof replaced === 'number' && !Number.isNaN(replaced) ? replaced : defaultValue
+    if (typeof raw === 'string') {
+      const resolved = this.templateSrv.replace(raw, scopedVars)
+      if (resolved.trim() === '') {
+        return defaultValue
+      }
+      const parsed = Number(resolved)
+      return Number.isFinite(parsed) ? parsed : defaultValue
+    }
+    return typeof raw === 'number' && !Number.isNaN(raw) ? raw : defaultValue
   }
 }
