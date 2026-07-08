@@ -234,6 +234,11 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
             this.dataAPI.multiSelectReplace(e, request.scopedVars)
           )
         }
+        if (filter.EventFilter?.Statuses) {
+          filter.EventFilter.Statuses = filter.EventFilter.Statuses.flatMap((e) =>
+            this.dataAPI.multiSelectReplace(e, request.scopedVars)
+          )
+        }
         if (filter.EventFilter?.Properties) {
           filter.EventFilter.Properties = filter.EventFilter.Properties.flatMap((e) =>
             this.dataAPI.multiSelectReplace(e, request.scopedVars)
