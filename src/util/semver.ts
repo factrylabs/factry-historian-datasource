@@ -132,8 +132,15 @@ export function semverCompare(a: string, b: string): number {
 
 // Helper function to check if a version is greater than or equal to a target version, excluding pre-releases by default
 export function isFeatureEnabled(version: string, targetVersion: string, includePreReleases = false): boolean {
+  const versionSemVer = parseSemVer(version)
+
+  // Fail closed for empty or unparseable versions (for example when the historian
+  // info fetch failed), except the documented 'debug' build marker which stays newest.
+  if (versionSemVer.isDebug && version !== 'debug') {
+    return false
+  }
+
   if (includePreReleases) {
-    let versionSemVer = parseSemVer(version)
     versionSemVer.preRelease = undefined
     version = toStringSemVer(versionSemVer)
   }
