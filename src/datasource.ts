@@ -191,7 +191,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   filterQuery(target: Query): boolean {
-    return target.query !== undefined
+    return target.query !== undefined && target.queryType !== undefined
   }
 
   replaceEventPropertyFilter(
