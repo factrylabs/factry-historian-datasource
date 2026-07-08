@@ -239,7 +239,7 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
             this.dataAPI.multiSelectReplace(e, request.scopedVars)
           )
         }
-        if ((filter.EventFilter?.PropertyFilter.length ?? 0) > 0) {
+        if ((filter.EventFilter?.PropertyFilter?.length ?? 0) > 0) {
           filter.EventFilter!.PropertyFilter = filter.EventFilter!.PropertyFilter?.map((e) => {
             e.Property = this.dataAPI.replace(e.Property, request.scopedVars)
             if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
