@@ -464,3 +464,20 @@ func TestEventTableColumnsStayAlignedWithMultipleFramesPerProperty(t *testing.T)
 		assert.Equal(t, 1, count, "field %q must have exactly one row per event", name)
 	}
 }
+
+// buildSimpleFieldsForEvent must fall back to a nullable string column for
+// unknown property datatypes instead of building a []interface{} field that
+// data.NewField rejects with a panic. Any datatype value other than
+// number/boolean/string (legacy empty value, future historian datatype) would
+// otherwise panic every simple event query.
+func TestUnknownEventPropertyDatatypeDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	assert.NotPanics(t, func() {
+		buildSimpleFieldsForEvent("", []schemas.EventTypeProperty{{
+			BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "when"},
+			Datatype:  "datetime", // not one of the three known datatypes
+			Type:      schemas.EventTypePropertyTypeSimple,
+		}}, nil)
+	})
+}

@@ -384,7 +384,8 @@ func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.Even
 		case schemas.EventTypePropertyDatatypeString:
 			parentField = data.NewField(parentPropertyFieldName, nil, []*string{})
 		default:
-			parentField = data.NewField(parentPropertyFieldName, nil, []interface{}{})
+			// Unknown datatypes fall back to a nullable string column
+			parentField = data.NewField(parentPropertyFieldName, nil, []*string{})
 		}
 		fields = append(fields, parentField)
 	}
@@ -578,7 +579,8 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 		case schemas.EventTypePropertyDatatypeString:
 			field = data.NewField(eventTypeProperty.Name, nil, []*string{})
 		default:
-			field = data.NewField(eventTypeProperty.Name, nil, []interface{}{})
+			// Unknown datatypes fall back to a nullable string column
+			field = data.NewField(eventTypeProperty.Name, nil, []*string{})
 		}
 
 		fields = append(fields, field)
