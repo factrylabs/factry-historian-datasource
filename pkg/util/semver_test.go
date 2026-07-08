@@ -21,7 +21,7 @@ func TestSemverCompare(t *testing.T) {
 		{"1.10.0", "1.2.0", false},
 		{"1.0.0", "1.0.0-alpha", false},
 		{"1.0.0-alpha", "1.0.0", true},
-		{"1.0.0-alpha.1", "1.0.0-alpha", true},
+		{"1.0.0-alpha.1", "1.0.0-alpha", false},
 		{"1.0.0-alpha.1", "1.0.0-beta", true},
 	}
 
@@ -31,4 +31,17 @@ func TestSemverCompare(t *testing.T) {
 			assert.Equal(t, tt.expected, result < 0)
 		})
 	}
+}
+
+// comparePreRelease must not pad the shorter pre-release with "" (non-numeric),
+// which would invert SemVer precedence. Per spec item 11.4,
+// 1.0.0-alpha < 1.0.0-alpha.1: a larger identifier set wins when the shared
+// prefix is equal.
+func TestSemverPreReleasePrecedence(t *testing.T) {
+	t.Parallel()
+
+	assert.Negative(t, util.SemverCompare("1.0.0-alpha", "1.0.0-alpha.1"),
+		"1.0.0-alpha must be lower precedence than 1.0.0-alpha.1")
+	assert.Positive(t, util.SemverCompare("1.0.0-alpha.1", "1.0.0-alpha"),
+		"1.0.0-alpha.1 must be higher precedence than 1.0.0-alpha")
 }
