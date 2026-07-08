@@ -148,7 +148,7 @@ func (ds *HistorianDataSource) handleGetTagKeys(_ http.ResponseWriter, req *http
 	close(resultsChan)
 
 	for result := range resultsChan {
-		frames = mergeFrames(frames, result)
+		frames, _ = mergeFrames(frames, result)
 	}
 
 	return getStringSetFromFrames(frames, "tagKey"), nil
@@ -220,7 +220,7 @@ func (ds *HistorianDataSource) handleGetTagValues(_ http.ResponseWriter, req *ht
 	close(resultsChan)
 
 	for result := range resultsChan {
-		frames = mergeFrames(frames, result)
+		frames, _ = mergeFrames(frames, result)
 	}
 
 	return getStringSetFromFrames(frames, "value"), nil
