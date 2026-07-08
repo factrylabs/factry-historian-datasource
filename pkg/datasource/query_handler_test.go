@@ -50,3 +50,33 @@ func TestFillQueryVariablesZeroIntervalDoesNotPanic(t *testing.T) {
 		fillQueryVariables("SELECT * FROM measurement WHERE $timeFilter", "Influx", timeRange, 0)
 	})
 }
+
+// A query with seriesLimit 0 (older saved queries, alerting or API callers that
+// bypass the frontend default) must not be silently truncated to a single
+// series instead of returning all matching series.
+func TestSeriesLimitZeroDoesNotTruncateToOneSeries(t *testing.T) {
+	t.Parallel()
+
+	assetUUID := uuid.New()
+	ds := assetQueryFixture(t, assetUUID, []schemas.AssetProperty{
+		{
+			BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: "temperature"},
+			AssetUUID:       assetUUID,
+			MeasurementUUID: uuid.New(),
+		},
+		{
+			BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: "pressure"},
+			AssetUUID:       assetUUID,
+			MeasurementUUID: uuid.New(),
+		},
+	})
+
+	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
+	frames, err := ds.handleAssetMeasurementQuery(context.Background(), schemas.AssetMeasurementQuery{
+		Assets:          []string{"plant"},
+		AssetProperties: []string{"temperature", "pressure"},
+	}, timeRange, time.Minute, 0, &schemas.HistorianInfo{Version: "v7.0.0"})
+
+	require.NoError(t, err)
+	assert.Len(t, frames, 2, "seriesLimit 0 must not silently truncate the result to one series")
+}

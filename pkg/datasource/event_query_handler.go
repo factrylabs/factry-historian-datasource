@@ -206,7 +206,8 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 		}
 
 		if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.UUID.String()) || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.Name) {
-			if len(measurementUUIDs) >= seriesLimit {
+			// a non-positive seriesLimit means unlimited
+			if seriesLimit > 0 && len(measurementUUIDs) >= seriesLimit {
 				if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
 					break
 				}

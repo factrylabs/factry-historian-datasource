@@ -216,7 +216,8 @@ assetLoop:
 				selectedPropertyUUIDs[assetProperty.UUID] = struct{}{}
 				measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
 				measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
-				if len(measurementUUIDs) >= seriesLimit {
+				// a non-positive seriesLimit means unlimited
+				if seriesLimit > 0 && len(measurementUUIDs) >= seriesLimit {
 					break assetLoop
 				}
 			}
@@ -276,7 +277,10 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 
 		measurementsQuery := url.Values{}
 		measurementsQuery.Set("Keyword", measurement)
-		measurementsQuery.Set("Limit", strconv.Itoa(seriesLimit))
+		// a non-positive seriesLimit means unlimited, don't ask the API to truncate
+		if seriesLimit > 0 {
+			measurementsQuery.Set("Limit", strconv.Itoa(seriesLimit))
+		}
 		for i, databaseUUID := range databaseUUIDs {
 			measurementsQuery.Set(fmt.Sprintf("DatabaseUUIDs[%v]", i), databaseUUID)
 		}
