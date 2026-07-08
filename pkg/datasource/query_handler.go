@@ -203,10 +203,17 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 		propertiesByAssetUUIDAndID[assetProperty.AssetUUID][assetProperty.UUID.String()] = assetProperty
 	}
 
+	selectedPropertyUUIDs := map[uuid.UUID]struct{}{}
+
 assetLoop:
 	for assetUUID := range assets {
 		for propertyName, assetProperty := range propertiesByAssetUUIDAndID[assetUUID] {
 			if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, propertyName) {
+				// each property is registered under both its name and its UUID, only select it once
+				if _, ok := selectedPropertyUUIDs[assetProperty.UUID]; ok {
+					continue
+				}
+				selectedPropertyUUIDs[assetProperty.UUID] = struct{}{}
 				measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
 				measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 				if len(measurementUUIDs) >= seriesLimit {
