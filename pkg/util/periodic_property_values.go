@@ -168,7 +168,9 @@ func (p *PeriodicPropertyValues) UnmarshalJSON(data []byte) error {
 	}
 
 	for i := range v.Offsets {
-		p.ValuesByOffset[v.Offsets[i]] = v.Values[i]
+		if len(v.Values) > i {
+			p.ValuesByOffset[v.Offsets[i]] = v.Values[i]
+		}
 		if len(v.DimensionValues) > i {
 			p.DimensionValuesByOffset[v.Offsets[i]] = v.DimensionValues[i]
 		}
