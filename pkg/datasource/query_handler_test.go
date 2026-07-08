@@ -37,3 +37,16 @@ func TestAssetMeasurementQueryWithoutPropertyFilterDoesNotDuplicateSeries(t *tes
 	require.NoError(t, err)
 	assert.Len(t, frames, 1, "one asset property backed by one measurement must produce exactly one series")
 }
+
+// fillQueryVariables computes UnixNano()%interval unconditionally.
+// backend.Query.Interval is 0 for API/alerting callers that omit intervalMs,
+// so every raw query from such a caller must not die on an integer divide by
+// zero.
+func TestFillQueryVariablesZeroIntervalDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
+	assert.NotPanics(t, func() {
+		fillQueryVariables("SELECT * FROM measurement WHERE $timeFilter", "Influx", timeRange, 0)
+	})
+}
