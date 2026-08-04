@@ -120,8 +120,8 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 		if err != nil {
 			return nil, err
 		}
-		for _, asset := range assets {
-			assetUUIDSet[asset.UUID] = asset
+		for i := range assets {
+			assetUUIDSet[assets[i].UUID] = assets[i]
 		}
 	}
 
