@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
@@ -38,8 +40,23 @@ type Query struct {
 // QueryData handles incoming backend queries
 func (ds *HistorianDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	return concurrent.QueryData(ctx, req, func(ctx context.Context, query concurrent.Query) (res backend.DataResponse) {
-		return ds.queryData(ctx, query.DataQuery)
+		return attributeError(ds.queryData(ctx, query.DataQuery))
 	}, 10)
+}
+
+// attributeError forwards the status code of a failed historian request to
+// Grafana. Without it the response only carries the error message, and Grafana
+// reports every failure as a 500 caused by the plugin instead of surfacing the
+// historian as the source of e.g. a 429 (admission queue full) or a 504 (query
+// exceeded timeout).
+func attributeError(response backend.DataResponse) backend.DataResponse {
+	var httpError *api.HTTPError
+	if errors.As(response.Error, &httpError) {
+		response.Status = backend.Status(httpError.StatusCode)
+		response.ErrorSource = backend.ErrorSourceFromHTTPStatus(httpError.StatusCode)
+	}
+
+	return response
 }
 
 func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backend.DataQuery) backend.DataResponse {
