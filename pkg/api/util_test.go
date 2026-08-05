@@ -14,6 +14,7 @@ import (
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -407,5 +408,56 @@ func indexedQuery(q url.Values, prefix string) []string {
 			return out
 		}
 		out = append(out, v)
+	}
+}
+
+// The historian returns 429 when its admission queue is full and 504 when a
+// query exceeds its timeout. Wrapping those in an error that carries a
+// downstream source lets the plugin SDK attribute them to the historian on
+// every endpoint (query data, resource calls, health checks) instead of
+// counting them as plugin faults. A 501 is the exception: it means the plugin
+// called an endpoint this historian does not implement, which is a plugin bug.
+func TestHTTPErrorCarriesErrorSource(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name         string
+		statusCode   int
+		body         string
+		isDownstream bool
+	}{
+		{name: "admission queue full", statusCode: http.StatusTooManyRequests, body: `{"error":"admission queue full"}`, isDownstream: true},
+		{name: "query exceeded timeout", statusCode: http.StatusGatewayTimeout, body: `{"error":"query exceeded timeout"}`, isDownstream: true},
+		{name: "bad request", statusCode: http.StatusBadRequest, body: `{"error":"error executing query"}`, isDownstream: true},
+		{name: "unauthorized", statusCode: http.StatusUnauthorized, body: `{"error":"invalid token"}`, isDownstream: true},
+		{name: "not implemented", statusCode: http.StatusNotImplemented, body: `{"error":"unknown endpoint"}`, isDownstream: false},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(testCase.statusCode)
+				_, _ = w.Write([]byte(testCase.body))
+			}))
+			t.Cleanup(server.Close)
+
+			historianAPI, err := api.NewAPIWithToken(server.URL, "token", "org")
+			require.NoError(t, err)
+
+			_, err = historianAPI.GetAssets(context.Background(), "")
+			require.Error(t, err)
+
+			var httpError *api.HTTPError
+			require.ErrorAs(t, err, &httpError, "the typed error must survive the error source wrapper")
+			assert.Equal(t, testCase.statusCode, httpError.StatusCode)
+			assert.Equal(t, testCase.body, httpError.Body, "the historian error body must be preserved")
+			assert.Contains(t, err.Error(), testCase.body, "the message must still carry the body for the panel")
+
+			assert.Equal(t, testCase.isDownstream, backend.IsDownstreamError(err), "error source attribution")
+			assert.Equal(t, !testCase.isDownstream, backend.IsPluginError(err), "error source attribution")
+		})
 	}
 }
