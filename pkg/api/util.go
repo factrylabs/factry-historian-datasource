@@ -12,6 +12,7 @@ import (
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
 // newHTTPRequest creates a new HTTP request with the given context, method, URL, and body
@@ -26,17 +27,29 @@ func newHTTPRequest(ctx context.Context, method, requestURL string, body io.Read
 	return req, nil
 }
 
-// handleHTTPError processes HTTP error responses
+// handleHTTPError processes HTTP error responses. The returned error carries an
+// error source derived from the status code, so the plugin SDK attributes a
+// historian failure such as a 429 (admission queue full) or a 504 (query
+// exceeded timeout) to the historian instead of to the plugin. Statuses that
+// indicate the plugin built a request this historian cannot serve (e.g. 501)
+// stay attributed to the plugin.
 func handleHTTPError(resp *http.Response) error {
 	// Read and parse the error response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-	return &HTTPError{
+
+	httpError := &HTTPError{
 		StatusCode: resp.StatusCode,
 		Body:       string(body),
 	}
+
+	if backend.ErrorSourceFromHTTPStatus(resp.StatusCode) == backend.ErrorSourceDownstream {
+		return backend.DownstreamError(httpError)
+	}
+
+	return backend.PluginError(httpError)
 }
 
 // HTTPError represents an HTTP error response
