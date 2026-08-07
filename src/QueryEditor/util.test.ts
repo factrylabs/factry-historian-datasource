@@ -8,8 +8,10 @@ import {
   isLazyLoadingEnabled,
   matchedAssets,
   migrateMeasurementQuery,
+  parentEventTypeUUIDs,
   propertyFilterToQueryTags,
   resolveAssetLabel,
+  resolvePropertyDatatype,
   resolveSelectedAssets,
   searchAssetsAndProperties,
   selectable,
@@ -19,7 +21,16 @@ import {
   updateTreeChildren,
   valueFiltersToQueryTags,
 } from './util'
-import { AggregationName, Asset, AssetProperty, MeasurementQuery } from 'types'
+import {
+  AggregationName,
+  Asset,
+  AssetProperty,
+  EventType,
+  EventTypeProperty,
+  MeasurementQuery,
+  PropertyDatatype,
+  PropertyType,
+} from 'types'
 import { DataSource } from 'datasource'
 
 const UUID = '11111111-1111-1111-1111-111111111111'
@@ -184,9 +195,7 @@ describe('searchAssetsAndProperties', () => {
     const res = await searchAssetsAndProperties(ds, 'speed')
 
     expect(getAssets).toHaveBeenNthCalledWith(2, { UUIDs: ['parent-1'] })
-    expect(res).toEqual([
-      { label: '📦 Line\\Pump\\📏 Speed', value: ['parent-1', 'p1'], description: 'Line\\Pump' },
-    ])
+    expect(res).toEqual([{ label: '📦 Line\\Pump\\📏 Speed', value: ['parent-1', 'p1'], description: 'Line\\Pump' }])
   })
 })
 
@@ -339,6 +348,65 @@ describe('propertyFilterToQueryTags', () => {
 
   it('returns empty array for empty input', () => {
     expect(propertyFilterToQueryTags([])).toEqual([])
+  })
+})
+
+describe('parentEventTypeUUIDs', () => {
+  const eventTypes: EventType[] = [
+    { Name: 'Batch', UUID: 'batch-uuid', Description: '' },
+    { Name: 'Phase', UUID: 'phase-uuid', Description: '', ParentUUID: 'batch-uuid' },
+    { Name: 'Unrelated', UUID: 'other-uuid', Description: '' },
+  ]
+
+  it('returns the parents of the selected event types', () => {
+    expect(parentEventTypeUUIDs(['phase-uuid'], eventTypes)).toEqual(['batch-uuid'])
+  })
+
+  it('returns nothing when the selected event type has no parent', () => {
+    expect(parentEventTypeUUIDs(['other-uuid'], eventTypes)).toEqual([])
+  })
+
+  it('returns nothing for an unresolved template variable', () => {
+    expect(parentEventTypeUUIDs(['$EventTypes'], eventTypes)).toEqual([])
+  })
+})
+
+describe('resolvePropertyDatatype', () => {
+  const eventTypeProperties: EventTypeProperty[] = [
+    {
+      Name: 'Batch number',
+      UUID: 'prop-1',
+      EventTypeUUID: 'batch-uuid',
+      Datatype: PropertyDatatype.String,
+      Type: PropertyType.Simple,
+    },
+    {
+      Name: 'Weight',
+      UUID: 'prop-2',
+      EventTypeUUID: 'batch-uuid',
+      Datatype: PropertyDatatype.Number,
+      Type: PropertyType.Simple,
+    },
+    {
+      Name: 'Batch number',
+      UUID: 'prop-3',
+      EventTypeUUID: 'other-uuid',
+      Datatype: PropertyDatatype.Number,
+      Type: PropertyType.Simple,
+    },
+  ]
+
+  it('resolves the datatype from the given event types', () => {
+    expect(resolvePropertyDatatype('Batch number', eventTypeProperties, ['batch-uuid'])).toBe(PropertyDatatype.String)
+    expect(resolvePropertyDatatype('Weight', eventTypeProperties, ['batch-uuid'])).toBe(PropertyDatatype.Number)
+  })
+
+  it('ignores properties of event types that are not selected', () => {
+    expect(resolvePropertyDatatype('Weight', eventTypeProperties, ['other-uuid'])).toBe(PropertyDatatype.String)
+  })
+
+  it('falls back to string for an unknown property', () => {
+    expect(resolvePropertyDatatype('Batch number', eventTypeProperties, [])).toBe(PropertyDatatype.String)
   })
 })
 
@@ -565,7 +633,14 @@ describe('buildLazyCascaderOptions', () => {
 
   it('marks leaf when HasChildren and HasAssetProperties are both false (>= v8.2.0)', () => {
     const flagged: Asset[] = [
-      { Name: 'Leaf', UUID: 'uuid-leaf', Description: '', Status: 'active', HasChildren: false, HasAssetProperties: false },
+      {
+        Name: 'Leaf',
+        UUID: 'uuid-leaf',
+        Description: '',
+        Status: 'active',
+        HasChildren: false,
+        HasAssetProperties: false,
+      },
     ]
     const result = buildLazyCascaderOptions(flagged, [])
     expect(result[0].isLeaf).toBe(true)
@@ -573,7 +648,14 @@ describe('buildLazyCascaderOptions', () => {
 
   it('keeps node expandable when HasChildren is true', () => {
     const flagged: Asset[] = [
-      { Name: 'Branch', UUID: 'uuid-branch', Description: '', Status: 'active', HasChildren: true, HasAssetProperties: false },
+      {
+        Name: 'Branch',
+        UUID: 'uuid-branch',
+        Description: '',
+        Status: 'active',
+        HasChildren: true,
+        HasAssetProperties: false,
+      },
     ]
     const result = buildLazyCascaderOptions(flagged, [])
     expect(result[0].isLeaf).toBe(false)
@@ -581,7 +663,14 @@ describe('buildLazyCascaderOptions', () => {
 
   it('keeps node expandable when HasAssetProperties is true', () => {
     const flagged: Asset[] = [
-      { Name: 'WithProps', UUID: 'uuid-props', Description: '', Status: 'active', HasChildren: false, HasAssetProperties: true },
+      {
+        Name: 'WithProps',
+        UUID: 'uuid-props',
+        Description: '',
+        Status: 'active',
+        HasChildren: false,
+        HasAssetProperties: true,
+      },
     ]
     const result = buildLazyCascaderOptions(flagged, [])
     expect(result[0].isLeaf).toBe(false)
@@ -594,9 +683,7 @@ describe('updateTreeChildren', () => {
       { label: '📦 Root', value: 'root-1', isLeaf: false },
       { label: '📦 Root2', value: 'root-2', isLeaf: false },
     ]
-    const children = [
-      { label: '📦 Child', value: 'child-1', isLeaf: false },
-    ]
+    const children = [{ label: '📦 Child', value: 'child-1', isLeaf: false }]
     const result = updateTreeChildren(options, 'root-1', children)
     expect(result[0].items).toHaveLength(1)
     expect(result[0].items![0].value).toBe('child-1')
@@ -604,9 +691,7 @@ describe('updateTreeChildren', () => {
   })
 
   it('marks node as isLeaf when children are empty', () => {
-    const options = [
-      { label: '📦 Root', value: 'root-1', isLeaf: false },
-    ]
+    const options = [{ label: '📦 Root', value: 'root-1', isLeaf: false }]
     const result = updateTreeChildren(options, 'root-1', [])
     expect(result[0].isLeaf).toBe(true)
     expect(result[0].items).toBeUndefined()
@@ -653,9 +738,7 @@ describe('updateTreeChildren', () => {
   })
 
   it('returns unchanged array when parent not found', () => {
-    const options = [
-      { label: '📦 Root', value: 'root-1', isLeaf: false },
-    ]
+    const options = [{ label: '📦 Root', value: 'root-1', isLeaf: false }]
     const result = updateTreeChildren(options, 'nonexistent', [])
     expect(result).toBe(options)
   })
@@ -667,10 +750,7 @@ describe('updateTreeChildren', () => {
       isLeaf: false,
       items: [{ label: '📦 Sub', value: 'sub', isLeaf: false }],
     }
-    const options = [
-      untouched,
-      { label: '📦 Target', value: 'target', isLeaf: false },
-    ]
+    const options = [untouched, { label: '📦 Target', value: 'target', isLeaf: false }]
     const result = updateTreeChildren(options, 'target', [{ label: '📦 Child', value: 'child', isLeaf: false }])
     expect(result).not.toBe(options)
     expect(result[0]).toBe(untouched)
@@ -678,9 +758,7 @@ describe('updateTreeChildren', () => {
   })
 
   it('returns new top-level array reference (immutable)', () => {
-    const options = [
-      { label: '📦 Root', value: 'root-1', isLeaf: false },
-    ]
+    const options = [{ label: '📦 Root', value: 'root-1', isLeaf: false }]
     const result = updateTreeChildren(options, 'root-1', [])
     expect(result).not.toBe(options)
     expect(result[0]).not.toBe(options[0])

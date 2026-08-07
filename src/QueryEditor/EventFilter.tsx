@@ -26,8 +26,10 @@ import {
   isSupportedPropertyType,
   matchedAssets,
   NIL_UUID,
+  parentEventTypeUUIDs,
   propertyFilterToQueryTags,
   resolveAssetLabel,
+  resolvePropertyDatatype,
   resolveSelectedAssets,
   searchAssetsAndProperties,
   templateVariablesToCascaderOptions,
@@ -309,14 +311,8 @@ export const EventFilter = (props: Props): JSX.Element => {
     } else {
       selectedEventTypesUUIDs = getSelectedEventTypes(props.query.EventTypes ?? [])
     }
-    const datatype = eventTypeProperties
-      .filter((e) => selectedEventTypesUUIDs.includes(e.EventTypeUUID))
-      .find((e) => e.Name === property)?.Datatype
-    if (!datatype) {
-      return PropertyDatatype.Number
-    }
 
-    return datatype
+    return resolvePropertyDatatype(property, eventTypeProperties, selectedEventTypesUUIDs)
   }
 
   const getTagsKeyOptions = (eventTypes: string[]): string[] => {
@@ -388,10 +384,7 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const getSelectedParentEventTypes = (eventTypeSelectors: string[]): string[] => {
-    const selectedEventTypes = eventTypes.filter((e) => eventTypeSelectors.some((et) => e.UUID === et))
-    const parentEventTypes = eventTypes.filter((e) => selectedEventTypes.some((et) => e.UUID === et.ParentUUID))
-    const parentEventTypeUUIDs = parentEventTypes.map((e) => e.UUID)
-    return parentEventTypeUUIDs
+    return parentEventTypeUUIDs(getSelectedEventTypes(eventTypeSelectors), eventTypes)
   }
 
   const availableProperties = (eventTypes: string[], includeParentInfo: boolean): Array<SelectableValue<string>> => {
