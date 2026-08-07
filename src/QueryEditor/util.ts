@@ -8,10 +8,13 @@ import {
   AssetProperty,
   Attributes,
   EventPropertyFilter,
+  EventType,
+  EventTypeProperty,
   FillType,
   Measurement,
   MeasurementQuery,
   MeasurementQueryOptions,
+  PropertyDatatype,
   PropertyType,
   ValueFilter,
 } from 'types'
@@ -106,9 +109,7 @@ export async function searchAssetsAndProperties(
   // name when the keyword is a regex, ILIKE on name/description otherwise), so
   // they are used as-is.
   const assetMap = new Map(assets.map((a) => [a.UUID, a]))
-  const missingParentUUIDs = [...new Set(
-    properties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid))
-  )]
+  const missingParentUUIDs = [...new Set(properties.map((p) => p.AssetUUID).filter((uuid) => !assetMap.has(uuid)))]
   if (missingParentUUIDs.length > 0) {
     const parentAssets = await datasource.getAssets({ UUIDs: missingParentUUIDs })
     for (const asset of parentAssets) {
@@ -331,10 +332,7 @@ export function getChildAssets(
   return result.sort(sortByLabel)
 }
 
-export function buildLazyCascaderOptions(
-  assets: Asset[],
-  assetProperties: AssetProperty[] = []
-): CascaderOption[] {
+export function buildLazyCascaderOptions(assets: Asset[], assetProperties: AssetProperty[] = []): CascaderOption[] {
   const result: CascaderOption[] = assets.map((asset) => {
     const properties: CascaderOption[] = assetProperties
       .filter((prop) => prop.AssetUUID === asset.UUID)
@@ -457,6 +455,31 @@ export function propertyFilterToQueryTags(filter: EventPropertyFilter[]): QueryT
   })
 
   return queryTags
+}
+
+// Returns the UUIDs of the event types that are the parent of one of the
+// selected event types. Selectors must already be resolved to UUIDs: template
+// variables never match an event type UUID.
+export function parentEventTypeUUIDs(selectedEventTypeUUIDs: string[], eventTypes: EventType[]): string[] {
+  const selectedEventTypes = eventTypes.filter((e) => selectedEventTypeUUIDs.includes(e.UUID))
+
+  return eventTypes.filter((e) => selectedEventTypes.some((et) => e.UUID === et.ParentUUID)).map((e) => e.UUID)
+}
+
+// Resolves the datatype of a property from the properties of the given event
+// types. An unresolved property falls back to string: it is the datatype the
+// backend assumes for an empty one, and it is the only cast historian cannot
+// fail on. A number fallback makes historian cast the filter value to real,
+// which errors out the whole query for any non-numeric value.
+export function resolvePropertyDatatype(
+  property: string,
+  eventTypeProperties: EventTypeProperty[],
+  eventTypeUUIDs: string[]
+): PropertyDatatype {
+  return (
+    eventTypeProperties.filter((e) => eventTypeUUIDs.includes(e.EventTypeUUID)).find((e) => e.Name === property)
+      ?.Datatype ?? PropertyDatatype.String
+  )
 }
 
 export function matchedAssets(selectedAssets: string[], assets: Asset[]): Asset[] {
