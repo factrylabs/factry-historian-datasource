@@ -1,6 +1,7 @@
 import {
   buildLazyCascaderOptions,
   debouncePromise,
+  eventTypeUUIDsForProperties,
   fetchLazyChildOptions,
   getAggregations,
   getAggregationsForDatatypes,
@@ -407,6 +408,59 @@ describe('resolvePropertyDatatype', () => {
 
   it('falls back to string for an unknown property', () => {
     expect(resolvePropertyDatatype('Batch number', eventTypeProperties, [])).toBe(PropertyDatatype.String)
+  })
+})
+
+describe('eventTypeUUIDsForProperties', () => {
+  const eventTypes: EventType[] = [
+    { Name: 'Batch', UUID: 'batch-uuid', Description: '' },
+    { Name: 'Phase', UUID: 'phase-uuid', Description: '', ParentUUID: 'batch-uuid' },
+    { Name: 'Standalone', UUID: 'standalone-uuid', Description: '' },
+  ]
+
+  const makeEventTypeDS = (resolve: (value: string) => string[]) =>
+    ({
+      multiSelectReplace: jest.fn(resolve),
+      containsTemplate: (value: string) => value.startsWith('$'),
+    } as unknown as DataSource)
+
+  it('honours a concrete selection', () => {
+    const ds = makeEventTypeDS((value) => [value])
+    expect(eventTypeUUIDsForProperties(ds, ['phase-uuid'], eventTypes, false)).toEqual(['phase-uuid'])
+    expect(eventTypeUUIDsForProperties(ds, ['phase-uuid'], eventTypes, true)).toEqual(['batch-uuid'])
+  })
+
+  it('honours a template variable that resolves to known event types', () => {
+    const ds = makeEventTypeDS((value) => (value === '$EventTypes' ? ['phase-uuid'] : [value]))
+    expect(eventTypeUUIDsForProperties(ds, ['$EventTypes'], eventTypes, false)).toEqual(['phase-uuid'])
+    expect(eventTypeUUIDsForProperties(ds, ['$EventTypes'], eventTypes, true)).toEqual(['batch-uuid'])
+  })
+
+  it('offers every event type when a template variable resolves to nothing known', () => {
+    const ds = makeEventTypeDS((value) => [value])
+    expect(eventTypeUUIDsForProperties(ds, ['$EventTypes'], eventTypes, false)).toEqual([
+      'batch-uuid',
+      'phase-uuid',
+      'standalone-uuid',
+    ])
+  })
+
+  it('offers only event types that are a parent when unresolvable and asked for parents', () => {
+    const ds = makeEventTypeDS((value) => [value])
+    expect(eventTypeUUIDsForProperties(ds, ['$EventTypes'], eventTypes, true)).toEqual(['batch-uuid'])
+  })
+
+  it('does not widen when one of several selectors resolves', () => {
+    const ds = makeEventTypeDS((value) => (value === '$EventTypes' ? ['phase-uuid'] : [value]))
+    expect(eventTypeUUIDsForProperties(ds, ['$EventTypes', 'standalone-uuid'], eventTypes, false)).toEqual([
+      'phase-uuid',
+      'standalone-uuid',
+    ])
+  })
+
+  it('returns nothing for an empty selection', () => {
+    const ds = makeEventTypeDS((value) => [value])
+    expect(eventTypeUUIDsForProperties(ds, [], eventTypes, false)).toEqual([])
   })
 })
 

@@ -20,6 +20,7 @@ import {
 import { getValueFilterOperatorsForVersion, KnownOperator, needsValue } from 'util/eventFilter'
 import {
   buildLazyCascaderOptions,
+  eventTypeUUIDsForProperties,
   fetchLazyChildOptions,
   getChildAssets,
   isLazyLoadingEnabled,
@@ -330,40 +331,24 @@ export const EventFilter = (props: Props): JSX.Element => {
   }
 
   const availableSimpleProperties = (eventTypeSelectors: string[], onlyParentProperties = false): string[] => {
-    if (eventTypeSelectors.some((et) => props.datasource.containsTemplate(et))) {
-      return [...new Set(eventTypeProperties.filter((e) => e.Type === PropertyType.Simple).map((e) => e.Name))]
-    }
-    let selectedEventTypeUUIDs: string[] = []
-    if (onlyParentProperties) {
-      selectedEventTypeUUIDs = getSelectedParentEventTypes(eventTypeSelectors)
-    } else {
-      selectedEventTypeUUIDs = getSelectedEventTypes(eventTypeSelectors)
-    }
+    const eventTypeUUIDs = eventTypeUUIDsForProperties(
+      props.datasource,
+      eventTypeSelectors,
+      eventTypes,
+      onlyParentProperties
+    )
     return [
       ...new Set(
         eventTypeProperties
           .filter((e) => e.Type === PropertyType.Simple)
-          .filter((e) => selectedEventTypeUUIDs.includes(e.EventTypeUUID))
+          .filter((e) => eventTypeUUIDs.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
     ]
   }
 
   const availablePeriodicProperties = (eventTypeSelectors: string[]): string[] => {
-    if (eventTypeSelectors.some((et) => props.datasource.containsTemplate(et))) {
-      return [
-        ...new Set(
-          eventTypeProperties
-            .filter((e) =>
-              props.query.Type === PropertyType.Periodic
-                ? e.Type === PropertyType.PeriodicWithDimension || e.Type === PropertyType.Periodic
-                : e.Type === PropertyType.PeriodicWithDimension
-            )
-            .map((e) => e.Name)
-        ),
-      ]
-    }
-    const selectedEventTypeUUIDs = getSelectedEventTypes(eventTypeSelectors)
+    const eventTypeUUIDs = eventTypeUUIDsForProperties(props.datasource, eventTypeSelectors, eventTypes, false)
     return [
       ...new Set(
         eventTypeProperties
@@ -372,7 +357,7 @@ export const EventFilter = (props: Props): JSX.Element => {
               ? e.Type === PropertyType.PeriodicWithDimension || e.Type === PropertyType.Periodic
               : e.Type === PropertyType.PeriodicWithDimension
           )
-          .filter((e) => selectedEventTypeUUIDs.includes(e.EventTypeUUID))
+          .filter((e) => eventTypeUUIDs.includes(e.EventTypeUUID))
           .map((e) => e.Name)
       ),
     ]
