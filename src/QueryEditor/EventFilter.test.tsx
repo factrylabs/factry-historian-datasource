@@ -29,12 +29,20 @@ jest.mock('components/Cascader/Cascader', () => ({
   default: ({ initialLabel }: { initialLabel: string }) => <input data-testid="assets" readOnly value={initialLabel} />,
 }))
 
-// TagsSection test double: keeps a handle on the onChange EventFilter passes
-// down so tests can drive the WHERE section without rendering the real editor.
+// TagsSection test double: keeps a handle on the props EventFilter passes down
+// so tests can drive the WHERE section without rendering the real editor.
 let mockTagsSectionOnChange: ((tags: QueryTag[]) => void) | undefined
+let mockTagsSectionGetTagKeyOptions: (() => Promise<string[]>) | undefined
 jest.mock('components/TagsSection/TagsSection', () => ({
-  TagsSection: ({ onChange }: { onChange: (tags: QueryTag[]) => void }) => {
+  TagsSection: ({
+    onChange,
+    getTagKeyOptions,
+  }: {
+    onChange: (tags: QueryTag[]) => void
+    getTagKeyOptions: () => Promise<string[]>
+  }) => {
     mockTagsSectionOnChange = onChange
+    mockTagsSectionGetTagKeyOptions = getTagKeyOptions
     return null
   },
 }))
@@ -130,5 +138,52 @@ describe('EventFilter', () => {
         ],
       })
     )
+  })
+
+  it('only offers parent keys that exist on the parent event type', async () => {
+    const eventTypes: EventType[] = [
+      { Name: 'Batch', UUID: 'batch-uuid', Description: '' },
+      { Name: 'Phase', UUID: 'phase-uuid', Description: '', ParentUUID: 'batch-uuid' },
+    ]
+    const simple = (name: string, uuid: string, eventTypeUUID: string): EventTypeProperty => ({
+      Name: name,
+      UUID: uuid,
+      EventTypeUUID: eventTypeUUID,
+      Datatype: PropertyDatatype.String,
+      Type: PropertyType.Simple,
+    })
+    const datasource = createMockDatasource({
+      getEventTypes: jest.fn().mockResolvedValue(eventTypes),
+      getEventTypeProperties: jest
+        .fn()
+        .mockResolvedValue([
+          simple('Batch number', 'prop-1', 'batch-uuid'),
+          simple('Phase step', 'prop-2', 'phase-uuid'),
+        ]),
+      multiSelectReplace: (value: string) => (value === '$EventTypes' ? ['phase-uuid'] : [value]),
+      containsTemplate: (value: string) => value.startsWith('$'),
+    })
+    const query = {
+      Assets: [],
+      EventTypes: ['$EventTypes'],
+      Properties: [],
+      Statuses: [],
+      PropertyFilter: [],
+      IncludeParentInfo: true,
+    } as unknown as EventQuery
+
+    render(<EventFilter query={query} datasource={datasource} onChangeQuery={jest.fn()} />)
+    await waitFor(() => {
+      expect(mockTagsSectionGetTagKeyOptions).toBeDefined()
+    })
+
+    const keys = await mockTagsSectionGetTagKeyOptions!()
+
+    expect(keys).toContain('Phase step')
+    expect(keys).toContain('parent:Batch number')
+    // 'Phase step' exists on the child only, so it is not a parent key, and
+    // 'Batch number' exists on the parent only, so it is not an own key.
+    expect(keys).not.toContain('parent:Phase step')
+    expect(keys).not.toContain('Batch number')
   })
 })

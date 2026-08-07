@@ -482,6 +482,37 @@ export function resolvePropertyDatatype(
   )
 }
 
+// Returns the event type UUIDs whose properties the property pickers may offer.
+// A template variable that resolves to no known event type says nothing about
+// the selection (variable not loaded yet, an all-value that is a regex, a
+// per-row repeat variable this editor has no scoped vars for), so every
+// candidate is offered rather than none: filterProperties drops the properties
+// that are missing from this list, and dropping the user's selection is worse
+// than offering too much. A selection that does resolve is honoured, so the
+// pickers stop offering properties of event types that are not selected.
+export function eventTypeUUIDsForProperties(
+  datasource: DataSource,
+  eventTypeSelectors: string[],
+  eventTypes: EventType[],
+  onlyParentProperties: boolean
+): string[] {
+  const isKnownEventType = (uuid: string): boolean => eventTypes.some((e) => e.UUID === uuid)
+  const unresolvable = eventTypeSelectors.some(
+    (et) => datasource.containsTemplate(et) && !datasource.multiSelectReplace(et).some(isKnownEventType)
+  )
+
+  if (!unresolvable) {
+    const selectedEventTypeUUIDs = eventTypeSelectors.flatMap((e) => datasource.multiSelectReplace(e))
+    return onlyParentProperties ? parentEventTypeUUIDs(selectedEventTypeUUIDs, eventTypes) : selectedEventTypeUUIDs
+  }
+
+  // Narrow the fallback to the event types that are a parent of something, so a
+  // parent picker never offers a property that exists on child types only.
+  return onlyParentProperties
+    ? [...new Set(eventTypes.map((e) => e.ParentUUID).filter((uuid): uuid is string => !!uuid))]
+    : eventTypes.map((e) => e.UUID)
+}
+
 export function matchedAssets(selectedAssets: string[], assets: Asset[]): Asset[] {
   if (selectedAssets.length === 0) {
     return []
