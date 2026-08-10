@@ -337,6 +337,16 @@ Triggered by tags matching `v*`:
 1. Build + sign + package plugin
 2. Upload to Factry Portal (uses `FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN` and `FACTRY_PORTAL_PRODUCT_UPDATES_URL` secrets)
 3. Create GitHub draft release
+4. Sync the changelog to Archbee (`archbee-sync` job)
+
+### Archbee changelog sync
+
+The `archbee-sync` job publishes the released version to the docs site. It extracts the `## <tag>` section from `CHANGELOG.md` and inserts it above the newest version heading in `docs/factry_historian_datasource_for_grafana.md` on the `spaces/changelog` branch of `factrylabs/archbee`, then opens a PR. Everything already on that page (title, compatibility matrix, previous entries) is left untouched.
+
+- `CHANGELOG.md` is the source of truth and must stay in the same shape as the published page: a `## vX.Y.Z` heading, a `released: DD/MM/YYYY` line, then `###` subsections. The job fills in `released:` with the run date if the section does not have one.
+- Archbee-specific markup (for example `:::hint{type="warning"}` blocks) belongs in the `CHANGELOG.md` section so it is carried over. It renders as literal text on GitHub.
+- Requires the `ARCHBEE_GITHUB_TOKEN` secret, with contents and pull request write access on `factrylabs/archbee`.
+- The job is idempotent: if the page already has a `## <tag>` heading it does nothing.
 
 ### Release Process
 
