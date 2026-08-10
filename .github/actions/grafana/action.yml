@@ -39,7 +39,10 @@ runs:
   steps:
     - name: Package plugin
       id: 'package-plugin'
-      uses: grafana/plugin-actions/package-plugin@main
+      # Pinned to a commit rather than @main, matching e2e-version in ci.yml: a
+      # moving ref would run whatever upstream last pushed, on the tag build
+      # that produces the released artifact.
+      uses: grafana/plugin-actions/package-plugin@1dd6eaef23956f8e83831ce4ab4b159e0723e0c1 # main @ 2026-08-06
       with:
         policy_token: ${{ inputs.policy_token }}
         node-version: '${{ inputs.node-version }}'
@@ -79,7 +82,7 @@ runs:
         subject-path: ${{ steps.package-plugin.outputs.archive }}
 
     - name: Create Github release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
       with:
         draft: true
         generate_release_notes: true

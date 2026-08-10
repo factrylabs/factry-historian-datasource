@@ -105,8 +105,8 @@ The plugin supports four query modes, selected via tabs in the Query Editor:
 
 - **Go** 1.23.2+ (the go.mod specifies 1.26 syntax)
 - **Mage** — Go build tool (`go install github.com/magefile/mage@latest`)
-- **Node.js** 20 LTS (see `.nvmrc`)
-- **pnpm** 9.6.0+ (`npm install -g pnpm`)
+- **Node.js** 24 LTS (see `.nvmrc`)
+- **pnpm** 11.20.0 (`corepack enable`, then the `packageManager` field pins it)
 - **Docker** — for running local Grafana instance
 
 ### Local Development
@@ -384,8 +384,9 @@ The backend uses Apache Arrow format (via protobuf) for efficient data frame ser
 
 ## Common Pitfalls
 
-- **pnpm only:** This project uses pnpm 9.6.0 (locked). Do not use npm or yarn.
-- **Node 20:** Required. Check `.nvmrc`.
+- **pnpm only:** This project uses pnpm 11.20.0 (locked via `packageManager`). Do not use npm or yarn.
+- **Dependency overrides live in `pnpm-workspace.yaml`,** not in a `pnpm` field in `package.json`: pnpm 11 stopped reading that field. The same file's `allowBuilds` lists the dependencies permitted to run install scripts, which pnpm 11 blocks by default.
+- **Node 24:** Required. Check `.nvmrc`.
 - **dist/ is gitignored:** Always build before running `make run_server`. The `run_debug` target builds automatically.
 - **plugin.json templates:** If you need the actual version string in plugin.json, look at `dist/plugin.json` (after build), not `src/plugin.json`.
 - **Go field casing:** API response structs use PascalCase (e.g., `Measurement.UUID`). TypeScript interfaces mirror this convention intentionally.

@@ -4,16 +4,23 @@ description: 'Sets up pnpm for use in other actions'
 runs:
   using: 'composite'
   steps:
+    # This runs after the calling job's own checkout, so without
+    # persist-credentials: false it would put GITHUB_TOKEN back into
+    # .git/config and undo the setting there.
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
     - name: Install Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 24
 
-    - uses: pnpm/action-setup@v4
+    # No version pin here on purpose: with none given, pnpm/action-setup reads
+    # the packageManager field in package.json, so the version is set in one
+    # place. Pinning both errors out whenever the two drift apart.
+    - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
       name: Install pnpm
       with:
-        version: 9.6.0
         run_install: false
 
     - name: Get pnpm store directory
