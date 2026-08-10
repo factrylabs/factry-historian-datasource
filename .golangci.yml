@@ -296,6 +296,12 @@ linters:
         linters:
           - godoclint
           - gosec
+      # tests/ holds the e2e mock Historian, which never ships in the plugin and
+      # is only reachable from Grafana on the docker-compose network. Same stance
+      # as _test.go above: gosec does not apply to test code.
+      - path: ^tests/
+        linters:
+          - gosec
       - linters:
           - govet
         text: 'declaration of "err" shadows declaration at'

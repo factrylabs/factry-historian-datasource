@@ -1,0 +1,12 @@
+# Keep the build context for tests/mockhistorian/Dockerfile small. It only needs
+# the Go module (go.mod, go.sum, pkg/, tests/); everything below is irrelevant.
+.git
+node_modules
+dist
+.pnpm-store
+playwright-report
+test-results
+blob-report
+playwright/.auth
+*.zip
+*.sha1

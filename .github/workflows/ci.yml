@@ -147,6 +147,10 @@ jobs:
       - name: Package plugin
         id: package-plugin
         run: |
+          # "make validate" above builds a plugin-id/ copy of dist to zip. It is
+          # still there, so a plain mv would move dist *into* it and ship the
+          # plugin twice, with the nested copy missing its +x bit.
+          rm -rf ${{ steps.metadata.outputs.plugin-id }}
           mv dist ${{ steps.metadata.outputs.plugin-id }}
           zip ${{ steps.metadata.outputs.archive }} ${{ steps.metadata.outputs.plugin-id }} -r
 
@@ -157,103 +161,107 @@ jobs:
           path: ${{ steps.metadata.outputs.plugin-id }}
           retention-days: 5
 
-  # resolve-versions:
-  #   name: Resolve e2e images
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 3
-  #   needs: build
-  #   if: ${{ needs.build.outputs.has-e2e == 'true' }}
-  #   outputs:
-  #     matrix: ${{ steps.resolve-versions.outputs.matrix }}
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #     - name: Resolve Grafana E2E versions
-  #       id: resolve-versions
-  #       uses: grafana/plugin-actions/e2e-version@main
-  #       with:
-  #         skip-grafana-react-19-preview-image: false
+  resolve-versions:
+    name: Resolve e2e images
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    needs: build
+    if: ${{ needs.build.outputs.has-e2e == 'true' }}
+    outputs:
+      matrix: ${{ steps.resolve-versions.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Resolve Grafana E2E versions
+        id: resolve-versions
+        uses: grafana/plugin-actions/e2e-version@main
 
-  # playwright-tests:
-  #   needs: [resolve-versions, build]
-  #   timeout-minutes: 15
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       GRAFANA_IMAGE: ${{fromJson(needs.resolve-versions.outputs.matrix)}}
-  #   name: e2e test ${{ matrix.GRAFANA_IMAGE.name }}@${{ matrix.GRAFANA_IMAGE.VERSION }}
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         sparse-checkout: |
-  #           provisioning
-  #           tests
-  #           .config
+  playwright-tests:
+    needs: [resolve-versions, build]
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        GRAFANA_IMAGE: ${{fromJson(needs.resolve-versions.outputs.matrix)}}
+    name: e2e test ${{ matrix.GRAFANA_IMAGE.name }}@${{ matrix.GRAFANA_IMAGE.VERSION }}
+    runs-on: ubuntu-latest
+    # Nightly is deliberately non-blocking. It tracks Grafana main, so a UI
+    # change there breaks the shared @grafana/plugin-e2e fixtures (a renamed
+    # data-testid behind panelEditPage, say) before a release of that library
+    # exists to match. Gating on it would mean every such change turns this
+    # repo red for something it neither caused nor can fix, which is how a red
+    # pipeline stops meaning anything. It still runs, so the breakage is
+    # visible as an early warning; it just does not block. Every released
+    # Grafana version in the matrix does block, and those are the ones the
+    # plugin claims to support.
+    continue-on-error: ${{ matrix.GRAFANA_IMAGE.VERSION == 'nightly' }}
+    steps:
+      # Full checkout: docker-compose.e2e.yaml builds the mock Historian from
+      # source (needs go.mod, pkg/, tests/), so a sparse checkout is not enough.
+      - uses: actions/checkout@v4
 
-  #     - name: Download plugin
-  #       if: needs.build.outputs.has-backend == 'true'
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         path: dist
-  #         name: ${{ needs.build.outputs.plugin-id }}-${{ needs.build.outputs.plugin-version }}
+      # Sets up Node 20 + pnpm 9.6.0 and installs dependencies (same as build).
+      - uses: ./.github/actions/pnpm
 
-  #     - name: Execute permissions on binary
-  #       if: needs.build.outputs.has-backend == 'true'
-  #       run: |
-  #         chmod +x ./dist/gpx_cicd_linux_amd64
+      - name: Download plugin
+        if: needs.build.outputs.has-backend == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          name: ${{ needs.build.outputs.plugin-id }}-${{ needs.build.outputs.plugin-version }}
 
-  #     - name: Setup Node.js environment
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
+      - name: Execute permissions on binary
+        if: needs.build.outputs.has-backend == 'true'
+        run: |
+          chmod +x ./dist/gpx_factry-historian-datasource_linux_amd64
 
-  #     - name: Install dev dependencies
-  #       run: pnpm install --frozen-lockfile
+      - name: Start Grafana and mock Historian
+        run: |
+          DEVELOPMENT=false GRAFANA_VERSION=${{ matrix.GRAFANA_IMAGE.VERSION }} GRAFANA_IMAGE=${{ matrix.GRAFANA_IMAGE.NAME }} docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml up -d --build
 
-  #     - name: Start Grafana
-  #       run: |
-  #         docker-compose pull
-  #         DEVELOPMENT=false GRAFANA_VERSION=${{ matrix.GRAFANA_IMAGE.VERSION }} GRAFANA_IMAGE=${{ matrix.GRAFANA_IMAGE.NAME }} docker-compose up -d
+      - name: Wait for Grafana to start
+        uses: nev7n/wait_for_response@7fef3c1a6e8939d0b09062f14fec50d3c5d15fa1 # v1
+        with:
+          # docker-compose publishes Grafana on host port 3001 (-> 3000).
+          url: 'http://localhost:3001/'
+          responseCode: 200
+          timeout: 60000
+          interval: 500
 
-  #     - name: Wait for Grafana to start
-  #       uses: nev7n/wait_for_response@v1
-  #       with:
-  #         url: 'http://localhost:3000/'
-  #         responseCode: 200
-  #         timeout: 60000
-  #         interval: 500
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium --with-deps
 
-  #     - name: Install Playwright Browsers
-  #       run: npx playwright install chromium --with-deps
+      - name: Run Playwright tests
+        id: run-tests
+        run: pnpm run e2e
 
-  #     - name: Run Playwright tests
-  #       id: run-tests
-  #       run: pnpm run e2e
+      - name: Docker logs
+        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        run: |
+          docker logs factry-historian-datasource >& grafana-server.log
+          # The mock logs every request it served, which shows at a glance
+          # which calls the datasource made (or failed to make).
+          docker logs factry-historian-mock >& mockhistorian.log
 
-  #     - name: Docker logs
-  #       if: ${{ always() && steps.run-tests.outcome == 'failure' }}
-  #       run: |
-  #         docker logs factry-historian-datasource >& grafana-server.log
+      - name: Stop grafana docker
+        run: docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml down
 
-  #     - name: Stop grafana docker
-  #       run: docker-compose down
+      - name: Upload server log
+        uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        with:
+          name: ${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}-server-log
+          path: |
+            grafana-server.log
+            mockhistorian.log
+          retention-days: 5
 
-  #     - name: Upload server log
-  #       uses: actions/upload-artifact@v4
-  #       if: ${{ always() && steps.run-tests.outcome == 'failure' }}
-  #       with:
-  #         name: ${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}-server-log
-  #         path: grafana-server.log
-  #         retention-days: 5
-
-  #     # If your repository is public, uploading the Playwright report will make it public on the Internet.
-  #     # Beware not to expose sensitive information.
-  #     - name: Upload artifacts
-  #       uses: actions/upload-artifact@v4
-  #       if: ${{ always() && steps.run-tests.outcome == 'failure' }}
-  #       with:
-  #         name: playwright-report-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}
-  #         path: playwright-report/
-  #         retention-days: 5
+      # If your repository is public, uploading the Playwright report will make it public on the Internet.
+      # Beware not to expose sensitive information.
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        with:
+          name: playwright-report-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}
+          path: playwright-report/
+          retention-days: 5
