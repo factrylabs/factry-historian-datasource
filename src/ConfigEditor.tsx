@@ -109,7 +109,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             >
               <Input
                 width={61}
-                name="url"
+                name="organization"
                 onChange={this.onSettingChange('organization')}
                 value={jsonData.organization || ''}
               />
