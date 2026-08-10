@@ -2,6 +2,8 @@
 
 ## v3.2.1
 
+released: 11/05/2026
+
 ### Bug fixes
 
 - Replace limit number inputs with text inputs again
@@ -9,6 +11,8 @@
 - Prevent datasource from trying to use unsupported asset API features when connecting to older Historian versions
 
 ## v3.2.0
+
+released: 05/05/2026
 
 ### Changes
 
@@ -27,6 +31,8 @@
 
 ## v3.1.0
 
+released: 22/04/2026
+
 ### Changes
 
 - Add support for using variables in all free-form text inputs
@@ -44,12 +50,16 @@
 
 ## v3.0.1
 
+released: 06/03/2026
+
 ### Bug fixes
 
 - Fixed an issue escaping special characters when calling the historian API
 - Fixed the asset selection cascader only showing root level assets
 
 ## v3.0.0
+
+released: 05/03/2026
 
 ### ⚠️ Breaking changes
 
@@ -70,6 +80,8 @@
 
 ## v2.4.0
 
+released: 17/12/2025
+
 ### Changes
 
 - Added option to align the start of an aggregation to the start of the query interval or to the truncated aggregation interval.
@@ -82,17 +94,27 @@
 
 ## v2.3.2
 
+released: 21/10/2025
+
 ### Bug fixes
 
 - Fixed an issue where dashboard variables of type Event Property Values could break if the configured Event Type was also a variable.
 
 ## v2.3.1
 
+released: 11/08/2025
+
 ### Bug fixes
 
-- Fixed dashboard variables of type Event Property Values not being migrated correctly and breaking dashboards
+- Fixed dashboard variables of type `Event Property Values` not being migrated correctly and breaking dashboards
 
 ## v2.3.0
+
+released: 27/06/2025
+
+:::hint{type="warning"}
+Migrating from an older version to v2.3.0 has the possibility to break dashboards that have variables of type `Event Property Values`. To mitigate, upgrade to v2.3.1 or later.
+:::
 
 ### Changes
 
@@ -128,6 +150,8 @@
 
 ## v2.2.0
 
+released: 22/02/2025
+
 ### Changes
 
 - Introduced the ability to include parent event information in event queries.
@@ -143,6 +167,8 @@
 - Fixed an issue where modifying a duplicated panel could impact the original panel.
 
 ## v2.1.0
+
+released: 18/11/2024
 
 ### Bug Fixes
 
@@ -160,6 +186,8 @@
 
 ## v2.0.4
 
+released: 26/09/2024
+
 ### Changes
 
 - Fixed logo in the README.
@@ -174,12 +202,16 @@
 
 ## v2.0.3
 
+released: 02/08/2024
+
 ### Changes
 
 - Fixed filtering of event types in the event query when using a regular expression for the assets
 - Fixed event queries when filtering on multiple statuses
 
 ## v2.0.2
+
+released: 04/07/2024
 
 ### Changes
 
@@ -207,6 +239,6 @@
   - Multi-value supported
 - Reworked measurement selection, using a regular expression is now a toggle
 - Fetch tag keys/values from the historian
-- Support valid values in the event query
+- Support periodic values in the event query
 - Optionally query asset properties in the event query
 - Improved error handling
