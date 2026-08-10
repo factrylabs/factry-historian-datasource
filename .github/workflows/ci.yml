@@ -29,7 +29,12 @@ jobs:
     env:
       GRAFANA_ACCESS_POLICY_TOKEN: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
     steps:
+      # persist-credentials: false everywhere in this repo. No workflow pushes
+      # over git, so nothing needs GITHUB_TOKEN left behind in .git/config where
+      # any later step or third-party action could read it.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/pnpm
 
       - name: Check types
@@ -86,27 +91,27 @@ jobs:
 
       - name: golangci-lint
         if: steps.check-for-backend.outputs.has-backend == 'true'
-        uses: golangci/golangci-lint-action@v9.2.0
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
-          version: v2.10.1
+          version: v2.12.2
           only-new-issues: true
 
       - name: gosec
         if: steps.check-for-backend.outputs.has-backend == 'true'
-        uses: securego/gosec@v2.24.7
+        uses: securego/gosec@bb17e422fc34bf4c0a2e5cab9d07dc45a68c040c # v2.24.7
         with:
           args: ./...
 
       - name: Test backend
         if: steps.check-for-backend.outputs.has-backend == 'true'
-        uses: magefile/mage-action@v3
+        uses: magefile/mage-action@6f50bbb8ea47d56e62dee92392788acbc8192d0b # v3
         with:
           version: latest
           args: coverage
 
       - name: Install Mage
         if: steps.check-for-backend.outputs.has-backend == 'true'
-        uses: magefile/mage-action@v3
+        uses: magefile/mage-action@6f50bbb8ea47d56e62dee92392788acbc8192d0b # v3
         with:
           version: latest
           install-only: true
@@ -172,9 +177,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Resolve Grafana E2E versions
         id: resolve-versions
-        uses: grafana/plugin-actions/e2e-version@main
+        # Pinned to a commit rather than @main: this is a third-party action and
+        # a moving ref would run whatever upstream lands. Pinning the action does
+        # not freeze the matrix, which it resolves from Grafana's API at runtime.
+        uses: grafana/plugin-actions/e2e-version@1dd6eaef23956f8e83831ce4ab4b159e0723e0c1 # main @ 2026-08-06
 
   playwright-tests:
     needs: [resolve-versions, build]
@@ -199,8 +209,10 @@ jobs:
       # Full checkout: docker-compose.e2e.yaml builds the mock Historian from
       # source (needs go.mod, pkg/, tests/), so a sparse checkout is not enough.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      # Sets up Node 20 + pnpm 9.6.0 and installs dependencies (same as build).
+      # Sets up Node and pnpm and installs dependencies (same as build).
       - uses: ./.github/actions/pnpm
 
       - name: Download plugin

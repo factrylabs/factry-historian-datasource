@@ -1,0 +1,35 @@
+# pnpm 11 reads its settings here rather than from .npmrc or a "pnpm" field in
+# package.json.
+#
+# shamefullyHoist flattens node_modules the way npm does. The build depends on
+# it: tsconfig references @types/testing-library__jest-dom, which nothing
+# declares directly, and several webpack loaders resolve plugins the same way.
+# Dropping it means declaring those dependencies explicitly first.
+shamefullyHoist: true
+autoInstallPeers: true
+sideEffectsCache: false
+
+# Dependency overrides. Most of these pin a transitive dependency to a patched
+# release to clear a vulnerability; drop an entry once whatever pulls in the
+# vulnerable range has moved past it on its own.
+overrides:
+  form-data: 4.0.4
+  rxjs: 7.3.0
+  immutable: 5.1.5
+  uplot: 1.6.31
+  qs: 6.14.1
+  '@remix-run/router': 1.23.2
+  'minimatch@<3.1.4': 3.1.4
+  'minimatch@>=9.0.0 <9.0.7': 9.0.7
+  serialize-javascript: 7.0.3
+  lodash: 4.18.1
+  picomatch: 4.0.4
+  'protobufjs@<=8.0.1': 7.5.5
+
+# Dependencies allowed to run install scripts. pnpm 11 blocks them by default;
+# these three need theirs to produce working native/generated code, and all
+# three already ran under pnpm 9, which allowed every script.
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  protobufjs: true

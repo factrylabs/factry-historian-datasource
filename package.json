@@ -70,7 +70,7 @@
     "form-data": "4.0.4"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "dependencies": {
     "@emotion/css": "^11.13.5",
@@ -84,21 +84,5 @@
     "react-dom": "^18.3.1",
     "tslib": "2.5.3"
   },
-  "packageManager": "pnpm@9.6.0",
-  "pnpm": {
-    "overrides": {
-      "form-data": "4.0.4",
-      "rxjs": "7.3.0",
-      "immutable": "5.1.5",
-      "uplot": "1.6.31",
-      "qs": "6.14.1",
-      "@remix-run/router": "1.23.2",
-      "minimatch@<3.1.4": "3.1.4",
-      "minimatch@>=9.0.0 <9.0.7": "9.0.7",
-      "serialize-javascript": "7.0.3",
-      "lodash": "4.18.1",
-      "picomatch": "4.0.4",
-      "protobufjs@<=8.0.1": "7.5.5"
-    }
-  }
+  "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
 }
