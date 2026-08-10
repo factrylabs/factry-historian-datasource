@@ -1,0 +1,23 @@
+# E2E override: adds a mock Historian API and points Grafana's datasource
+# provisioning at it, leaving the dev provisioning (real Historian) untouched.
+#
+#   docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml up -d --build
+#
+# Grafana reaches the mock over the compose network at http://mockhistorian:8000.
+services:
+  mockhistorian:
+    container_name: 'factry-historian-mock'
+    build:
+      context: .
+      dockerfile: tests/mockhistorian/Dockerfile
+
+  grafana:
+    depends_on:
+      - mockhistorian
+    environment:
+      # Point Grafana at a separate provisioning dir so the dev bind mount at
+      # /etc/grafana/provisioning is ignored (docker-compose appends volume
+      # lists, so we cannot replace the dev mount in place).
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning-e2e
+    volumes:
+      - ./tests/provisioning:/etc/grafana/provisioning-e2e

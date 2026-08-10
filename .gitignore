@@ -36,3 +36,9 @@ factry-historian-datasource/
 *.zip
 *.sha1
 .eslintcache
+
+# Playwright e2e
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.auth/

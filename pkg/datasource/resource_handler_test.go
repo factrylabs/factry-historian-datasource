@@ -28,7 +28,7 @@ func TestEventPropertyValuesWithoutPropertiesParamDoesNotPanic(t *testing.T) {
 	resourceMux := http.NewServeMux()
 	resourceMux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(ds.handleGetEventPropertyValues))
 
-	req := httptest.NewRequest(http.MethodGet, "/event-property-values/someName", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/event-property-values/someName", http.NoBody)
 	rec := httptest.NewRecorder()
 	assert.NotPanics(t, func() {
 		resourceMux.ServeHTTP(rec, req)
@@ -92,7 +92,7 @@ func TestResourceCallForwardsHistorianStatus(t *testing.T) {
 			resourceMux.HandleFunc("GET /assets", handleJSON(ds.handleGetAssets))
 
 			rec := httptest.NewRecorder()
-			resourceMux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, testCase.path, http.NoBody))
+			resourceMux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, testCase.path, http.NoBody))
 
 			assert.Equal(t, testCase.expectedStatus, rec.Code, "the historian status must reach grafana")
 			assert.Contains(t, rec.Body.String(), testCase.expectedBody, "the historian error body must reach grafana")
@@ -109,7 +109,7 @@ func TestResourceCallKeepsBadRequestForInvalidInput(t *testing.T) {
 	// no path values on the request, so the handler rejects it before ever
 	// reaching the historian
 	rec := httptest.NewRecorder()
-	handleJSON(ds.handleGetTagValueForMeasurementAndTagKey)(rec, httptest.NewRequest(http.MethodGet, "/measurements/x/tags/y", http.NoBody))
+	handleJSON(ds.handleGetTagValueForMeasurementAndTagKey)(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/measurements/x/tags/y", http.NoBody))
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Contains(t, rec.Body.String(), "uuid is required")

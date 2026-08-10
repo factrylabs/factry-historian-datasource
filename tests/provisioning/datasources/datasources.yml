@@ -1,0 +1,20 @@
+apiVersion: 1
+
+# E2E datasource: points at the mock Historian (docker-compose.e2e.yaml).
+# Token/organization are throwaway; the mock does not validate them.
+datasources:
+  # Distinct name (not the dev 'Factry Historian') so provisioning never
+  # collides with a datasource left in a reused grafana-data volume.
+  - name: 'Factry Historian E2E'
+    uid: 'factry-historian-e2e'
+    type: 'factry-historian-datasource'
+    access: proxy
+    isDefault: true
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      url: 'http://mockhistorian:8000'
+      organization: '00000000-0000-0000-0000-000000000000'
+    secureJsonData:
+      token: 'e2e-mock-token'

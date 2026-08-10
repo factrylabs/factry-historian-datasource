@@ -1,0 +1,44 @@
+{
+  "uid": "e2e-measurements",
+  "title": "E2E Measurements",
+  "tags": ["e2e"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Motor speed",
+      "datasource": { "type": "factry-historian-datasource", "uid": "factry-historian-e2e" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "factry-historian-datasource", "uid": "factry-historian-e2e" },
+          "queryType": "MeasurementQuery",
+          "tabIndex": 1,
+          "seriesLimit": 50,
+          "query": {
+            "Databases": ["historian"],
+            "Measurements": ["e2e.motor.speed"],
+            "IsRegex": false,
+            "Regex": "",
+            "Options": {
+              "Aggregation": { "Name": "mean", "Period": "$__interval" },
+              "GroupBy": [],
+              "Tags": {},
+              "IncludeLastKnownPoint": false,
+              "FillInitialEmptyValues": false,
+              "UseEngineeringSpecs": false,
+              "MetadataAsLabels": false,
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
