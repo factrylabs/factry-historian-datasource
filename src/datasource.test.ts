@@ -359,7 +359,7 @@ describe('DataSource resource filters drop values from empty variables', () => {
   it('omits DatabaseUUIDs from a measurement filter when the variable resolves to ""', async () => {
     const { ds, params } = makeCapturingDataSource({ db: '' })
     await ds.getMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, { Limit: 100, Page: 1 })
-    expect(params().DatabaseUUIDs).toEqual([])
+    expect(params().DatabaseUUIDs).toBeUndefined()
   })
 
   it('keeps the resolved DatabaseUUIDs of a variable that has a value', async () => {
@@ -371,7 +371,7 @@ describe('DataSource resource filters drop values from empty variables', () => {
   it('omits AssetUUIDs from an asset property filter when the variable resolves to ""', async () => {
     const { ds, params } = makeCapturingDataSource({ asset: '' })
     await ds.getAssetProperties({ AssetUUIDs: ['$asset'], ScopedVars: {} })
-    expect(params().AssetUUIDs).toEqual([])
+    expect(params().AssetUUIDs).toBeUndefined()
   })
 
   it('keeps the resolved AssetUUIDs of a variable that has a value', async () => {
@@ -383,7 +383,7 @@ describe('DataSource resource filters drop values from empty variables', () => {
   it('omits EventTypeUUIDs from an event type property filter when the variable resolves to ""', async () => {
     const { ds, params } = makeCapturingDataSource({ etype: '' })
     await ds.getEventTypeProperties({ EventTypeUUIDs: ['$etype'], ScopedVars: {} })
-    expect(params().EventTypeUUIDs).toEqual([])
+    expect(params().EventTypeUUIDs).toBeUndefined()
   })
 
   it('keeps the resolved EventTypeUUIDs of a variable that has a value', async () => {
