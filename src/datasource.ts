@@ -271,8 +271,12 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   // that as 'X=' (only undefined and empty arrays are omitted). Historian >= 8.2
   // rejects an empty query parameter with 400 'empty value is not allowed', so an
   // unresolved variable must leave the filter out instead of sending it empty.
-  private multiSelectReplaceNonEmpty(values: string[], scopedVars?: ScopedVars): string[] {
-    return values.flatMap((e) => this.multiSelectReplace(e, scopedVars)).filter((e) => e !== '')
+  // Returns undefined when nothing is left: an empty array would still show up in
+  // the JSON.stringify cache keys below, splitting the cache from the case where
+  // the filter was never set even though both produce the same request.
+  private multiSelectReplaceNonEmpty(values: string[], scopedVars?: ScopedVars): string[] | undefined {
+    const replaced = values.flatMap((e) => this.multiSelectReplace(e, scopedVars)).filter((e) => e !== '')
+    return replaced.length > 0 ? replaced : undefined
   }
 
   templateReplaceQueryOptions(options: MeasurementQueryOptions, scopedVars: ScopedVars): MeasurementQueryOptions {
