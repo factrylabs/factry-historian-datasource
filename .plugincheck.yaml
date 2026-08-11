@@ -1,3 +1,13 @@
+# The global block is what enables every analyzer the validator ships. Without
+# it, passing this file with -config leaves only the analyzers named below
+# switched on, so the release gate (which runs the validator with no -config)
+# checks things CI does not. Values match config/default.yaml upstream.
+global:
+  enabled: true
+  severity: warning
+  jsonOutput: false
+  reportAll: false
+
 analyzers:
   go-manifest:
     rules:
