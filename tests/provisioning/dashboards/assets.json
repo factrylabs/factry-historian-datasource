@@ -1,0 +1,42 @@
+{
+  "uid": "e2e-assets",
+  "title": "E2E Assets",
+  "tags": ["e2e"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Motor properties",
+      "datasource": { "type": "factry-historian-datasource", "uid": "factry-historian-e2e" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "factry-historian-datasource", "uid": "factry-historian-e2e" },
+          "queryType": "AssetMeasurementQuery",
+          "tabIndex": 0,
+          "seriesLimit": 50,
+          "query": {
+            "Assets": ["66666666-6666-6666-6666-666666666666"],
+            "AssetProperties": ["Speed", "Temperature"],
+            "Options": {
+              "Aggregation": { "Name": "mean", "Period": "$__interval" },
+              "GroupBy": [],
+              "Tags": {},
+              "IncludeLastKnownPoint": false,
+              "FillInitialEmptyValues": false,
+              "UseEngineeringSpecs": false,
+              "MetadataAsLabels": false,
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
