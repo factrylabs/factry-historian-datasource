@@ -334,3 +334,61 @@ describe('DataSource.applyTemplateVariables seriesLimit falls back on an empty v
     expect(result.seriesLimit).toBe(50)
   })
 })
+
+// Historian >= 8.2 validates query parameters against its OpenAPI spec and
+// rejects an empty value with 400 'empty value is not allowed'. A dashboard
+// variable that resolves to "" (an unset variable, or a chained variable whose
+// query returned no options) makes multiSelectReplace return [''], which
+// grafana serializes as 'X='. Such an entry must be dropped before the request
+// is built.
+describe('DataSource resource filters drop values from empty variables', () => {
+  function makeCapturingDataSource(values: Record<string, string | string[]>): {
+    ds: DataSource
+    params: () => Record<string, unknown>
+  } {
+    const ds = makeDataSource(makeTemplateSrv(values))
+    let captured: Record<string, unknown> = {}
+    ;(ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }).getResource =
+      (_path: string, params?: Record<string, unknown>) => {
+        captured = params ?? {}
+        return Promise.resolve([])
+      }
+    return { ds, params: () => captured }
+  }
+
+  it('omits DatabaseUUIDs from a measurement filter when the variable resolves to ""', async () => {
+    const { ds, params } = makeCapturingDataSource({ db: '' })
+    await ds.getMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, { Limit: 100, Page: 1 })
+    expect(params().DatabaseUUIDs).toEqual([])
+  })
+
+  it('keeps the resolved DatabaseUUIDs of a variable that has a value', async () => {
+    const { ds, params } = makeCapturingDataSource({ db: 'db-uuid' })
+    await ds.getMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, { Limit: 100, Page: 1 })
+    expect(params().DatabaseUUIDs).toEqual(['db-uuid'])
+  })
+
+  it('omits AssetUUIDs from an asset property filter when the variable resolves to ""', async () => {
+    const { ds, params } = makeCapturingDataSource({ asset: '' })
+    await ds.getAssetProperties({ AssetUUIDs: ['$asset'], ScopedVars: {} })
+    expect(params().AssetUUIDs).toEqual([])
+  })
+
+  it('keeps the resolved AssetUUIDs of a variable that has a value', async () => {
+    const { ds, params } = makeCapturingDataSource({ asset: 'asset-uuid' })
+    await ds.getAssetProperties({ AssetUUIDs: ['$asset'], ScopedVars: {} })
+    expect(params().AssetUUIDs).toEqual(['asset-uuid'])
+  })
+
+  it('omits EventTypeUUIDs from an event type property filter when the variable resolves to ""', async () => {
+    const { ds, params } = makeCapturingDataSource({ etype: '' })
+    await ds.getEventTypeProperties({ EventTypeUUIDs: ['$etype'], ScopedVars: {} })
+    expect(params().EventTypeUUIDs).toEqual([])
+  })
+
+  it('keeps the resolved EventTypeUUIDs of a variable that has a value', async () => {
+    const { ds, params } = makeCapturingDataSource({ etype: 'event-type-uuid' })
+    await ds.getEventTypeProperties({ EventTypeUUIDs: ['$etype'], ScopedVars: {} })
+    expect(params().EventTypeUUIDs).toEqual(['event-type-uuid'])
+  })
+})

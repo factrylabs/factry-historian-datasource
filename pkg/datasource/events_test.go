@@ -166,6 +166,9 @@ type fakeHistorianData struct {
 	eventTypesByKey map[string]schemas.EventType
 	allEventTypes   []schemas.EventType
 	events          []schemas.Event
+	// onEventsRequest, when set, is called with every /api/events request so a
+	// test can assert on the query the datasource built.
+	onEventsRequest func(*http.Request)
 }
 
 // newFakeHistorianServer spins up an httptest.Server that serves only the endpoints the
@@ -214,7 +217,10 @@ func newFakeHistorianServer(t *testing.T, fixture fakeHistorianData) *httptest.S
 		writeJSON(w, fixture.allEventTypes)
 	})
 
-	mux.HandleFunc("/api/events", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/api/events", func(w http.ResponseWriter, r *http.Request) {
+		if fixture.onEventsRequest != nil {
+			fixture.onEventsRequest(r)
+		}
 		writeJSON(w, fixture.events)
 	})
 
@@ -480,4 +486,63 @@ func TestUnknownEventPropertyDatatypeDoesNotPanic(t *testing.T) {
 			Type:      schemas.EventTypePropertyTypeSimple,
 		}}, nil)
 	})
+}
+
+// Historian >= 8.2 validates query parameters against its OpenAPI spec and
+// rejects an empty value with 400 'empty value is not allowed'. A statuses
+// variable that resolves to "" reaches the event filter as [""], which the form
+// encoder writes as "Status=", so the entry must be dropped before the query is
+// built.
+func TestHandleEventQuery_OmitsStatusFromEmptyVariable(t *testing.T) {
+	t.Parallel()
+
+	asset := schemas.Asset{
+		BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "machine"},
+		AssetPath: `\\site\\machine`,
+	}
+	eventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Batch"}}
+
+	tests := []struct {
+		name     string
+		statuses []string
+		want     []string
+	}{
+		{name: "variable resolved to an empty string", statuses: []string{""}, want: nil},
+		{name: "one resolved status and one empty variable", statuses: []string{"processed", ""}, want: []string{"processed"}},
+		{name: "resolved statuses", statuses: []string{"processed", "open"}, want: []string{"processed", "open"}},
+		{name: "no statuses selected", statuses: nil, want: nil},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var eventsQuery url.Values
+			server := newFakeHistorianServer(t, fakeHistorianData{
+				assetsByPath:    map[string]schemas.Asset{asset.AssetPath: asset},
+				assetsByUUID:    map[string]schemas.Asset{asset.UUID.String(): asset},
+				eventTypesByKey: map[string]schemas.EventType{eventType.Name: eventType},
+				allEventTypes:   []schemas.EventType{eventType},
+				onEventsRequest: func(r *http.Request) { eventsQuery = r.URL.Query() },
+			})
+			t.Cleanup(server.Close)
+
+			apiClient, err := api.NewAPIWithToken(server.URL, "test-token", "test-org")
+			require.NoError(t, err)
+			ds := &HistorianDataSource{API: apiClient}
+
+			startTime := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+			_, err = ds.handleEventQuery(context.Background(), schemas.EventQuery{
+				Type:       string(schemas.EventTypePropertyTypeSimple),
+				Assets:     []string{asset.AssetPath},
+				EventTypes: []string{eventType.Name},
+				Statuses:   tt.statuses,
+			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.2.0"})
+			require.NoError(t, err)
+			require.NotNil(t, eventsQuery, "the event query must reach /api/events")
+
+			assert.Equal(t, tt.want, eventsQuery["Status"])
+		})
+	}
 }
