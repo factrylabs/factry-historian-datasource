@@ -13,18 +13,40 @@ sideEffectsCache: false
 # release to clear a vulnerability; drop an entry once whatever pulls in the
 # vulnerable range has moved past it on its own.
 overrides:
-  form-data: 4.0.4
+  form-data: 4.0.6
   rxjs: 7.3.0
-  immutable: 5.1.5
+  immutable: 5.1.9
   uplot: 1.6.31
-  qs: 6.14.1
-  '@remix-run/router': 1.23.2
+  qs: 6.15.3
+  '@remix-run/router': 1.23.3
   'minimatch@<3.1.4': 3.1.4
   'minimatch@>=9.0.0 <9.0.7': 9.0.7
-  serialize-javascript: 7.0.3
+  serialize-javascript: 7.1.0
   lodash: 4.18.1
   picomatch: 4.0.4
-  'protobufjs@<=8.0.1': 7.5.5
+  'ajv@6': 6.15.0
+  'ajv@8': 8.20.0
+  '@tootallnate/once': 2.0.1
+  'brace-expansion@1': 1.1.18
+  'brace-expansion@5': 5.0.9
+  'diff@4': 4.0.4
+  dompurify: 3.4.13
+  fast-uri: 3.1.5
+  'js-yaml@3': 3.15.1
+  'js-yaml@4': 4.3.1
+  'nanoid@3': 3.3.18
+  postcss: 8.5.26
+  prismjs: 1.30.0
+  protocol-buffers-schema: 3.6.1
+  # Scoped to 6.x: react-router-dom@5 still pulls react-router@5, which the
+  # 6.x advisories do not cover.
+  'react-router@6': 6.30.4
+  # Scoped to 11.x: schema-utils and the ajv plugins ask for uuid ^8.
+  'uuid@11': 11.1.1
+  websocket-driver: 0.7.5
+  ws: 8.21.3
+  'yaml@1': 1.10.3
+  'yaml@2': 2.9.0
 
 # Dependencies allowed to run install scripts. pnpm 11 blocks them by default;
 # these three need theirs to produce working native/generated code, and all

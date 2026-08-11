@@ -99,6 +99,13 @@ jobs:
       - name: gosec
         if: steps.check-for-backend.outputs.has-backend == 'true'
         uses: securego/gosec@bb17e422fc34bf4c0a2e5cab9d07dc45a68c040c # v2.24.7
+        # This is a Docker action, so it uses the Go inside its own image rather
+        # than the one Setup Go installed. That image is built on golang:1.26-alpine,
+        # which sets GOTOOLCHAIN=local, so gosec fails to load any package when
+        # go.mod requires a patch newer than the image happens to carry. Letting it
+        # resolve the toolchain keeps this independent of the image's Go version.
+        env:
+          GOTOOLCHAIN: auto
         with:
           args: ./...
 
