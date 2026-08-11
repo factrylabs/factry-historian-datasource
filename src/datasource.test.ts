@@ -339,56 +339,101 @@ describe('DataSource.applyTemplateVariables seriesLimit falls back on an empty v
 // rejects an empty value with 400 'empty value is not allowed'. A dashboard
 // variable that resolves to "" (an unset variable, or a chained variable whose
 // query returned no options) makes multiSelectReplace return [''], which
-// grafana serializes as 'X='. Such an entry must be dropped before the request
-// is built.
-describe('DataSource resource filters drop values from empty variables', () => {
+// grafana serializes as 'X='. Such an entry must be dropped from the request,
+// and a filter left without any value must return no results instead of
+// querying every database / asset / event type.
+describe('DataSource resource filters handle empty variables', () => {
   function makeCapturingDataSource(values: Record<string, string | string[]>): {
     ds: DataSource
-    params: () => Record<string, unknown>
+    params: () => Record<string, unknown> | undefined
+    calls: () => number
   } {
     const ds = makeDataSource(makeTemplateSrv(values))
-    let captured: Record<string, unknown> = {}
+    let captured: Record<string, unknown> | undefined
+    let calls = 0
     ;(ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }).getResource =
       (_path: string, params?: Record<string, unknown>) => {
-        captured = params ?? {}
+        calls++
+        captured = params
         return Promise.resolve([])
       }
-    return { ds, params: () => captured }
+    return { ds, params: () => captured, calls: () => calls }
   }
 
-  it('omits DatabaseUUIDs from a measurement filter when the variable resolves to ""', async () => {
-    const { ds, params } = makeCapturingDataSource({ db: '' })
-    await ds.getMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, { Limit: 100, Page: 1 })
-    expect(params().DatabaseUUIDs).toBeUndefined()
+  it('returns no measurements when the database variable resolves to ""', async () => {
+    const { ds, calls } = makeCapturingDataSource({ db: '' })
+    const result = await ds.getMeasurements(
+      { Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} },
+      { Limit: 100, Page: 1 }
+    )
+    expect(result).toEqual([])
+    expect(calls()).toBe(0)
   })
 
   it('keeps the resolved DatabaseUUIDs of a variable that has a value', async () => {
     const { ds, params } = makeCapturingDataSource({ db: 'db-uuid' })
     await ds.getMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, { Limit: 100, Page: 1 })
-    expect(params().DatabaseUUIDs).toEqual(['db-uuid'])
+    expect(params()?.DatabaseUUIDs).toEqual(['db-uuid'])
   })
 
-  it('omits AssetUUIDs from an asset property filter when the variable resolves to ""', async () => {
-    const { ds, params } = makeCapturingDataSource({ asset: '' })
-    await ds.getAssetProperties({ AssetUUIDs: ['$asset'], ScopedVars: {} })
-    expect(params().AssetUUIDs).toBeUndefined()
+  it('queries every database when no database filter was set', async () => {
+    const { ds, params, calls } = makeCapturingDataSource({})
+    await ds.getMeasurements({ Keyword: 'pump', ScopedVars: {} }, { Limit: 100, Page: 1 })
+    expect(calls()).toBe(1)
+    expect(params()?.DatabaseUUIDs).toBeUndefined()
+  })
+
+  it('returns no tag keys when the database variable resolves to ""', async () => {
+    const { ds, calls } = makeCapturingDataSource({ db: '' })
+    const result = await ds.getTagKeysForMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} })
+    expect(result).toEqual([])
+    expect(calls()).toBe(0)
+  })
+
+  it('returns no tag values when the database variable resolves to ""', async () => {
+    const { ds, calls } = makeCapturingDataSource({ db: '' })
+    const result = await ds.getTagValuesForMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, 'key')
+    expect(result).toEqual([])
+    expect(calls()).toBe(0)
+  })
+
+  it('returns no asset properties when the asset variable resolves to ""', async () => {
+    const { ds, calls } = makeCapturingDataSource({ asset: '' })
+    const result = await ds.getAssetProperties({ AssetUUIDs: ['$asset'], ScopedVars: {} })
+    expect(result).toEqual([])
+    expect(calls()).toBe(0)
   })
 
   it('keeps the resolved AssetUUIDs of a variable that has a value', async () => {
     const { ds, params } = makeCapturingDataSource({ asset: 'asset-uuid' })
     await ds.getAssetProperties({ AssetUUIDs: ['$asset'], ScopedVars: {} })
-    expect(params().AssetUUIDs).toEqual(['asset-uuid'])
+    expect(params()?.AssetUUIDs).toEqual(['asset-uuid'])
   })
 
-  it('omits EventTypeUUIDs from an event type property filter when the variable resolves to ""', async () => {
-    const { ds, params } = makeCapturingDataSource({ etype: '' })
-    await ds.getEventTypeProperties({ EventTypeUUIDs: ['$etype'], ScopedVars: {} })
-    expect(params().EventTypeUUIDs).toBeUndefined()
+  it('queries every asset property when no asset filter was set', async () => {
+    const { ds, params, calls } = makeCapturingDataSource({})
+    await ds.getAssetProperties({ ScopedVars: {} })
+    expect(calls()).toBe(1)
+    expect(params()?.AssetUUIDs).toBeUndefined()
+  })
+
+  it('returns no event type properties when the event type variable resolves to ""', async () => {
+    const { ds, calls } = makeCapturingDataSource({ etype: '' })
+    const result = await ds.getEventTypeProperties({ EventTypeUUIDs: ['$etype'], ScopedVars: {} })
+    expect(result).toEqual([])
+    expect(calls()).toBe(0)
   })
 
   it('keeps the resolved EventTypeUUIDs of a variable that has a value', async () => {
     const { ds, params } = makeCapturingDataSource({ etype: 'event-type-uuid' })
     await ds.getEventTypeProperties({ EventTypeUUIDs: ['$etype'], ScopedVars: {} })
-    expect(params().EventTypeUUIDs).toEqual(['event-type-uuid'])
+    expect(params()?.EventTypeUUIDs).toEqual(['event-type-uuid'])
+  })
+
+  it('queries every event type property when no event type filter was set', async () => {
+    const { ds, params, calls } = makeCapturingDataSource({})
+    await ds.getEventTypeProperties({ ScopedVars: {} })
+    expect(calls()).toBe(1)
+    expect(params()?.EventTypeUUIDs).toBeUndefined()
   })
 })
