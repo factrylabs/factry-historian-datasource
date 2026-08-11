@@ -266,17 +266,21 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return this.templateSrv.replace(value, scopedVars)
   }
 
-  // Interpolates every entry and drops the ones that resolve to an empty string.
-  // multiSelectReplace returns [''] for an unset variable, and grafana serializes
-  // that as 'X=' (only undefined and empty arrays are omitted). Historian >= 8.2
-  // rejects an empty query parameter with 400 'empty value is not allowed', so an
-  // unresolved variable must leave the filter out instead of sending it empty.
-  // Returns undefined when nothing is left: an empty array would still show up in
-  // the JSON.stringify cache keys below, splitting the cache from the case where
-  // the filter was never set even though both produce the same request.
-  private multiSelectReplaceNonEmpty(values: string[], scopedVars?: ScopedVars): string[] | undefined {
-    const replaced = values.flatMap((e) => this.multiSelectReplace(e, scopedVars)).filter((e) => e !== '')
-    return replaced.length > 0 ? replaced : undefined
+  // Interpolates a multi-value resource filter, telling apart the two ways it can
+  // end up without values:
+  //   undefined -> no filter was set, the caller must query everything
+  //   []        -> a filter was set but every entry resolved to an empty string,
+  //                i.e. an unset variable, so the filter matches nothing and the
+  //                caller must return no results rather than query everything
+  // The empty entries themselves are dropped because multiSelectReplace returns
+  // [''] for an unset variable, grafana serializes that as 'X=' (only undefined
+  // and empty arrays are omitted), and historian >= 8.2 rejects an empty query
+  // parameter with 400 'empty value is not allowed'.
+  private resolveFilterValues(values: string[] | undefined, scopedVars?: ScopedVars): string[] | undefined {
+    if (!values || values.length === 0) {
+      return undefined
+    }
+    return values.flatMap((e) => this.multiSelectReplace(e, scopedVars)).filter((e) => e !== '')
   }
 
   templateReplaceQueryOptions(options: MeasurementQueryOptions, scopedVars: ScopedVars): MeasurementQueryOptions {
@@ -315,8 +319,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   templateReplaceMeasurementFilter(filter: MeasurementFilter): MeasurementFilter {
-    filter.DatabaseUUIDs =
-      filter.DatabaseUUIDs && this.multiSelectReplaceNonEmpty(filter.DatabaseUUIDs, filter.ScopedVars)
+    filter.DatabaseUUIDs = this.resolveFilterValues(filter.DatabaseUUIDs, filter.ScopedVars)
     filter.Keyword = this.templateSrv.replace(filter.Keyword, filter.ScopedVars)
     return filter
   }
@@ -343,6 +346,11 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   async getMeasurements(filter: MeasurementFilter, pagination: Pagination): Promise<Measurement[]> {
     const f = this.templateReplaceMeasurementFilter(filter)
     if (f.Keyword && isRegex(f.Keyword) && !isValidRegex(f.Keyword)) {
+      return Promise.resolve([])
+    }
+    // a database filter whose variables all resolved to "" matches no database,
+    // it must not widen the query to every database
+    if (f.DatabaseUUIDs?.length === 0) {
       return Promise.resolve([])
     }
 
@@ -414,9 +422,13 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       params = {
         ...filter,
       }
-      if (filter.AssetUUIDs) {
-        params.AssetUUIDs = this.multiSelectReplaceNonEmpty(filter.AssetUUIDs, filter.ScopedVars)
+      const assetUUIDs = this.resolveFilterValues(filter.AssetUUIDs, filter.ScopedVars)
+      // an asset filter whose variables all resolved to "" matches no asset, it
+      // must not widen the query to every asset property
+      if (assetUUIDs?.length === 0) {
+        return []
       }
+      params.AssetUUIDs = assetUUIDs
       delete params.ScopedVars
     }
     const cacheKey = `assetProperties:${JSON.stringify(params)}`
@@ -445,11 +457,14 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       const eventTypePropertiesFilter: EventTypePropertiesFilter = {
         ...filter,
       }
-      if (eventTypePropertiesFilter.EventTypeUUIDs) {
-        eventTypePropertiesFilter.EventTypeUUIDs = this.multiSelectReplaceNonEmpty(
-          eventTypePropertiesFilter.EventTypeUUIDs,
-          filter.ScopedVars
-        )
+      eventTypePropertiesFilter.EventTypeUUIDs = this.resolveFilterValues(
+        eventTypePropertiesFilter.EventTypeUUIDs,
+        filter.ScopedVars
+      )
+      // an event type filter whose variables all resolved to "" matches no event
+      // type, it must not widen the query to every event type property
+      if (eventTypePropertiesFilter.EventTypeUUIDs?.length === 0) {
+        return []
       }
       params = {
         ...eventTypePropertiesFilter,
@@ -475,6 +490,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     if (f.Keyword && isRegex(f.Keyword) && !isValidRegex(f.Keyword)) {
       return Promise.resolve([])
     }
+    if (f.DatabaseUUIDs?.length === 0) {
+      return Promise.resolve([])
+    }
     const params: Record<string, unknown> = {
       ...f,
     }
@@ -491,6 +509,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   async getTagValuesForMeasurements(filter: MeasurementFilter, key: string): Promise<string[]> {
     const f = this.templateReplaceMeasurementFilter(filter)
     if (f.Keyword && isRegex(f.Keyword) && !isValidRegex(f.Keyword)) {
+      return Promise.resolve([])
+    }
+    if (f.DatabaseUUIDs?.length === 0) {
       return Promise.resolve([])
     }
     const params: Record<string, unknown> = {
