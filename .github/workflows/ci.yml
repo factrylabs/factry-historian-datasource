@@ -293,6 +293,22 @@ jobs:
       - name: Verify plugin and datasource health
         run: |
           # The e2e Grafana runs with anonymous admin access (basic auth is disabled).
+          # Provisioning runs after the HTTP server binds, so Grafana can pass the
+          # wait above and then exit. Retry briefly and name the problem if it
+          # stays down, instead of failing on a bare curl exit code.
+          healthy=false
+          for attempt in $(seq 10); do
+            if curl -sf -o /dev/null http://localhost:3001/api/plugins/factry-historian-datasource/settings; then
+              healthy=true
+              break
+            fi
+            sleep 3
+          done
+          if [ "$healthy" != true ]; then
+            echo "::error::Grafana stopped serving the plugin settings endpoint"
+            docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml ps
+            exit 1
+          fi
           echo "--- plugin settings ---"
           curl -sf http://localhost:3001/api/plugins/factry-historian-datasource/settings
           echo
