@@ -266,6 +266,15 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return this.templateSrv.replace(value, scopedVars)
   }
 
+  // Interpolates every entry and drops the ones that resolve to an empty string.
+  // multiSelectReplace returns [''] for an unset variable, and grafana serializes
+  // that as 'X=' (only undefined and empty arrays are omitted). Historian >= 8.2
+  // rejects an empty query parameter with 400 'empty value is not allowed', so an
+  // unresolved variable must leave the filter out instead of sending it empty.
+  private multiSelectReplaceNonEmpty(values: string[], scopedVars?: ScopedVars): string[] {
+    return values.flatMap((e) => this.multiSelectReplace(e, scopedVars)).filter((e) => e !== '')
+  }
+
   templateReplaceQueryOptions(options: MeasurementQueryOptions, scopedVars: ScopedVars): MeasurementQueryOptions {
     if (options.GroupBy) {
       options.GroupBy = options.GroupBy?.flatMap((e) => this.multiSelectReplace(e, scopedVars))
@@ -302,7 +311,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   }
 
   templateReplaceMeasurementFilter(filter: MeasurementFilter): MeasurementFilter {
-    filter.DatabaseUUIDs = filter.DatabaseUUIDs?.flatMap((e) => this.multiSelectReplace(e, filter.ScopedVars))
+    filter.DatabaseUUIDs =
+      filter.DatabaseUUIDs && this.multiSelectReplaceNonEmpty(filter.DatabaseUUIDs, filter.ScopedVars)
     filter.Keyword = this.templateSrv.replace(filter.Keyword, filter.ScopedVars)
     return filter
   }
@@ -401,7 +411,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         ...filter,
       }
       if (filter.AssetUUIDs) {
-        params.AssetUUIDs = filter.AssetUUIDs.flatMap((e) => this.multiSelectReplace(e, filter.ScopedVars))
+        params.AssetUUIDs = this.multiSelectReplaceNonEmpty(filter.AssetUUIDs, filter.ScopedVars)
       }
       delete params.ScopedVars
     }
@@ -432,8 +442,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         ...filter,
       }
       if (eventTypePropertiesFilter.EventTypeUUIDs) {
-        eventTypePropertiesFilter.EventTypeUUIDs = eventTypePropertiesFilter.EventTypeUUIDs.flatMap((e) =>
-          this.multiSelectReplace(e, filter.ScopedVars)
+        eventTypePropertiesFilter.EventTypeUUIDs = this.multiSelectReplaceNonEmpty(
+          eventTypePropertiesFilter.EventTypeUUIDs,
+          filter.ScopedVars
         )
       }
       params = {
