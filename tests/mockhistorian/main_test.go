@@ -378,7 +378,8 @@ func doRequest(t *testing.T, method, target, body string) *httptest.ResponseReco
 	if body != "" {
 		reader = strings.NewReader(body)
 	}
-	req := httptest.NewRequest(method, target, reader)
+	// t.Context() ties the request to the test's lifetime and satisfies noctx.
+	req := httptest.NewRequestWithContext(t.Context(), method, target, reader)
 	rec := httptest.NewRecorder()
 	newMux().ServeHTTP(rec, req)
 	return rec
