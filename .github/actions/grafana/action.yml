@@ -77,12 +77,12 @@ runs:
     - name: Generate artifact attestation
       if: ${{ inputs.attestation == 'true' }}
       id: attestation
-      uses: actions/attest-build-provenance@v2
+      uses: actions/attest-build-provenance@v3
       with:
         subject-path: ${{ steps.package-plugin.outputs.archive }}
 
     - name: Create Github release
-      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+      uses: softprops/action-gh-release@fe965f7af51af5f2602596916f38a38df2e33de0 # v3.0.2
       with:
         draft: true
         generate_release_notes: true
