@@ -1,4 +1,5 @@
-import { test, expect } from '@grafana/plugin-e2e';
+import { test, expect } from './fixtures';
+import { enableTableView, inlineFieldInput } from './utils';
 
 test.describe('measurements query', () => {
   test('provisioned dashboard renders data from the mock Historian', async ({
@@ -20,16 +21,48 @@ test.describe('measurements query', () => {
     await expect(panel.locator).toContainText('e2e.motor.speed');
   });
 
-  test('query editor exposes the four query-type tabs', async ({
+  test('a measurement picked in the query editor returns data', async ({
     panelEditPage,
     readProvisionedDataSource,
     page,
   }) => {
     const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
     await panelEditPage.datasource.set(ds.name);
+    await enableTableView(page);
 
-    for (const tab of ['Assets', 'Measurements', 'Events', 'Raw']) {
-      await expect(page.getByRole('radio', { name: tab })).toBeVisible();
-    }
+    await page.getByRole('radio', { name: 'Measurements' }).check({ force: true });
+    await expect(page.getByText('select measurement')).toBeVisible();
+    // The measurement select remounts once the database list resolves
+    // (key={selectedDatabases}), which would destroy the input mid-typing.
+    await page.waitForTimeout(1500);
+
+    // Type into the combobox input; the options load from the mock's
+    // /api/measurements with the typed keyword.
+    await inlineFieldInput(page, 'Measurements').pressSequentially('temperature', { delay: 40 });
+    await page.getByRole('option', { name: /e2e\.motor\.temperature/ }).click();
+
+    // Selecting a measurement triggers the query; the rendered table proves the
+    // full frontend -> backend -> mock -> Arrow decode path.
+    await expect(panelEditPage.refreshPanel()).toBeOK();
+    await expect(panelEditPage.panel.locator).toContainText('e2e.motor.temperature');
+  });
+
+  test('regex mode queries all matching measurements', async ({
+    panelEditPage,
+    readProvisionedDataSource,
+    page,
+  }) => {
+    const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+    await panelEditPage.datasource.set(ds.name);
+    await enableTableView(page);
+
+    await page.getByRole('radio', { name: 'Measurements' }).check({ force: true });
+    await page.getByText('Use regular expression').click();
+
+    await page.getByPlaceholder('[m|M]otor_[0-9]').fill('e2e\\.motor\\..*');
+
+    // The regex input debounces for 500ms before it updates the query.
+    await expect(panelEditPage.refreshPanel()).toBeOK();
+    await expect(panelEditPage.panel.locator).toContainText('e2e.motor.speed');
   });
 });

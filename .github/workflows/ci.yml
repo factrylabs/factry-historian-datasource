@@ -229,10 +229,42 @@ jobs:
           path: dist
           name: ${{ needs.build.outputs.plugin-id }}-${{ needs.build.outputs.plugin-version }}
 
+      # Guard against a nested or incomplete artifact layout: Grafana mounts
+      # ./dist as the plugin directory, so these files must sit at its root.
+      - name: Check plugin artifact layout
+        if: needs.build.outputs.has-backend == 'true'
+        run: |
+          test -f dist/plugin.json || { echo "dist/plugin.json missing"; ls -laR dist | head -50; exit 1; }
+          test -f dist/gpx_factry-historian-datasource_linux_amd64 || { echo "backend binary missing"; ls -la dist; exit 1; }
+          test ! -d dist/dist || { echo "artifact contains a nested dist/ directory"; ls -la dist; exit 1; }
+
+      - name: Setup Go environment
+        if: needs.build.outputs.has-backend == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      # Replace the release binary with a coverage-instrumented build so the
+      # e2e run measures backend coverage (GOCOVERDIR is wired up in
+      # docker-compose.e2e.yaml). The signature manifest no longer matches the
+      # modified binary, so drop it; the e2e Grafana allows unsigned plugins.
+      - name: Build coverage-instrumented backend
+        if: needs.build.outputs.has-backend == 'true'
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -cover -covermode=atomic -coverpkg=./pkg/... -o dist/gpx_factry-historian-datasource_linux_amd64 ./pkg
+          rm -f dist/MANIFEST.txt
+
       - name: Execute permissions on binary
         if: needs.build.outputs.has-backend == 'true'
         run: |
           chmod +x ./dist/gpx_factry-historian-datasource_linux_amd64
+
+      # The grafana container user must be able to write coverage counters into
+      # the bind-mounted directory.
+      - name: Prepare coverage directories
+        run: |
+          mkdir -p coverage/e2e-backend-raw
+          chmod 777 coverage/e2e-backend-raw
 
       - name: Start Grafana and mock Historian
         run: |
@@ -250,12 +282,26 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install chromium --with-deps
 
+      # Fail fast with a clear signal when the plugin did not load or the
+      # datasource cannot reach the mock, instead of 18 opaque test failures.
+      - name: Verify plugin and datasource health
+        run: |
+          # The e2e Grafana runs with anonymous admin access (basic auth is disabled).
+          echo "--- plugin settings ---"
+          curl -sf http://localhost:3001/api/plugins/factry-historian-datasource/settings
+          echo
+          echo "--- datasource health ---"
+          curl -s http://localhost:3001/api/datasources/uid/factry-historian-e2e/health
+          echo
+
       - name: Run Playwright tests
         id: run-tests
-        run: pnpm run e2e
+        run: pnpm run e2e:coverage
 
+      # Also runs when the job was cancelled by a timeout or an earlier step
+      # failed: 'cancelled' and 'skipped' are != 'success' too.
       - name: Docker logs
-        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        if: ${{ always() && steps.run-tests.outcome != 'success' }}
         run: |
           docker logs factry-historian-datasource >& grafana-server.log
           # The mock logs every request it served, which shows at a glance
@@ -263,11 +309,29 @@ jobs:
           docker logs factry-historian-mock >& mockhistorian.log
 
       - name: Stop grafana docker
+        if: ${{ always() }}
         run: docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml down
+
+      # Renders the frontend + backend e2e coverage summary (also into the job
+      # summary) and produces the HTML reports uploaded below.
+      - name: E2E coverage report
+        if: ${{ always() && steps.run-tests.outcome != 'skipped' }}
+        run: bash scripts/e2e-coverage-report.sh
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.run-tests.outcome != 'skipped' }}
+        with:
+          name: e2e-coverage-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}
+          path: |
+            coverage/e2e-frontend
+            coverage/e2e-backend.cov
+            coverage/e2e-backend.html
+          retention-days: 5
 
       - name: Upload server log
         uses: actions/upload-artifact@v4
-        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        if: ${{ always() && steps.run-tests.outcome != 'success' }}
         with:
           name: ${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}-server-log
           path: |
@@ -279,8 +343,12 @@ jobs:
       # Beware not to expose sensitive information.
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
-        if: ${{ always() && steps.run-tests.outcome == 'failure' }}
+        if: ${{ always() && steps.run-tests.outcome != 'success' }}
         with:
           name: playwright-report-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}
-          path: playwright-report/
+          # test-results/ carries the traces and error-context snapshots, which
+          # are what actually pin down a failure.
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 5

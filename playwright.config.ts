@@ -12,9 +12,12 @@ export default defineConfig<PluginOptions>({
   testMatch: ['**/*.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
+  // Frontend coverage collection (no-ops unless E2E_COVERAGE=true).
+  globalSetup: require.resolve('./tests/coverage/global-setup'),
+  globalTeardown: require.resolve('./tests/coverage/global-teardown'),
   use: {
     // This repo's docker-compose publishes Grafana on host port 3001 (-> 3000).
     baseURL: process.env.GRAFANA_URL ?? 'http://localhost:3001',

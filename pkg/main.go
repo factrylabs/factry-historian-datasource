@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	startCoverageFlusher()
 	if err := datasource.Manage("factry-historian-datasource", historianDataSource.NewDataSource, datasource.ManageOpts{}); err != nil {
 		log.DefaultLogger.Error(err.Error())
 		os.Exit(1)

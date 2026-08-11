@@ -1,0 +1,41 @@
+{
+  "uid": "e2e-events",
+  "title": "E2E Events",
+  "tags": ["e2e"],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Batch events",
+      "datasource": { "type": "factry-historian-datasource", "uid": "factry-historian-e2e" },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "factry-historian-datasource", "uid": "factry-historian-e2e" },
+          "queryType": "EventQuery",
+          "tabIndex": 2,
+          "seriesLimit": 50,
+          "query": {
+            "Type": "simple",
+            "Assets": ["66666666-6666-6666-6666-666666666666"],
+            "EventTypes": ["99999999-9999-9999-9999-999999999999"],
+            "Statuses": [],
+            "Properties": [],
+            "PropertyFilter": [],
+            "IncludeParentInfo": false,
+            "QueryAssetProperties": false,
+            "OverrideAssets": [],
+            "Limit": 1000,
+            "OverrideTimeRange": false,
+            "Ascending": true
+          }
+        }
+      ]
+    }
+  ]
+}

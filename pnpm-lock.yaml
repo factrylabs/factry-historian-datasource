@@ -171,6 +171,9 @@ importers:
       jest-environment-jsdom:
         specifier: ^29.7.0
         version: 29.7.0(supports-color@8.1.1)
+      monocart-coverage-reports:
+        specifier: ^2.12.12
+        version: 2.12.12
       prettier:
         specifier: ^2.8.8
         version: 2.8.8
@@ -1504,8 +1507,16 @@ packages:
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
 
+  acorn-loose@8.5.2:
+    resolution: {integrity: sha512-PPvV6g8UGMGgjrMu+n/f9E/tCSkNQ2Y97eFvuVdJfG11+xdIeDcLyNdC8SHcrHbRqkfwLASdplyR6B6sKM1U4A==}
+    engines: {node: '>=0.4.0'}
+
   acorn-walk@8.3.4:
     resolution: {integrity: sha512-ueEepnujpqee2o5aIYnvHU6C0A42MNdsIDeqy5BydrkuC5R1ZuUFnm27EeFJGoEHJQgn3uleRvmTXaJgfXbt4g==}
+    engines: {node: '>=0.4.0'}
+
+  acorn-walk@8.3.5:
+    resolution: {integrity: sha512-HEHNfbars9v4pgpW6SO1KSPkfoS0xVOM/9UzkJltjlsHZmJasxg8aXkuZa7SMf8vKGIBhpUsPluQSqhJFCqebw==}
     engines: {node: '>=0.4.0'}
 
   acorn@8.15.0:
@@ -1824,6 +1835,10 @@ packages:
     resolution: {integrity: sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==}
     engines: {node: '>=14'}
 
+  commander@14.0.3:
+    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
+    engines: {node: '>=20'}
+
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
 
@@ -1840,6 +1855,9 @@ packages:
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
+
+  console-grid@2.2.4:
+    resolution: {integrity: sha512-OLjCRTiHhOpTRo9lQp/2FgJDyq5uQHwkEmVJulEnQ6JVf27oKKzXHZnNOv/e72V4++UdMZCrDWtvXW5sx4lyQg==}
 
   continuable-cache@0.3.1:
     resolution: {integrity: sha512-TF30kpKhTH8AGCG3dut0rdd/19B7Z+qCnrMoBLpyQu/2drZdNrrpcjPEoJeSVsQM+8KmWG5O56oPDjSSUsuTyA==}
@@ -2187,6 +2205,9 @@ packages:
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
 
+  eight-colors@1.3.3:
+    resolution: {integrity: sha512-4B54S2Qi4pJjeHmCbDIsveQZWQ/TSSQng4ixYJ9/SYHHpeS5nYK0pzcHvWzWUfRsvJQjwoIENhAwqg59thQceg==}
+
   electron-to-chromium@1.5.267:
     resolution: {integrity: sha512-0Drusm6MVRXSOJpGbaSVgcQsuB4hEkMpHXaVstcPmhu5LIedxs1xNK/nIxmQIU/RPC0+1/o0AVZfBTkTNJOdUw==}
 
@@ -2483,6 +2504,10 @@ packages:
   foreground-child@3.3.1:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
     engines: {node: '>=14'}
+
+  foreground-child@4.0.3:
+    resolution: {integrity: sha512-yeXZaNbCBGaT9giTpLPBdtedzjwhlJBUoL/R4BVQU5mn0TQXOHwVIl1Q2DMuBIdNno4ktA1abZ7dQFVxD6uHxw==}
+    engines: {node: '>=16'}
 
   fork-ts-checker-webpack-plugin@8.0.0:
     resolution: {integrity: sha512-mX3qW3idpueT2klaQXBzrIM/pHw+T0B/V9KHEvNrqijTq9NFnMZU6oreVxDYcf33P8a5cW+67PjodNHthGnNVg==}
@@ -3230,6 +3255,9 @@ packages:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
 
+  lz-utils@2.1.1:
+    resolution: {integrity: sha512-d3Thjos0PSJQAoyMj6vipSSrtrRHS7DImqUNR8x9NW3+zQIftPIbMJAWhi5nPdg5Q9zHz6lxtN8kp/VdMlhi/Q==}
+
   make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
     engines: {node: '>=10'}
@@ -3391,6 +3419,13 @@ packages:
 
   monaco-editor@0.34.1:
     resolution: {integrity: sha512-FKc80TyiMaruhJKKPz5SpJPIjL+dflGvz4CpuThaPMc94AyN7SeC9HQ8hrvaxX7EyHdJcUY5i4D0gNyJj1vSZQ==}
+
+  monocart-coverage-reports@2.12.12:
+    resolution: {integrity: sha512-d9FdUr2dn58Crweon0IE0zVi8r/i4vLvfvb2G7eL5vL5LfrxCB2X6F6qzuiwV6RioA4zbAI//7CYi6LjCvN3zA==}
+    hasBin: true
+
+  monocart-locator@1.0.3:
+    resolution: {integrity: sha512-pe29W2XAoA1WQmZZqxXoP7s06ZEXUhcb81086v68cqjk1HnVL7Q/iU/WJnnetxjPcLqwb4qG8vaSGUOMQU602g==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -6525,16 +6560,24 @@ snapshots:
 
   acorn-globals@7.0.1:
     dependencies:
-      acorn: 8.15.0
+      acorn: 8.18.0
       acorn-walk: 8.3.4
 
-  acorn-jsx@5.3.2(acorn@8.15.0):
+  acorn-jsx@5.3.2(acorn@8.18.0):
     dependencies:
-      acorn: 8.15.0
+      acorn: 8.18.0
+
+  acorn-loose@8.5.2:
+    dependencies:
+      acorn: 8.18.0
 
   acorn-walk@8.3.4:
     dependencies:
-      acorn: 8.15.0
+      acorn: 8.18.0
+
+  acorn-walk@8.3.5:
+    dependencies:
+      acorn: 8.18.0
 
   acorn@8.15.0: {}
 
@@ -6890,6 +6933,8 @@ snapshots:
 
   commander@10.0.1: {}
 
+  commander@14.0.3: {}
+
   commander@2.20.3: {}
 
   commander@7.2.0: {}
@@ -6899,6 +6944,8 @@ snapshots:
   compute-scroll-into-view@3.1.1: {}
 
   concat-map@0.0.1: {}
+
+  console-grid@2.2.4: {}
 
   continuable-cache@0.3.1: {}
 
@@ -7295,6 +7342,8 @@ snapshots:
 
   eastasianwidth@0.2.0: {}
 
+  eight-colors@1.3.3: {}
+
   electron-to-chromium@1.5.267: {}
 
   emittery@0.13.1: {}
@@ -7623,8 +7672,8 @@ snapshots:
 
   espree@10.4.0:
     dependencies:
-      acorn: 8.15.0
-      acorn-jsx: 5.3.2(acorn@8.15.0)
+      acorn: 8.18.0
+      acorn-jsx: 5.3.2(acorn@8.18.0)
       eslint-visitor-keys: 4.2.1
 
   esprima@4.0.1: {}
@@ -7751,6 +7800,10 @@ snapshots:
   foreground-child@3.3.1:
     dependencies:
       cross-spawn: 7.0.6
+      signal-exit: 4.1.0
+
+  foreground-child@4.0.3:
+    dependencies:
       signal-exit: 4.1.0
 
   fork-ts-checker-webpack-plugin@8.0.0(typescript@5.9.2)(webpack@5.109.2):
@@ -8618,7 +8671,7 @@ snapshots:
   jsdom@20.0.3(supports-color@8.1.1):
     dependencies:
       abab: 2.0.6
-      acorn: 8.15.0
+      acorn: 8.18.0
       acorn-globals: 7.0.1
       cssom: 0.5.0
       cssstyle: 2.3.0
@@ -8728,6 +8781,8 @@ snapshots:
 
   lz-string@1.5.0: {}
 
+  lz-utils@2.1.1: {}
+
   make-dir@4.0.0:
     dependencies:
       semver: 7.7.3
@@ -8832,6 +8887,23 @@ snapshots:
   moment@2.30.1: {}
 
   monaco-editor@0.34.1: {}
+
+  monocart-coverage-reports@2.12.12:
+    dependencies:
+      acorn: 8.18.0
+      acorn-loose: 8.5.2
+      acorn-walk: 8.3.5
+      commander: 14.0.3
+      console-grid: 2.2.4
+      eight-colors: 1.3.3
+      foreground-child: 4.0.3
+      istanbul-lib-coverage: 3.2.2
+      istanbul-lib-report: 3.0.1
+      istanbul-reports: 3.2.0
+      lz-utils: 2.1.1
+      monocart-locator: 1.0.3
+
+  monocart-locator@1.0.3: {}
 
   ms@2.1.3: {}
 
@@ -8987,7 +9059,7 @@ snapshots:
 
   parse-json@5.2.0:
     dependencies:
-      '@babel/code-frame': 7.27.1
+      '@babel/code-frame': 7.29.7
       error-ex: 1.3.4
       json-parse-even-better-errors: 2.3.1
       lines-and-columns: 1.2.4
@@ -9985,7 +10057,7 @@ snapshots:
   terser@5.44.1:
     dependencies:
       '@jridgewell/source-map': 0.3.11
-      acorn: 8.15.0
+      acorn: 8.18.0
       commander: 2.20.3
       source-map-support: 0.5.21
 
