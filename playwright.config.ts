@@ -15,6 +15,10 @@ export default defineConfig<PluginOptions>({
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'html',
+  // V8 coverage collection roughly doubles page load time, which pushes a first
+  // panel render past the 5s default and makes the provisioned-dashboard specs
+  // flake. Panels are the slowest thing asserted on, so raise it suite-wide.
+  expect: { timeout: 15_000 },
   // Frontend coverage collection (no-ops unless E2E_COVERAGE=true).
   globalSetup: require.resolve('./tests/coverage/global-setup'),
   globalTeardown: require.resolve('./tests/coverage/global-teardown'),
