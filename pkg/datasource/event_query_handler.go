@@ -58,7 +58,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		PreloadProperties: true,
 		Limit:             limit,
 		PropertyFilter:    eventQuery.PropertyFilter,
-		Status:            eventQuery.Statuses,
+		Status:            util.DropEmpty(eventQuery.Statuses),
 		Ascending:         eventQuery.Ascending,
 	}
 

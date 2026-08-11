@@ -34,6 +34,24 @@ func Dedupe[T comparable](arr []T) []T {
 	return out
 }
 
+// DropEmpty returns a copy of arr without its empty strings. A dashboard variable
+// that resolves to an empty string reaches the backend as "", and the form encoder
+// writes that as an empty query parameter, which historian >= 8.2 rejects with 400
+// 'empty value is not allowed'. Returns nil when nothing is left, so the encoder
+// omits the parameter entirely.
+func DropEmpty(arr []string) []string {
+	out := make([]string, 0, len(arr))
+	for _, v := range arr {
+		if v != "" {
+			out = append(out, v)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // Model is an interface for objects with a UUID field
 type Model interface {
 	// GetUUID returns the UUID of the object

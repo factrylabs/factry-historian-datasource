@@ -3,11 +3,13 @@ package datasource
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // handleGetEventPropertyValues indexes request.Properties[0] without a length
@@ -113,4 +115,45 @@ func TestResourceCallKeepsBadRequestForInvalidInput(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Contains(t, rec.Body.String(), "uuid is required")
+}
+
+// An event type variable that resolves to "" reaches the resource handler as an
+// empty entry in EventTypes. Forwarding it as "EventTypeUUIDs[n]=" makes
+// historian >= 8.2 reject the lookup with 400 'empty value is not allowed', so
+// the entry must be left out of the query. The same holds for an unset Type.
+func TestEventPropertyValuesLookupOmitsEmptyEventTypesAndType(t *testing.T) {
+	t.Parallel()
+
+	eventTypeUUID := uuid.New()
+	gotQuery := make(chan string, 1)
+
+	historianMux := http.NewServeMux()
+	historianMux.HandleFunc("GET /api/event-type-properties", func(w http.ResponseWriter, r *http.Request) {
+		gotQuery <- r.URL.RawQuery
+		writeJSON(w, []schemas.EventTypeProperty{{
+			BaseModel:     schemas.BaseModel{UUID: uuid.New(), Name: "recipe"},
+			EventTypeUUID: eventTypeUUID,
+		}})
+	})
+	historianMux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, []schemas.Asset{})
+	})
+	ds := newFakeHistorianDataSource(t, historianMux)
+
+	resourceMux := http.NewServeMux()
+	resourceMux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(ds.handleGetEventPropertyValues))
+
+	target := "/event-property-values/recipe?Properties[0]=recipe&Type=&EventTypes[0]=" + eventTypeUUID.String() + "&EventTypes[1]="
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, http.NoBody)
+	resourceMux.ServeHTTP(httptest.NewRecorder(), req)
+
+	query, err := url.ParseQuery(<-gotQuery)
+	require.NoError(t, err)
+
+	for key, values := range query {
+		for _, value := range values {
+			assert.NotEmpty(t, value, "%s must not be sent with an empty value", key)
+		}
+	}
+	assert.Equal(t, []string{eventTypeUUID.String()}, query["EventTypeUUIDs[0]"], "the resolved event type must still be sent")
 }

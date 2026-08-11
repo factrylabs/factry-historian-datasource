@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/resource/httpadapter"
@@ -249,12 +250,16 @@ func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWrite
 			return nil, errors.New("a property name is required via the Properties parameter")
 		}
 
-		queryString := "Types[0]=" + request.Type + "&"
 		var queryStringBuilder strings.Builder
-		for i := range request.EventTypes {
-			fmt.Fprintf(&queryStringBuilder, "EventTypeUUIDs[%v]=%s&", i, request.EventTypes[i])
+		if request.Type != "" {
+			fmt.Fprintf(&queryStringBuilder, "Types[0]=%s&", request.Type)
 		}
-		queryString += queryStringBuilder.String()
+		// event types that came from a variable resolving to "" would end up as an
+		// empty query parameter, which historian >= 8.2 rejects
+		for i, eventType := range util.DropEmpty(request.EventTypes) {
+			fmt.Fprintf(&queryStringBuilder, "EventTypeUUIDs[%v]=%s&", i, eventType)
+		}
+		queryString := queryStringBuilder.String()
 
 		eventTypeProperties, err := ds.API.GetEventTypeProperties(req.Context(), queryString)
 		if err != nil {
