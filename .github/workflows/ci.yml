@@ -32,7 +32,7 @@ jobs:
       # persist-credentials: false everywhere in this repo. No workflow pushes
       # over git, so nothing needs GITHUB_TOKEN left behind in .git/config where
       # any later step or third-party action could read it.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: ./.github/actions/pnpm
@@ -62,7 +62,7 @@ jobs:
 
       - name: Update coverage badge
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.COVERAGE_GIST_ID != ''
-        uses: Schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483
+        uses: Schneegans/dynamic-badges-action@28b0fa8bdeb46170ac397105ece0c1fe58f68910 # v1.9.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: ${{ vars.COVERAGE_GIST_ID }}
@@ -85,9 +85,12 @@ jobs:
 
       - name: Setup Go environment
         if: steps.check-for-backend.outputs.has-backend == 'true'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.26'
+          # setup-go v6 keys the module cache on go.mod by default; go.sum keeps
+          # the key tied to the resolved dependency set, as v5 did.
+          cache-dependency-path: go.sum
 
       - name: golangci-lint
         if: steps.check-for-backend.outputs.has-backend == 'true'
@@ -111,14 +114,14 @@ jobs:
 
       - name: Test backend
         if: steps.check-for-backend.outputs.has-backend == 'true'
-        uses: magefile/mage-action@6f50bbb8ea47d56e62dee92392788acbc8192d0b # v3
+        uses: magefile/mage-action@a662bd8c29d8106879588cfff83b2faf6e6f59db # v4.0.0
         with:
           version: latest
           args: coverage
 
       - name: Install Mage
         if: steps.check-for-backend.outputs.has-backend == 'true'
-        uses: magefile/mage-action@6f50bbb8ea47d56e62dee92392788acbc8192d0b # v3
+        uses: magefile/mage-action@a662bd8c29d8106879588cfff83b2faf6e6f59db # v4.0.0
         with:
           version: latest
           install-only: true
@@ -167,7 +170,7 @@ jobs:
           zip ${{ steps.metadata.outputs.archive }} ${{ steps.metadata.outputs.plugin-id }} -r
 
       - name: Archive Build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.metadata.outputs.plugin-id }}-${{ steps.metadata.outputs.plugin-version }}
           path: ${{ steps.metadata.outputs.plugin-id }}
@@ -183,7 +186,7 @@ jobs:
       matrix: ${{ steps.resolve-versions.outputs.matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
       - name: Resolve Grafana E2E versions
@@ -215,7 +218,7 @@ jobs:
     steps:
       # Full checkout: docker-compose.e2e.yaml builds the mock Historian from
       # source (needs go.mod, pkg/, tests/), so a sparse checkout is not enough.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
 
@@ -224,7 +227,7 @@ jobs:
 
       - name: Download plugin
         if: needs.build.outputs.has-backend == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: dist
           name: ${{ needs.build.outputs.plugin-id }}-${{ needs.build.outputs.plugin-version }}
@@ -240,9 +243,12 @@ jobs:
 
       - name: Setup Go environment
         if: needs.build.outputs.has-backend == 'true'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.26'
+          # setup-go v6 keys the module cache on go.mod by default; go.sum keeps
+          # the key tied to the resolved dependency set, as v5 did.
+          cache-dependency-path: go.sum
 
       # Replace the release binary with a coverage-instrumented build so the
       # e2e run measures backend coverage (GOCOVERDIR is wired up in
@@ -319,7 +325,7 @@ jobs:
         run: bash scripts/e2e-coverage-report.sh
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: ${{ always() && steps.run-tests.outcome != 'skipped' }}
         with:
           name: e2e-coverage-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}
@@ -330,7 +336,7 @@ jobs:
           retention-days: 5
 
       - name: Upload server log
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: ${{ always() && steps.run-tests.outcome != 'success' }}
         with:
           name: ${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}-server-log
@@ -342,7 +348,7 @@ jobs:
       # If your repository is public, uploading the Playwright report will make it public on the Internet.
       # Beware not to expose sensitive information.
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: ${{ always() && steps.run-tests.outcome != 'success' }}
         with:
           name: playwright-report-${{ matrix.GRAFANA_IMAGE.NAME }}-v${{ matrix.GRAFANA_IMAGE.VERSION }}-${{github.run_id}}
