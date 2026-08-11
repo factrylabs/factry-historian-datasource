@@ -1,5 +1,43 @@
 # Changelog
 
+## v3.3.0
+
+released: 11/08/2026
+
+### Changes
+
+- The asset tree cascader loads nodes on demand instead of fetching the whole tree up front, which keeps the asset pickers responsive on large trees. Requires Historian v8.2.0 or later; earlier versions keep loading the tree eagerly.
+- Requests to the Historian API identify themselves with a `User-Agent` of `factry-historian-datasource/<version>`.
+- Historian failures are reported to Grafana as downstream errors carrying their original status code, so a 429 or a 504 is no longer attributed to the plugin.
+
+### Bug fixes
+
+- Fixed regex input disappearing in every field that accepts a regex.
+- Fixed the event property pickers offering parent properties that cannot match when the event type is selected through a template variable, and fixed the parent property datatype falling back to number in that case, which made the query fail.
+- Fixed template variables not being interpolated in event query options, event filter statuses and asset properties.
+- Fixed a template variable that resolves to an empty value being sent as an empty query parameter, which Historian v8.2 and later reject. The filter is left out of the request instead, matching the behaviour before v8.2 tightened validation.
+- Fixed a chained variable listing every measurement, asset property or event type property when its parent variable resolved to an empty value, instead of listing nothing.
+- Fixed asset property value parsing, and derived the asset property column type from the named value field.
+- Fixed asset property values being appended twice when a query returned multiple frames.
+- Fixed an event with a parent reference but no parent data failing the query.
+- Fixed `Parent_StopTime` being written to the event labels instead of the periodic column labels.
+- Fixed unknown event property datatypes failing instead of falling back to a nullable string column.
+- Fixed duplicate asset properties in measurement selection.
+- Fixed the prepended last-known point being removed from frames that never received one.
+- Fixed a `seriesLimit` of zero or less being applied as a limit instead of meaning unlimited.
+- Fixed the Timeout, Query timeout and Skip TLS verify settings not being applied to the Historian client.
+- Fixed percent-escaped path segments being decoded when the Historian URL contains a path prefix.
+- Fixed the organization field in the datasource configuration reusing the URL field's name attribute.
+- Fixed tag queries using a regex operator the API does not support.
+- Fixed feature detection treating an unknown Historian version as supported, and corrected pre-release version comparison.
+- Hardened variable queries against unknown query types, legacy migrated property filters and filters modified in place.
+- Hardened query and frame handling against empty frames, missing aggregations, a zero query interval, out-of-range periodic values and frame merges with differing field counts.
+
+### Misc
+
+- Added an end-to-end testing framework
+- Updated dependencies
+
 ## v3.2.1
 
 released: 11/05/2026
