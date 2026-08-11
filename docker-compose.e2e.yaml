@@ -26,6 +26,15 @@ services:
       # listed. Both are no-ops for a regular (non -cover) binary.
       GOCOVERDIR: /coverage
       GF_PLUGINS_FORWARD_HOST_ENV_VARS: factry-historian-datasource
+      # Grafana >= 11.5 preinstalls a few first-party apps (explore traces,
+      # metrics drilldown, ...) from grafana.com in the background on startup.
+      # Those installs write to the same SQLite file as datasource
+      # provisioning, and provisioning losing that lock kills the server:
+      #   Datasource provisioning error: database is locked
+      # It exits after the health endpoint has already answered, so the leg
+      # fails later with a connection refused. None of those apps are used
+      # here, and skipping the downloads also cuts about a minute off startup.
+      GF_PLUGINS_PREINSTALL_DISABLED: 'true'
     volumes:
       - ./tests/provisioning:/etc/grafana/provisioning-e2e
       # Host directory must be writable by the grafana user (CI pre-creates it
