@@ -17,6 +17,23 @@ released: 31/08/2026
 
 - Fixed asset, event type and event configuration filters not being applied to event queries and to the event property values variable query on Historian v8.2 and later.
 
+### Changes
+
+- **Resolved asset and measurement metadata is now cached.** An asset-measurement query used to resolve its assets and properties against Historian on every panel of every dashboard refresh. The plugin now reuses the resolution for 60 seconds by default, and collapses concurrent lookups for the same assets into a single request, so a cold dashboard load resolves once instead of once per panel.
+  - The lifetime is set with the `resolutionCacheTTL` datasource setting: a number of seconds, `"0"` to disable. It is a provisioning setting like `timeout` and `queryTimeout`, so it is set in the datasource YAML rather than in the UI:
+
+    ```yaml
+    datasources:
+      - name: "Factry Historian"
+        type: "factry-historian-datasource"
+        jsonData:
+          resolutionCacheTTL: "60"
+    ```
+
+  - The TTL is also the bound on staleness: after an asset is reconfigured, dashboards keep showing the previous resolution for at most that long. Lower it if your assets are reconfigured while operators watch the result, and set it to `"0"` if no staleness is acceptable at all.
+  - The connection test is never served from the cache.
+- **Assets addressed by path resolve in one request.** A query listing several asset paths issued one request per path, and Historian rebuilds its whole asset-path tree for each one. The paths now go out as a single filter, in batches sized to keep the request URL within proxy limits.
+
 ## v3.3.0
 
 released: 11/08/2026
