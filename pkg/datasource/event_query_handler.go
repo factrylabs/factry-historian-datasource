@@ -102,11 +102,8 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	}
 
 	eventTypeQuery := url.Values{}
-	i := 0
-	for eventTypeUUID := range eventTypeUUIDs {
-		eventTypeQuery.Add(fmt.Sprintf("EventTypeUUIDs[%d]", i), eventTypeUUID.String())
-		i++
-	}
+	// Sorted so the encoded query is stable for a given event-type set.
+	util.AddSortedIndexedUUIDs(eventTypeQuery, "EventTypeUUIDs", eventTypeUUIDs)
 	if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) {
 		eventTypeQuery.Add("Types[0]", eventQuery.Type)
 	}
@@ -136,7 +133,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 			AssetProperties: eventQuery.AssetProperties,
 			Options:         *eventQuery.Options,
 		}
-		assetProperties, err := ds.API.GetAssetProperties(ctx, "")
+		assetProperties, err := ds.API.GetAssetPropertiesCached(ctx, "")
 		if err != nil {
 			return nil, err
 		}

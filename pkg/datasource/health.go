@@ -12,7 +12,9 @@ const (
 	SuccessfulHealthCheckMessage string = "Connection test successful, %v timeseries database(s) found"
 )
 
-// CheckHealth checks the health by fetching the time series databases
+// CheckHealth checks the health by fetching the time series databases. It uses
+// the uncached call on purpose: a health check has to reach the historian, or a
+// broken connection would keep reporting the last cached result.
 func (ds *HistorianDataSource) CheckHealth(ctx context.Context, _ *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	databases, err := ds.API.GetTimeseriesDatabases(ctx, "")
 	if err != nil {

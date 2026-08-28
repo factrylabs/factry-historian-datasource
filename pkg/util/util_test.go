@@ -2,6 +2,7 @@ package util_test
 
 import (
 	"encoding/json"
+	"net/url"
 	"testing"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
@@ -272,4 +273,38 @@ func TestDeepCopyRoundTripsThroughJSON(t *testing.T) {
 	dstJSON, err := json.Marshal(dst)
 	require.NoError(t, err)
 	assert.JSONEq(t, string(srcJSON), string(dstJSON))
+}
+
+// url.Values.Encode sorts by key name only, so the values of an indexed
+// parameter have to go in sorted for the encoded query to be stable.
+func TestAddSortedIndexedParams(t *testing.T) {
+	t.Parallel()
+
+	first := url.Values{}
+	util.AddSortedIndexedParams(first, "AssetUUIDs", []string{"b", "a", "c"})
+	second := url.Values{}
+	util.AddSortedIndexedParams(second, "AssetUUIDs", []string{"c", "b", "a"})
+
+	assert.Equal(t, first.Encode(), second.Encode(), "permutations of one set must encode identically")
+	assert.Equal(t, "AssetUUIDs%5B0%5D=a&AssetUUIDs%5B1%5D=b&AssetUUIDs%5B2%5D=c", first.Encode())
+
+	input := []string{"b", "a"}
+	util.AddSortedIndexedParams(url.Values{}, "UUIDs", input)
+	assert.Equal(t, []string{"b", "a"}, input, "the input slice must not be modified")
+}
+
+func TestAddSortedIndexedUUIDs(t *testing.T) {
+	t.Parallel()
+
+	uuids := map[uuid.UUID]struct{}{
+		uuid.MustParse("cccccccc-0000-0000-0000-000000000000"): {},
+		uuid.MustParse("aaaaaaaa-0000-0000-0000-000000000000"): {},
+		uuid.MustParse("bbbbbbbb-0000-0000-0000-000000000000"): {},
+	}
+	query := url.Values{}
+	util.AddSortedIndexedUUIDs(query, "AssetUUIDs", uuids)
+
+	assert.Equal(t, "aaaaaaaa-0000-0000-0000-000000000000", query.Get("AssetUUIDs[0]"))
+	assert.Equal(t, "bbbbbbbb-0000-0000-0000-000000000000", query.Get("AssetUUIDs[1]"))
+	assert.Equal(t, "cccccccc-0000-0000-0000-000000000000", query.Get("AssetUUIDs[2]"))
 }
