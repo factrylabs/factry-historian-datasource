@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -101,11 +103,6 @@ func TestGetFilteredAssets(t *testing.T) {
 		a2UUID.String(): a2,
 		a3UUID.String(): a3,
 	}
-	byPath := map[string]schemas.Asset{
-		a1.AssetPath: a1,
-		a2.AssetPath: a2,
-		a3.AssetPath: a3,
-	}
 	allAssets := []schemas.Asset{a1, a2, a3}
 
 	type recordedRequest struct {
@@ -139,9 +136,7 @@ func TestGetFilteredAssets(t *testing.T) {
 					matched = append(matched, a)
 				}
 			case q.Get("Path") != "":
-				if a, ok := byPath[q.Get("Path")]; ok {
-					matched = append(matched, a)
-				}
+				matched = matchPath(t, allAssets, q.Get("Path"))
 			default:
 				matched = allAssets
 			}
@@ -158,7 +153,7 @@ func TestGetFilteredAssets(t *testing.T) {
 		return c
 	}
 
-	t.Run("v8.1.0 batches uuids and queries paths individually", func(t *testing.T) {
+	t.Run("v8.1.0 sends uuids and paths as separate requests", func(t *testing.T) {
 		t.Parallel()
 		srv, requests := startServer(t)
 		client := newClient(t, srv.URL)
@@ -171,7 +166,7 @@ func TestGetFilteredAssets(t *testing.T) {
 		assert.Contains(t, result, a2UUID)
 		assert.Contains(t, result, a3UUID)
 
-		require.Len(t, *requests, 2, "expected one batched UUIDs request followed by one path request")
+		require.Len(t, *requests, 2, "expected one UUIDs request followed by one path request")
 		assert.ElementsMatch(t,
 			[]string{a1UUID.String(), a3UUID.String()},
 			indexedQuery((*requests)[0].query, "UUIDs"),
@@ -194,11 +189,9 @@ func TestGetFilteredAssets(t *testing.T) {
 		assert.Contains(t, result, a1UUID)
 		assert.Contains(t, result, a3UUID)
 
-		require.Len(t, *requests, 2)
-		for _, req := range *requests {
-			assert.Empty(t, indexedQuery(req.query, "UUIDs"), "no UUIDs[i] should be sent when input has no uuids")
-			assert.NotEmpty(t, req.query.Get("Path"))
-		}
+		require.Len(t, *requests, 1, "two paths and no uuids means one batched path request")
+		assert.Empty(t, indexedQuery((*requests)[0].query, "UUIDs"), "no UUIDs[i] should be sent when input has no uuids")
+		assert.NotEmpty(t, (*requests)[0].query.Get("Path"))
 	})
 
 	t.Run("v7.x issues per-asset Keyword/Path requests", func(t *testing.T) {
@@ -390,6 +383,30 @@ func TestClientIdentificationHeaders(t *testing.T) {
 }
 
 // indexedQuery returns values for the indexed parameter form Foo[0]=a&Foo[1]=b in input order.
+// matchPath models how the historian applies the Path asset filter: a value
+// wrapped in slashes is an unanchored regular expression over asset_path,
+// anything else is an exact match.
+func matchPath(t *testing.T, assets []schemas.Asset, path string) []schemas.Asset {
+	t.Helper()
+	var matched []schemas.Asset
+	if len(path) >= 2 && strings.HasPrefix(path, "/") && strings.HasSuffix(path, "/") {
+		pattern, err := regexp.Compile(path[1 : len(path)-1])
+		require.NoError(t, err, "the historian would reject this pattern")
+		for _, asset := range assets {
+			if pattern.MatchString(asset.AssetPath) {
+				matched = append(matched, asset)
+			}
+		}
+		return matched
+	}
+	for _, asset := range assets {
+		if asset.AssetPath == path {
+			matched = append(matched, asset)
+		}
+	}
+	return matched
+}
+
 func indexedQuery(q url.Values, prefix string) []string {
 	var out []string
 	for i := 0; ; i++ {
@@ -450,4 +467,114 @@ func TestHTTPErrorCarriesErrorSource(t *testing.T) {
 			assert.Equal(t, !testCase.isDownstream, backend.IsPluginError(err), "error source attribution")
 		})
 	}
+}
+
+// startPathServer serves assets filtered with the historian's Path semantics
+// and returns a client against it plus an accessor for the recorded queries.
+func startPathServer(t *testing.T, assets []schemas.Asset) (client *api.API, recorded func() []url.Values) {
+	t.Helper()
+
+	var (
+		mu       sync.Mutex
+		requests []url.Values
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		requests = append(requests, r.URL.Query())
+		mu.Unlock()
+		_ = json.NewEncoder(w).Encode(matchPath(t, assets, r.URL.Query().Get("Path")))
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+	require.NoError(t, err)
+
+	recorded = func() []url.Values {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(requests)
+	}
+	return client, recorded
+}
+
+// One request per path makes a panel that addresses its assets by path fan out
+// into N requests, and the historian rebuilds the whole asset-path tree for
+// each one. The Path filter accepts a regex, so the literal paths belong in a
+// single anchored alternation.
+func TestGetFilteredAssetsBatchesPaths(t *testing.T) {
+	t.Parallel()
+
+	// Asset paths are backslash-separated and asset names may contain regex
+	// metacharacters, so every literal has to be escaped before it goes into
+	// the alternation.
+	mixer := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "mixer (A)"}, AssetPath: `plant\line 1\mixer (A)`}
+	pump := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "pump.1"}, AssetPath: `plant\line 2\pump.1`}
+	oven := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "oven+3"}, AssetPath: `plant\line 3\oven+3`}
+	// decoy is matched by an unescaped "pump.1" pattern but not by an escaped one.
+	decoy := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "pumpX1"}, AssetPath: `plant\line 2\pumpX1`}
+	allAssets := []schemas.Asset{mixer, pump, oven, decoy}
+
+	client, recorded := startPathServer(t, allAssets)
+
+	info := &schemas.HistorianInfo{Version: "v8.1.0"}
+	result, err := client.GetFilteredAssets(context.Background(),
+		[]string{mixer.AssetPath, pump.AssetPath, oven.AssetPath}, info)
+	require.NoError(t, err)
+
+	require.Len(t, recorded(), 1, "the literal paths must collapse into one request")
+	assert.Len(t, result, 3)
+	assert.Contains(t, result, mixer.UUID)
+	assert.Contains(t, result, pump.UUID)
+	assert.Contains(t, result, oven.UUID)
+	assert.NotContains(t, result, decoy.UUID, "regex metacharacters in a path must be escaped")
+}
+
+// A user-supplied regex is not a literal, so it must not be escaped and its
+// unanchored semantics must survive. Only the literal paths get batched.
+func TestGetFilteredAssetsKeepsUserRegexSeparate(t *testing.T) {
+	t.Parallel()
+
+	line1 := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "mixer"}, AssetPath: `plant\line 1\mixer`}
+	line2 := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "mixer"}, AssetPath: `plant\line 2\mixer`}
+	other := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "pump"}, AssetPath: `plant\line 3\pump`}
+	allAssets := []schemas.Asset{line1, line2, other}
+
+	client, recorded := startPathServer(t, allAssets)
+
+	info := &schemas.HistorianInfo{Version: "v8.1.0"}
+	result, err := client.GetFilteredAssets(context.Background(),
+		[]string{`/mixer$/`, other.AssetPath}, info)
+	require.NoError(t, err)
+
+	require.Len(t, recorded(), 2, "a user regex keeps its own request, the literal path is batched separately")
+	assert.Len(t, result, 3)
+	assert.Contains(t, result, line1.UUID, "the user regex must stay unanchored and unescaped")
+	assert.Contains(t, result, line2.UUID)
+	assert.Contains(t, result, other.UUID)
+}
+
+// A very long alternation would push the encoded URL past the limit of a proxy
+// in front of the historian, so the literal paths are batched by encoded size.
+func TestGetFilteredAssetsKeepsPathBatchesWithinTheBudget(t *testing.T) {
+	t.Parallel()
+
+	const pathCount = 400
+	assets := make([]schemas.Asset, 0, pathCount)
+	paths := make([]string, 0, pathCount)
+	for i := range pathCount {
+		path := fmt.Sprintf(`plant\area %03d\line %03d`, i/10, i)
+		assets = append(assets, schemas.Asset{
+			BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: fmt.Sprintf("line %03d", i)},
+			AssetPath: path,
+		})
+		paths = append(paths, path)
+	}
+
+	client, recorded := startPathServer(t, assets)
+
+	result, err := client.GetFilteredAssets(context.Background(), paths, &schemas.HistorianInfo{Version: "v8.1.0"})
+	require.NoError(t, err)
+
+	assert.Len(t, result, pathCount, "batching must not drop any asset")
+	assert.Greater(t, len(recorded()), 1, "the alternation must be split into multiple requests")
 }
