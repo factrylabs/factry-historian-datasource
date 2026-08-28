@@ -189,8 +189,16 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 
 	assetPropertyQuery := url.Values{}
 
-	for i, assetUUID := range slices.Collect(maps.Keys(assets)) {
-		assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID.String())
+	// Sort the UUIDs so the same asset set always encodes to the same query.
+	// Map iteration order is random and the query doubles as the resolution
+	// cache key.
+	assetUUIDs := make([]string, 0, len(assets))
+	for assetUUID := range assets {
+		assetUUIDs = append(assetUUIDs, assetUUID.String())
+	}
+	slices.Sort(assetUUIDs)
+	for i, assetUUID := range assetUUIDs {
+		assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID)
 	}
 
 	for i, datatype := range assetMeasurementQuery.Options.Datatypes {
