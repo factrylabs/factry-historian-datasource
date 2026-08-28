@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
@@ -69,6 +70,10 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 	if len(assetStrings) == 0 {
 		return assetUUIDSet, nil
 	}
+	// Callers pass the asset strings in map order, so sort them to keep the
+	// encoded query stable for a given asset set. The query doubles as the
+	// resolution cache key.
+	slices.Sort(assetStrings)
 
 	if util.CheckMinimumVersion(historianInfo, "8.1.0", false) {
 		uuids := make([]string, 0, len(assetStrings))

@@ -3,6 +3,7 @@ package datasource
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -196,5 +197,44 @@ func TestQueryDataAttributesHistorianErrorsToDownstream(t *testing.T) {
 			assert.Equal(t, testCase.expectedStatus, dataResponse.Status, "the historian status code must be forwarded")
 			assert.Equal(t, backend.ErrorSourceDownstream, dataResponse.ErrorSource, "a historian failure is not a plugin failure")
 		})
+	}
+}
+
+// handleAssetMeasurementQuery builds the asset-property query from a map of
+// assets, so its AssetUUIDs[i] order is random unless the UUIDs are sorted
+// first. The encoded query is the resolution cache key, so an unstable order
+// makes a repeat of the same panel query miss the cache.
+func TestAssetMeasurementQueryEncodesAssetUUIDsInAStableOrder(t *testing.T) {
+	t.Parallel()
+
+	const assetCount = 6
+	assets := make([]schemas.Asset, 0, assetCount)
+	properties := make([]schemas.AssetProperty, 0, assetCount)
+	for i := range assetCount {
+		assetUUID := uuid.New()
+		assets = append(assets, schemas.Asset{
+			BaseModel: schemas.BaseModel{UUID: assetUUID, Name: fmt.Sprintf("asset-%d", i)},
+			AssetPath: fmt.Sprintf("plant\\asset-%d", i),
+		})
+		properties = append(properties, schemas.AssetProperty{
+			BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: "temperature"},
+			AssetUUID:       assetUUID,
+			MeasurementUUID: uuid.New(),
+		})
+	}
+
+	ds, recorder := multiAssetQueryFixture(t, assets, properties)
+	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
+	for range 20 {
+		_, err := ds.handleAssetMeasurementQuery(context.Background(), schemas.AssetMeasurementQuery{
+			Assets: []string{"plant"},
+		}, timeRange, time.Minute, 0, &schemas.HistorianInfo{Version: "v8.1.0"})
+		require.NoError(t, err)
+	}
+
+	queries := recorder.queriesFor("/api/asset-properties")
+	require.Len(t, queries, 20)
+	for i := range queries {
+		require.Equal(t, queries[0], queries[i], "every repeat of the same query must encode to the same string")
 	}
 }
