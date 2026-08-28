@@ -1,8 +1,13 @@
 package util
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"maps"
+	"net/url"
 	"reflect"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -32,6 +37,29 @@ func Dedupe[T comparable](arr []T) []T {
 		out = append(out, v)
 	}
 	return out
+}
+
+// AddSortedIndexedParams adds values to query as name[0], name[1], ... in
+// sorted order. url.Values.Encode sorts by key name only, so a caller whose
+// encoded query doubles as a cache key needs the values themselves in a
+// stable order. The input slice is not modified.
+func AddSortedIndexedParams(query url.Values, name string, values []string) {
+	for i, value := range slices.Sorted(slices.Values(values)) {
+		query.Add(fmt.Sprintf("%s[%d]", name, i), value)
+	}
+}
+
+// AddSortedIndexedUUIDs adds the keys of uuids to query as name[0], name[1],
+// ... in sorted order. Sorting the raw bytes gives the same order as sorting
+// the lowercase-hex string form, so the encoding matches
+// AddSortedIndexedParams over the same UUIDs as strings.
+func AddSortedIndexedUUIDs[T any](query url.Values, name string, uuids map[uuid.UUID]T) {
+	sorted := slices.SortedFunc(maps.Keys(uuids), func(a, b uuid.UUID) int {
+		return bytes.Compare(a[:], b[:])
+	})
+	for i, id := range sorted {
+		query.Add(fmt.Sprintf("%s[%d]", name, i), id.String())
+	}
 }
 
 // DropEmpty returns a copy of arr without its empty strings. A dashboard variable
@@ -124,4 +152,3 @@ func MarshalStructToMap(input interface{}) map[string]interface{} {
 
 	return result
 }
-

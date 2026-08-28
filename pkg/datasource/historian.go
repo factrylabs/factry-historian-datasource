@@ -82,6 +82,12 @@ func NewDataSource(_ context.Context, s backend.DataSourceInstanceSettings) (ins
 	if seconds, err := strconv.Atoi(settings.QueryTimeout); err == nil && seconds > 0 {
 		apiOptions.QueryTimeout = time.Duration(seconds) * time.Second
 	}
+	// A zero TTL disables the resolution caches. LoadSettings guarantees the
+	// value parses as a non-negative number of seconds that fits in a
+	// time.Duration.
+	if seconds, err := strconv.Atoi(settings.ResolutionCacheTTL); err == nil && seconds > 0 {
+		apiOptions.ResolutionCacheTTL = time.Duration(seconds) * time.Second
+	}
 	historianDataSource.API, err = api.NewAPIWithOptions(apiOptions)
 	if err != nil {
 		return nil, err

@@ -118,7 +118,7 @@ func batchPaths(paths []string) [][]string {
 func (api *API) collectAssetsByPath(ctx context.Context, set map[uuid.UUID]schemas.Asset, pathFilter string) error {
 	assetQuery := url.Values{}
 	assetQuery.Add("Path", pathFilter)
-	assets, err := api.GetAssets(ctx, assetQuery.Encode())
+	assets, err := api.GetAssetsCached(ctx, assetQuery.Encode())
 	if err != nil {
 		return err
 	}
@@ -154,10 +154,8 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 
 		if len(uuids) > 0 {
 			assetQuery := url.Values{}
-			for i, u := range uuids {
-				assetQuery.Add(fmt.Sprintf("UUIDs[%d]", i), u)
-			}
-			assets, err := api.GetAssets(ctx, assetQuery.Encode())
+			util.AddSortedIndexedParams(assetQuery, "UUIDs", uuids)
+			assets, err := api.GetAssetsCached(ctx, assetQuery.Encode())
 			if err != nil {
 				return nil, err
 			}
@@ -200,7 +198,7 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 		}
 		assetQuery := url.Values{}
 		assetQuery.Add(searchKey, assetString)
-		assets, err := api.GetAssets(ctx, assetQuery.Encode())
+		assets, err := api.GetAssetsCached(ctx, assetQuery.Encode())
 		if err != nil {
 			return nil, err
 		}

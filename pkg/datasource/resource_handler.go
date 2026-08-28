@@ -95,15 +95,15 @@ func (ds *HistorianDataSource) handleGetCollectors(_ http.ResponseWriter, req *h
 }
 
 func (ds *HistorianDataSource) handleGetDatabases(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetTimeseriesDatabases(req.Context(), req.URL.RawQuery)
+	return ds.API.GetTimeseriesDatabasesCached(req.Context(), req.URL.RawQuery)
 }
 
 func (ds *HistorianDataSource) handleGetAssets(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetAssets(req.Context(), req.URL.RawQuery)
+	return ds.API.GetAssetsCached(req.Context(), req.URL.RawQuery)
 }
 
 func (ds *HistorianDataSource) handleGetAssetProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetAssetProperties(req.Context(), req.URL.RawQuery)
+	return ds.API.GetAssetPropertiesCached(req.Context(), req.URL.RawQuery)
 }
 
 func (ds *HistorianDataSource) handleGetEventTypes(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
