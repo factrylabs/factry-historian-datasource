@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/httpclient"
 	"github.com/grafana/grafana-plugin-sdk-go/build/buildinfo"
 )
@@ -18,6 +19,14 @@ const clientName = "factry-historian-datasource"
 // API is used to communicate with the historian API
 type API struct {
 	client *http.Client
+
+	// Asset and measurement metadata resolve to the same result for every panel
+	// of a dashboard refresh, so each list endpoint gets a cache. The caches
+	// hold one client's results, which are already scoped to its token and
+	// organization, so they must not outlive the client.
+	assetCache         *resolutionCache[schemas.Asset]
+	assetPropertyCache *resolutionCache[schemas.AssetProperty]
+	databaseCache      *resolutionCache[schemas.TimeseriesDatabase]
 }
 
 // clientIdentifier returns the "<name>/<version>" string sent in the User-Agent
@@ -92,6 +101,9 @@ type Options struct {
 	Timeout            time.Duration
 	QueryTimeout       time.Duration
 	InsecureSkipVerify bool
+	// ResolutionCacheTTL is how long resolved asset and measurement metadata is
+	// reused. Zero disables the caches.
+	ResolutionCacheTTL time.Duration
 }
 
 // NewAPIWithOptions creates a new instance of API from the given options
@@ -135,11 +147,17 @@ func NewAPIWithOptions(options Options) (*API, error) {
 		return nil, err
 	}
 
-	api := &API{client}
+	api := &API{
+		client:             client,
+		assetCache:         newResolutionCache[schemas.Asset](options.ResolutionCacheTTL),
+		assetPropertyCache: newResolutionCache[schemas.AssetProperty](options.ResolutionCacheTTL),
+		databaseCache:      newResolutionCache[schemas.TimeseriesDatabase](options.ResolutionCacheTTL),
+	}
 	return api, nil
 }
 
-// NewAPIWithToken creates a new instance of API using a token
+// NewAPIWithToken creates a new instance of API using a token. It leaves the
+// resolution caches disabled; only the datasource settings turn them on.
 func NewAPIWithToken(baseURL string, token string, organization string) (*API, error) {
 	return NewAPIWithOptions(Options{
 		URL:          baseURL,

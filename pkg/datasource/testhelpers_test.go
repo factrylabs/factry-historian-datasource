@@ -45,13 +45,26 @@ func measurementFrame(measurementUUID string, rows int) *data.Frame {
 }
 
 // newFakeHistorianDataSource spins up a fake historian HTTP server and returns
-// a HistorianDataSource whose API client points at it.
+// a HistorianDataSource whose API client points at it. The resolution caches are
+// disabled, so every lookup reaches the fake historian.
 func newFakeHistorianDataSource(t *testing.T, mux *http.ServeMux) *HistorianDataSource {
+	t.Helper()
+	return newFakeHistorianDataSourceWithTTL(t, mux, 0)
+}
+
+// newFakeHistorianDataSourceWithTTL is newFakeHistorianDataSource with the
+// resolution caches enabled for the given TTL.
+func newFakeHistorianDataSourceWithTTL(t *testing.T, mux *http.ServeMux, resolutionCacheTTL time.Duration) *HistorianDataSource {
 	t.Helper()
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 
-	historianAPI, err := api.NewAPIWithToken(server.URL, "token", "org")
+	historianAPI, err := api.NewAPIWithOptions(api.Options{
+		URL:                server.URL,
+		Token:              "token",
+		Organization:       "org",
+		ResolutionCacheTTL: resolutionCacheTTL,
+	})
 	require.NoError(t, err)
 
 	return &HistorianDataSource{
@@ -107,14 +120,14 @@ func assetQueryFixture(t *testing.T, assetUUID uuid.UUID, properties []schemas.A
 	ds, _ := multiAssetQueryFixture(t, []schemas.Asset{{
 		BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "plant"},
 		AssetPath: "plant",
-	}}, properties)
+	}}, properties, 0)
 	return ds
 }
 
 // multiAssetQueryFixture wires up a fake historian that serves the given assets
 // and asset properties, and records every request it receives. The timeseries
 // endpoint returns one frame per requested measurement UUID.
-func multiAssetQueryFixture(t *testing.T, assets []schemas.Asset, properties []schemas.AssetProperty) (*HistorianDataSource, *requestRecorder) {
+func multiAssetQueryFixture(t *testing.T, assets []schemas.Asset, properties []schemas.AssetProperty, resolutionCacheTTL time.Duration) (*HistorianDataSource, *requestRecorder) {
 	t.Helper()
 	recorder := &requestRecorder{}
 	mux := http.NewServeMux()
@@ -136,5 +149,5 @@ func multiAssetQueryFixture(t *testing.T, assets []schemas.Asset, properties []s
 		}
 		writeArrowResponse(t, w, frames)
 	})
-	return newFakeHistorianDataSource(t, mux), recorder
+	return newFakeHistorianDataSourceWithTTL(t, mux, resolutionCacheTTL), recorder
 }

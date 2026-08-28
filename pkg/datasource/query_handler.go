@@ -15,6 +15,7 @@ import (
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -189,23 +190,15 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 
 	assetPropertyQuery := url.Values{}
 
-	// Sort the UUIDs so the same asset set always encodes to the same query.
 	// Map iteration order is random and the query doubles as the resolution
-	// cache key.
-	assetUUIDs := make([]string, 0, len(assets))
-	for assetUUID := range assets {
-		assetUUIDs = append(assetUUIDs, assetUUID.String())
-	}
-	slices.Sort(assetUUIDs)
-	for i, assetUUID := range assetUUIDs {
-		assetPropertyQuery.Add(fmt.Sprintf("AssetUUIDs[%d]", i), assetUUID)
-	}
+	// cache key, so the UUIDs go in sorted.
+	util.AddSortedIndexedUUIDs(assetPropertyQuery, "AssetUUIDs", assets)
 
 	for i, datatype := range assetMeasurementQuery.Options.Datatypes {
 		assetPropertyQuery.Add(fmt.Sprintf("Datatypes[%d]", i), datatype)
 	}
 
-	assetProperties, err := ds.API.GetAssetProperties(ctx, assetPropertyQuery.Encode())
+	assetProperties, err := ds.API.GetAssetPropertiesCached(ctx, assetPropertyQuery.Encode())
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +268,7 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 			measurements = append(measurements, measurementQuery.Measurement)
 		}
 	}
-	databases, err := ds.API.GetTimeseriesDatabases(ctx, "")
+	databases, err := ds.API.GetTimeseriesDatabasesCached(ctx, "")
 	if err != nil {
 		return nil, err
 	}

@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -223,7 +227,7 @@ func TestAssetMeasurementQueryEncodesAssetUUIDsInAStableOrder(t *testing.T) {
 		})
 	}
 
-	ds, recorder := multiAssetQueryFixture(t, assets, properties)
+	ds, recorder := multiAssetQueryFixture(t, assets, properties, 0)
 	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
 	for range 20 {
 		_, err := ds.handleAssetMeasurementQuery(context.Background(), schemas.AssetMeasurementQuery{
@@ -237,4 +241,201 @@ func TestAssetMeasurementQueryEncodesAssetUUIDsInAStableOrder(t *testing.T) {
 	for i := range queries {
 		require.Equal(t, queries[0], queries[i], "every repeat of the same query must encode to the same string")
 	}
+}
+
+// A dashboard refresh must not re-resolve asset properties it already resolved.
+// Only the timeseries query, whose time window actually changes, still reaches
+// the historian.
+func TestAssetMeasurementQueryServesRepeatedResolutionFromCache(t *testing.T) {
+	t.Parallel()
+
+	assetUUID := uuid.New()
+	measurementUUID := uuid.New()
+	assets := []schemas.Asset{{
+		BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "mixer"},
+		AssetPath: `plant\line 1\mixer`,
+	}}
+	properties := []schemas.AssetProperty{{
+		BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: "temperature"},
+		AssetUUID:       assetUUID,
+		MeasurementUUID: measurementUUID,
+	}}
+
+	ds, recorder := multiAssetQueryFixture(t, assets, properties, time.Minute)
+	query := schemas.AssetMeasurementQuery{
+		Assets:          []string{`plant\line 1\mixer`},
+		AssetProperties: []string{"temperature"},
+	}
+	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
+
+	first, err := ds.handleAssetMeasurementQuery(context.Background(), query, timeRange, time.Minute, 0, &schemas.HistorianInfo{Version: "v8.1.0"})
+	require.NoError(t, err)
+	second, err := ds.handleAssetMeasurementQuery(context.Background(), query, timeRange, time.Minute, 0, &schemas.HistorianInfo{Version: "v8.1.0"})
+	require.NoError(t, err)
+
+	assert.Len(t, recorder.queriesFor("/api/assets"), 1, "the asset lookup must be served from the cache on the repeat")
+	assert.Len(t, recorder.queriesFor("/api/asset-properties"), 1, "the resolution must not reach the historian twice")
+	assert.Len(t, recorder.queriesFor("/api/timeseries/query"), 2, "the timeseries query itself is never cached")
+
+	require.Len(t, first, 1)
+	require.Len(t, second, 1)
+	assert.Equal(t, first[0].Name, second[0].Name, "a cached resolution must produce the same frames")
+	assert.Equal(t, first[0].Rows(), second[0].Rows())
+}
+
+// A cold dashboard load is many panels resolving the same assets at once. They
+// share one resolution request instead of one per panel.
+func TestAssetMeasurementQueryCollapsesConcurrentPanelResolutions(t *testing.T) {
+	t.Parallel()
+
+	assetUUID := uuid.New()
+	assets := []schemas.Asset{{
+		BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "mixer"},
+		AssetPath: "mixer",
+	}}
+	properties := []schemas.AssetProperty{{
+		BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: "temperature"},
+		AssetUUID:       assetUUID,
+		MeasurementUUID: uuid.New(),
+	}}
+
+	// The resolution is held open for the whole test, so a panel that fails to
+	// join the in-flight request has to issue its own and be counted. A slow
+	// scheduler can only delay a panel, so this cannot fail spuriously.
+	release := make(chan struct{})
+	resolutions := &atomic.Int64{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, assets)
+	})
+	mux.HandleFunc("GET /api/asset-properties", func(w http.ResponseWriter, _ *http.Request) {
+		resolutions.Add(1)
+		<-release
+		writeJSON(w, properties)
+	})
+	mux.HandleFunc("POST /api/timeseries/query", func(w http.ResponseWriter, r *http.Request) {
+		query := schemas.Query{}
+		assert.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+		frames := make(data.Frames, 0, len(query.MeasurementUUIDs))
+		for _, measurementUUID := range query.MeasurementUUIDs {
+			frames = append(frames, measurementFrame(measurementUUID, 2))
+		}
+		writeArrowResponse(t, w, frames)
+	})
+	ds := newFakeHistorianDataSourceWithTTL(t, mux, time.Minute)
+
+	query := schemas.AssetMeasurementQuery{Assets: []string{"mixer"}}
+	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
+
+	const panels = 12
+	done := sync.WaitGroup{}
+	done.Add(panels)
+	for range panels {
+		go func() {
+			defer done.Done()
+			_, err := ds.handleAssetMeasurementQuery(context.Background(), query, timeRange, time.Minute, 0, &schemas.HistorianInfo{Version: "v8.1.0"})
+			assert.NoError(t, err)
+		}()
+	}
+
+	require.Eventually(t, func() bool { return resolutions.Load() >= 1 }, time.Second, time.Millisecond,
+		"no panel ever reached the resolution")
+	assert.Never(t, func() bool { return resolutions.Load() > 1 }, 200*time.Millisecond, 5*time.Millisecond,
+		"a cold dashboard load must resolve once, not once per panel")
+
+	close(release)
+	done.Wait()
+
+	assert.Equal(t, int64(1), resolutions.Load())
+}
+
+// Reconfiguring an asset must reach dashboards once the TTL passes. The TTL is
+// the documented bound on how long a stale measurement can be served.
+func TestAssetMeasurementQueryPicksUpReconfiguredAssetAfterTTL(t *testing.T) {
+	t.Parallel()
+
+	assetUUID := uuid.New()
+	oldMeasurementUUID := uuid.New()
+	newMeasurementUUID := uuid.New()
+
+	var (
+		mu         sync.Mutex
+		properties = []schemas.AssetProperty{{
+			BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: "temperature"},
+			AssetUUID:       assetUUID,
+			MeasurementUUID: oldMeasurementUUID,
+		}}
+		queried []string
+	)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, []schemas.Asset{{
+			BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "mixer"},
+			AssetPath: "mixer",
+		}})
+	})
+	mux.HandleFunc("GET /api/asset-properties", func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		current := slices.Clone(properties)
+		mu.Unlock()
+		writeJSON(w, current)
+	})
+	mux.HandleFunc("POST /api/timeseries/query", func(w http.ResponseWriter, r *http.Request) {
+		query := schemas.Query{}
+		assert.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+		mu.Lock()
+		queried = append(queried, query.MeasurementUUIDs...)
+		mu.Unlock()
+		frames := make(data.Frames, 0, len(query.MeasurementUUIDs))
+		for _, measurementUUID := range query.MeasurementUUIDs {
+			frames = append(frames, measurementFrame(measurementUUID, 2))
+		}
+		writeArrowResponse(t, w, frames)
+	})
+
+	// A short TTL keeps the test fast. The cache unit tests cover expiry on a
+	// fake clock; this one checks the reconfigured measurement reaches the panel.
+	const ttl = 20 * time.Millisecond
+	ds := newFakeHistorianDataSourceWithTTL(t, mux, ttl)
+	query := schemas.AssetMeasurementQuery{Assets: []string{"mixer"}}
+	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
+
+	_, err := ds.handleAssetMeasurementQuery(context.Background(), query, timeRange, time.Minute, 0, &schemas.HistorianInfo{Version: "v8.1.0"})
+	require.NoError(t, err)
+
+	mu.Lock()
+	properties[0].MeasurementUUID = newMeasurementUUID
+	mu.Unlock()
+
+	time.Sleep(20 * ttl)
+	_, err = ds.handleAssetMeasurementQuery(context.Background(), query, timeRange, time.Minute, 0, &schemas.HistorianInfo{Version: "v8.1.0"})
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, []string{oldMeasurementUUID.String(), newMeasurementUUID.String()}, queried,
+		"the second refresh must query the reconfigured measurement")
+}
+
+// A health check reports whether the historian is reachable right now, so it
+// must never be served from the cache.
+func TestCheckHealthAlwaysReachesTheHistorian(t *testing.T) {
+	t.Parallel()
+
+	recorder := &requestRecorder{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/timeseries-databases", func(w http.ResponseWriter, r *http.Request) {
+		recorder.record(r.URL.Path, r.URL.RawQuery)
+		writeJSON(w, []schemas.TimeseriesDatabase{{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "factory"}}})
+	})
+	ds := newFakeHistorianDataSourceWithTTL(t, mux, time.Minute)
+
+	for range 3 {
+		result, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{})
+		require.NoError(t, err)
+		require.Equal(t, backend.HealthStatusOk, result.Status)
+	}
+
+	assert.Len(t, recorder.queriesFor("/api/timeseries-databases"), 3, "the health check must not be cached")
 }
