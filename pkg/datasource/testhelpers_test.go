@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -73,29 +75,66 @@ func writeArrowResponse(t *testing.T, w http.ResponseWriter, frames data.Frames)
 	require.NoError(t, err)
 }
 
+// requestRecorder collects the raw query string of every request a fixture
+// serves, keyed by request path. Tests use it to assert how often the
+// datasource reached the historian and with which query.
+type requestRecorder struct {
+	mu      sync.Mutex
+	queries map[string][]string
+}
+
+func (r *requestRecorder) record(path string, rawQuery string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.queries == nil {
+		r.queries = map[string][]string{}
+	}
+	r.queries[path] = append(r.queries[path], rawQuery)
+}
+
+// queriesFor returns the raw query strings seen on path, in arrival order.
+func (r *requestRecorder) queriesFor(path string) []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Clone(r.queries[path])
+}
+
 // assetQueryFixture wires up a fake historian with one asset and the given
 // asset properties. The timeseries endpoint returns one frame per requested
 // measurement UUID.
 func assetQueryFixture(t *testing.T, assetUUID uuid.UUID, properties []schemas.AssetProperty) *HistorianDataSource {
 	t.Helper()
+	ds, _ := multiAssetQueryFixture(t, []schemas.Asset{{
+		BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "plant"},
+		AssetPath: "plant",
+	}}, properties)
+	return ds
+}
+
+// multiAssetQueryFixture wires up a fake historian that serves the given assets
+// and asset properties, and records every request it receives. The timeseries
+// endpoint returns one frame per requested measurement UUID.
+func multiAssetQueryFixture(t *testing.T, assets []schemas.Asset, properties []schemas.AssetProperty) (*HistorianDataSource, *requestRecorder) {
+	t.Helper()
+	recorder := &requestRecorder{}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, []schemas.Asset{{
-			BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "plant"},
-			AssetPath: "plant",
-		}})
+	mux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, r *http.Request) {
+		recorder.record(r.URL.Path, r.URL.RawQuery)
+		writeJSON(w, assets)
 	})
-	mux.HandleFunc("GET /api/asset-properties", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /api/asset-properties", func(w http.ResponseWriter, r *http.Request) {
+		recorder.record(r.URL.Path, r.URL.RawQuery)
 		writeJSON(w, properties)
 	})
 	mux.HandleFunc("POST /api/timeseries/query", func(w http.ResponseWriter, r *http.Request) {
 		query := schemas.Query{}
 		assert.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+		recorder.record(r.URL.Path, r.URL.RawQuery)
 		frames := data.Frames{}
 		for _, measurementUUID := range query.MeasurementUUIDs {
 			frames = append(frames, measurementFrame(measurementUUID, 2))
 		}
 		writeArrowResponse(t, w, frames)
 	})
-	return newFakeHistorianDataSource(t, mux)
+	return newFakeHistorianDataSource(t, mux), recorder
 }

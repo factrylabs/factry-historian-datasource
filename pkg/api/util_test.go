@@ -265,6 +265,27 @@ func TestGetFilteredAssets(t *testing.T) {
 		)
 		assert.Equal(t, "site/a2", (*requests)[1].query.Get("Path"))
 	})
+
+	// Callers build the asset strings from a map (the event handler collects
+	// missing parent asset UUIDs that way), so the input order varies between
+	// otherwise identical calls. The encoded query is the resolution cache key,
+	// so the same asset set has to encode to the same string every time.
+	t.Run("encodes the same asset set identically whatever order the caller supplies", func(t *testing.T) {
+		t.Parallel()
+		srv, requests := startServer(t)
+		client := newClient(t, srv.URL)
+
+		info := &schemas.HistorianInfo{Version: "v8.1.0"}
+		_, err := client.GetFilteredAssets(context.Background(),
+			[]string{a3UUID.String(), a1UUID.String(), a2UUID.String()}, info)
+		require.NoError(t, err)
+		_, err = client.GetFilteredAssets(context.Background(),
+			[]string{a2UUID.String(), a3UUID.String(), a1UUID.String()}, info)
+		require.NoError(t, err)
+
+		require.Len(t, *requests, 2)
+		assert.Equal(t, (*requests)[0].rawQuery, (*requests)[1].rawQuery)
+	})
 }
 
 func TestGetAssets(t *testing.T) {
