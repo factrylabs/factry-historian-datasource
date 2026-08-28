@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
@@ -62,6 +64,70 @@ func (e *HTTPError) Error() string {
 	return http.StatusText(e.StatusCode) + ": " + e.Body
 }
 
+// pathBatchBudget caps the percent-encoded size of one batched Path filter, so
+// the request URL stays well inside the length limit of any proxy in front of
+// the historian. The boundary is bytes rather than a path count: escaping and
+// percent-encoding can triple a path full of backslashes.
+const pathBatchBudget = 4096
+
+// isPathRegex reports whether the historian reads an asset string as a regular
+// expression instead of an exact asset path. It mirrors the historian's own
+// check: a value wrapped in slashes is a regex.
+func isPathRegex(assetString string) bool {
+	return len(assetString) >= 2 && strings.HasPrefix(assetString, "/") && strings.HasSuffix(assetString, "/")
+}
+
+// pathAlternation builds a Path filter that matches every given literal asset
+// path and nothing else. The historian applies the value as an unanchored
+// POSIX regex over asset_path, so the alternation carries its own anchors.
+// Asset paths are backslash-separated and asset names may contain regex
+// metacharacters, so every path is escaped first. regexp.QuoteMeta escapes only
+// non-alphanumerics, which a POSIX ARE reads as literals just like Go does.
+func pathAlternation(paths []string) string {
+	escaped := make([]string, 0, len(paths))
+	for _, path := range paths {
+		escaped = append(escaped, regexp.QuoteMeta(path))
+	}
+	return "/^(" + strings.Join(escaped, "|") + ")$/"
+}
+
+// batchPaths splits literal asset paths into batches whose alternation stays
+// within pathBatchBudget once percent-encoded. A path that exceeds the budget
+// on its own forms a batch of one.
+func batchPaths(paths []string) [][]string {
+	var batches [][]string
+	batch := make([]string, 0, len(paths))
+	size := 0
+	for _, path := range paths {
+		// The alternation separator | encodes to %7C.
+		cost := len(url.QueryEscape(regexp.QuoteMeta(path))) + len("%7C")
+		if len(batch) > 0 && size+cost > pathBatchBudget {
+			batches = append(batches, batch)
+			batch, size = nil, 0
+		}
+		batch = append(batch, path)
+		size += cost
+	}
+	if len(batch) > 0 {
+		batches = append(batches, batch)
+	}
+	return batches
+}
+
+// collectAssetsByPath adds every asset matching the given Path filter to set.
+func (api *API) collectAssetsByPath(ctx context.Context, set map[uuid.UUID]schemas.Asset, pathFilter string) error {
+	assetQuery := url.Values{}
+	assetQuery.Add("Path", pathFilter)
+	assets, err := api.GetAssets(ctx, assetQuery.Encode())
+	if err != nil {
+		return err
+	}
+	for _, asset := range assets {
+		set[asset.UUID] = asset
+	}
+	return nil
+}
+
 // GetFilteredAssets returns a map of assets that match the given asset strings
 func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, historianInfo *schemas.HistorianInfo) (map[uuid.UUID]schemas.Asset, error) {
 	assetUUIDSet := map[uuid.UUID]schemas.Asset{}
@@ -100,15 +166,28 @@ func (api *API) GetFilteredAssets(ctx context.Context, assetStrings []string, hi
 			}
 		}
 
+		// The historian rebuilds the full asset-path tree for every Path
+		// request, so batch the literal paths into a single alternation. A
+		// user-supplied regex keeps its own request: its content must not be
+		// escaped and it stays unanchored.
+		literals := make([]string, 0, len(paths))
 		for _, path := range paths {
-			assetQuery := url.Values{}
-			assetQuery.Add("Path", path)
-			assets, err := api.GetAssets(ctx, assetQuery.Encode())
-			if err != nil {
-				return nil, err
+			if isPathRegex(path) {
+				if err := api.collectAssetsByPath(ctx, assetUUIDSet, path); err != nil {
+					return nil, err
+				}
+				continue
 			}
-			for _, asset := range assets {
-				assetUUIDSet[asset.UUID] = asset
+			literals = append(literals, path)
+		}
+		for _, batch := range batchPaths(literals) {
+			// A single path stays an exact match, which skips the regex engine.
+			pathFilter := batch[0]
+			if len(batch) > 1 {
+				pathFilter = pathAlternation(batch)
+			}
+			if err := api.collectAssetsByPath(ctx, assetUUIDSet, pathFilter); err != nil {
+				return nil, err
 			}
 		}
 		return assetUUIDSet, nil
