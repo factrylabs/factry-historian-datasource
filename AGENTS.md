@@ -304,11 +304,25 @@ The canonical version is defined in `Makefile` (`major`, `minor`, `patch` variab
 
 ---
 
-## DataSource Caching
+## Caching
 
-The `DataSource` class uses a 5-second TTL in-memory cache for metadata requests (assets, measurements, databases, etc.) to avoid redundant network calls during rapid UI interactions. The cache is keyed by request parameters and deduplicates concurrent requests for the same key.
+There are two independent caches. They serve different call paths, so both are needed.
 
-Cache-related fields in `datasource.ts`:
+### Backend resolution cache (`pkg/api/cache.go`)
+
+`resolutionCache[T]` fronts the asset, asset-property and timeseries-database list endpoints. It is what keeps a dashboard refresh from re-resolving asset properties, and it is the only cache on the query path: `QueryData` never goes through the frontend, so alerting and recording rules depend on this one.
+
+- TTL comes from the `resolutionCacheTTL` datasource setting (string of seconds, default `60`, `0` disables). It is provisioning-only, like `timeout` and `queryTimeout`.
+- Concurrent misses on one key share a request through `golang.org/x/sync/singleflight`. The shared fetch runs on `context.WithoutCancel`, so a cancelled panel query cannot fail the callers waiting on it; the HTTP client timeout still bounds it. A waiter whose own context is cancelled returns immediately with that error while the fetch keeps running.
+- A cache belongs to one `api.API`, which is built per datasource instance, so its contents are already scoped to that instance's token and organization. Never make one package-level.
+- Cache keys are encoded query strings, so any code building an indexed parameter from a map must use `util.AddSortedIndexedUUIDs` (or `util.AddSortedIndexedParams` for strings); `url.Values.Encode` sorts by key name only, never by value.
+- Callers opt in through `GetAssetsCached`, `GetAssetPropertiesCached` and `GetTimeseriesDatabasesCached`. The plain methods stay uncached; `CheckHealth` uses one on purpose.
+- Errors are not cached. Entries are bounded at `resolutionCacheMaxEntries` and evicted on write, so there is no janitor goroutine to dispose.
+
+### Frontend metadata cache (`src/datasource.ts`)
+
+A 5-second TTL in-memory cache for `getResource` metadata requests, which saves a Grafana proxy hop during rapid query-editor interaction. It never sees the query path.
+
 - `metadataCache: Map<string, {data, timestamp, timeoutId}>` — stores responses
 - `cacheTTL = 5000` — cache lifetime in milliseconds
 - `pendingRequests: Map<string, Promise<unknown>>` — in-flight request deduplication

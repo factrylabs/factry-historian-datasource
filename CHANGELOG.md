@@ -12,6 +12,23 @@
   - The pre-v6.3.0 asset-property filtering fallback has been removed.
   - All v7.0.0 / v7.1.0 / v7.2.0 / v7.3.0 frontend feature gates have been removed — the corresponding features (datatype filters, value filters, regex/`IN`/`IS NULL`/duration event property filters, periodic-with-dimension property types, time-weighted average aggregation, event property values variable query, asset property keyword/datatype variable filters) are now always available.
 
+### Changes
+
+- **Resolved asset and measurement metadata is now cached.** An asset-measurement query used to resolve its assets and properties against Historian on every panel of every dashboard refresh. The plugin now reuses the resolution for 60 seconds by default, and collapses concurrent lookups for the same assets into a single request, so a cold dashboard load resolves once instead of once per panel.
+  - The lifetime is set with the `resolutionCacheTTL` datasource setting: a number of seconds, `"0"` to disable. It is a provisioning setting like `timeout` and `queryTimeout`, so it is set in the datasource YAML rather than in the UI:
+
+    ```yaml
+    datasources:
+      - name: "Factry Historian"
+        type: "factry-historian-datasource"
+        jsonData:
+          resolutionCacheTTL: "60"
+    ```
+
+  - The TTL is also the bound on staleness: after an asset is reconfigured, dashboards keep showing the previous resolution for at most that long. Lower it if your assets are reconfigured while operators watch the result, and set it to `"0"` if no staleness is acceptable at all.
+  - The connection test is never served from the cache.
+- **Assets addressed by path resolve in one request.** A query listing several asset paths issued one request per path, and Historian rebuilds its whole asset-path tree for each one. The paths now go out as a single filter, in batches sized to keep the request URL within proxy limits.
+
 ## v3.3.0
 
 released: 11/08/2026
