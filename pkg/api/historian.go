@@ -9,7 +9,6 @@ import (
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
-	"github.com/go-playground/form"
 	"github.com/google/uuid"
 )
 
@@ -328,8 +327,7 @@ func (api *API) GetDistinctEventPropertyValues(ctx context.Context, eventTypePro
 		StopTime:       &request.To,
 		PropertyFilter: request.PropertyFilter,
 	}
-	encoder := form.NewEncoder()
-	urlValues, err := encoder.Encode(filter)
+	urlValues, err := newFormEncoder().Encode(filter)
 	if err != nil {
 		return nil, err
 	}
