@@ -9,10 +9,9 @@ released: 31/08/2026
 
 ### ⚠️ Breaking changes
 
-- Raised the minimum supported Factry Historian version to **v7.3.0**. The plugin no longer carries fallbacks for older Historian APIs:
-  - The pre-v6.4.0 asset and event-type filtering paths (full fetch + in-memory match) have been removed.
-  - The pre-v6.3.0 asset-property filtering fallback has been removed.
-  - All v7.0.0 / v7.1.0 / v7.2.0 / v7.3.0 frontend feature gates have been removed. The corresponding features (datatype filters, value filters, regex/`IN`/`IS NULL`/duration event property filters, periodic-with-dimension property types, time-weighted average aggregation, event property values variable query, asset property keyword/datatype variable filters) are now always available.
+- Factry Historian v7.3.0 is now the minimum supported version. Upgrade your Historian before updating the plugin.
+- All filtering of assets, event types and asset properties is done by Historian. The plugin no longer falls back to fetching everything and filtering it itself, which only older Historian versions needed.
+- Features that were hidden on older Historian versions are now always available: datatype filters, value filters, the regex, `IN`, `IS NULL` and duration event property filters, periodic-with-dimension property types, the time-weighted average aggregation, the event property values variable query and the asset property keyword and datatype variable filters.
 
 ### Bug fixes
 
