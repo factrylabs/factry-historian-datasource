@@ -287,6 +287,14 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 			}
 		}
 
+		// A requested database filter that resolves to nothing must yield no
+		// measurements. Searching without the constraint would match every
+		// database, e.g. while the cached database list does not yet hold a
+		// just-created database.
+		if len(measurementQuery.Databases) > 0 && len(databaseUUIDs) == 0 {
+			continue
+		}
+
 		measurementsQuery := url.Values{}
 		measurementsQuery.Set("Keyword", measurement)
 		// a non-positive seriesLimit means unlimited, don't ask the API to truncate
