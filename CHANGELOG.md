@@ -15,7 +15,7 @@ released: 31/08/2026
 
 ### Bug fixes
 
-- Fixed asset, event type and event configuration filters not being applied to event queries and to the event property values variable query.
+- Fixed asset, event type and event configuration filters not being applied to event queries and to the event property values variable query on Historian v8.2 and later.
 
 ## v3.3.0
 
