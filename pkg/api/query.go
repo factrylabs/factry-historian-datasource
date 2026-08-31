@@ -13,6 +13,7 @@ import (
 	arrow_pb "github.com/factrylabs/factry-historian-datasource.git/pkg/proto"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/go-playground/form"
+	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"google.golang.org/protobuf/proto"
 )
@@ -184,10 +185,19 @@ func fixPropertyFilterValues(filter schemas.EventFilter) schemas.EventFilter {
 	return filter
 }
 
-func getEventFilter(filter schemas.EventFilter) (url.Values, error) {
+// newFormEncoder returns the encoder used for all query parameters sent to Historian. It handles UUIDs explicitly as
+// strings, so they're not sent as byte arrays to the Historian backend.
+func newFormEncoder() *form.Encoder {
 	encoder := form.NewEncoder()
+	encoder.RegisterCustomTypeFunc(func(x interface{}) ([]string, error) {
+		return []string{x.(uuid.UUID).String()}, nil
+	}, uuid.UUID{})
+	return encoder
+}
+
+func getEventFilter(filter schemas.EventFilter) (url.Values, error) {
 	filter = fixPropertyFilterValues(filter)
-	values, err := encoder.Encode(&filter)
+	values, err := newFormEncoder().Encode(&filter)
 	if err != nil {
 		return nil, err
 	}
