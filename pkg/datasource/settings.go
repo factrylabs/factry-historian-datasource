@@ -20,7 +20,7 @@ const defaultResolutionCacheTTL = "60"
 // Settings - data loaded from grafana settings database
 type Settings struct {
 	URL          string `json:"url,omitempty"`
-	Token        string `json:"-,omitempty"`
+	Token        string `json:"-"`
 	Organization string `json:"organization,omitempty"`
 	Timeout      string `json:"timeout,omitempty"`
 	QueryTimeout string `json:"queryTimeout,omitempty"`
