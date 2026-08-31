@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -438,4 +439,59 @@ func TestCheckHealthAlwaysReachesTheHistorian(t *testing.T) {
 	}
 
 	assert.Len(t, recorder.queriesFor("/api/timeseries-databases"), 3, "the health check must not be cached")
+}
+
+// A measurement query filtered on a database name that resolves to nothing must
+// return no measurements. Dropping the filter instead would search every
+// database, and with the resolution cache a just-created database stays
+// unresolvable for up to the TTL.
+func TestGetMeasurementsWithUnresolvableDatabaseFilterReturnsNothing(t *testing.T) {
+	t.Parallel()
+
+	factory := schemas.TimeseriesDatabase{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "factory"}}
+	measurement := schemas.Measurement{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "temperature"}}
+
+	newFixture := func(t *testing.T) (*HistorianDataSource, *requestRecorder) {
+		t.Helper()
+		recorder := &requestRecorder{}
+		mux := http.NewServeMux()
+		mux.HandleFunc("GET /api/timeseries-databases", func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode([]schemas.TimeseriesDatabase{factory})
+		})
+		mux.HandleFunc("GET /api/measurements", func(w http.ResponseWriter, r *http.Request) {
+			recorder.record(r.URL.Path, r.URL.RawQuery)
+			_ = json.NewEncoder(w).Encode([]schemas.Measurement{measurement})
+		})
+		return newFakeHistorianDataSource(t, mux), recorder
+	}
+
+	t.Run("an unresolvable name yields no measurements and no search", func(t *testing.T) {
+		t.Parallel()
+		ds, recorder := newFixture(t)
+		measurements, err := ds.getMeasurements(t.Context(), schemas.MeasurementQuery{
+			Measurement: "temperature",
+			Databases:   []string{"just-created"},
+		}, 50)
+		require.NoError(t, err)
+
+		assert.Empty(t, measurements, "a database filter that resolves to nothing must not match any measurement")
+		assert.Empty(t, recorder.queriesFor("/api/measurements"), "the search must not go out without the database filter")
+	})
+
+	t.Run("a resolvable name keeps its filter", func(t *testing.T) {
+		t.Parallel()
+		ds, recorder := newFixture(t)
+		measurements, err := ds.getMeasurements(t.Context(), schemas.MeasurementQuery{
+			Measurement: "temperature",
+			Databases:   []string{"factory"},
+		}, 50)
+		require.NoError(t, err)
+
+		require.Equal(t, []string{measurement.UUID.String()}, measurements)
+		queries := recorder.queriesFor("/api/measurements")
+		require.Len(t, queries, 1)
+		parsed, err := url.ParseQuery(queries[0])
+		require.NoError(t, err)
+		assert.Equal(t, factory.UUID.String(), parsed.Get("DatabaseUUIDs[0]"), "the resolved filter must reach the historian")
+	})
 }
