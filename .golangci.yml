@@ -89,6 +89,11 @@ linters:
         - performance
         - diagnostic
         - style
+      settings:
+        rangeValCopy:
+          # The default of 128 flags harmless copies of medium structs; only a
+          # copy of several hundred bytes per iteration is worth restructuring.
+          sizeThreshold: 512
     exhaustive:
       check:
         - switch
