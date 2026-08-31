@@ -15,13 +15,7 @@ released: 31/08/2026
 
 ### Bug fixes
 
-- Fixed UUID query parameters being encoded as byte arrays, which Historian's request validation silently dropped. Asset, event type and event configuration filters had no effect on event queries and on the event property values variable query.
-
-### Misc
-
-- Property lookups are skipped when the asset or event type filter matched nothing, instead of asking Historian for every property.
-- Overrode `js-cookie` to 3.0.8, which resolves CVE-2026-46625 reported against the version `@grafana/data` pulls in.
-- Expanded the end-to-end test suite to cover every editor, and added coverage reporting.
+- Fixed asset, event type and event configuration filters not being applied to event queries and to the event property values variable query.
 
 ## v3.3.0
 
