@@ -1,16 +1,28 @@
 # Changelog
 
 > ⚠️ **Minimum supported Factry Historian version: v7.3.0.**
-> Versions of this plugin from the next release onwards no longer ship compatibility code for Historian instances older than v7.3.0. Earlier Historian versions are not supported — upgrade your Historian before updating this plugin.
+> Versions of this plugin from v4.0.0 onwards no longer ship compatibility code for Historian instances older than v7.3.0. Earlier Historian versions are not supported, so upgrade your Historian before updating this plugin.
 
-## Unreleased
+## v4.0.0
+
+released: 31/08/2026
 
 ### ⚠️ Breaking changes
 
 - Raised the minimum supported Factry Historian version to **v7.3.0**. The plugin no longer carries fallbacks for older Historian APIs:
   - The pre-v6.4.0 asset and event-type filtering paths (full fetch + in-memory match) have been removed.
   - The pre-v6.3.0 asset-property filtering fallback has been removed.
-  - All v7.0.0 / v7.1.0 / v7.2.0 / v7.3.0 frontend feature gates have been removed — the corresponding features (datatype filters, value filters, regex/`IN`/`IS NULL`/duration event property filters, periodic-with-dimension property types, time-weighted average aggregation, event property values variable query, asset property keyword/datatype variable filters) are now always available.
+  - All v7.0.0 / v7.1.0 / v7.2.0 / v7.3.0 frontend feature gates have been removed. The corresponding features (datatype filters, value filters, regex/`IN`/`IS NULL`/duration event property filters, periodic-with-dimension property types, time-weighted average aggregation, event property values variable query, asset property keyword/datatype variable filters) are now always available.
+
+### Bug fixes
+
+- Fixed UUID query parameters being encoded as byte arrays, which Historian's request validation silently dropped. Asset, event type and event configuration filters had no effect on event queries and on the event property values variable query.
+
+### Misc
+
+- Property lookups are skipped when the asset or event type filter matched nothing, instead of asking Historian for every property.
+- Overrode `js-cookie` to 3.0.8, which resolves CVE-2026-46625 reported against the version `@grafana/data` pulls in.
+- Expanded the end-to-end test suite to cover every editor, and added coverage reporting.
 
 ## v3.3.0
 
