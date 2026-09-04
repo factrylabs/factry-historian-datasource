@@ -29,9 +29,10 @@ overrides:
   '@tootallnate/once': 2.0.1
   'brace-expansion@1': 1.1.18
   'brace-expansion@5': 5.0.9
+  browserslist: 4.28.9
   'diff@4': 4.0.4
   dompurify: 3.4.13
-  fast-uri: 3.1.5
+  fast-uri: 3.1.7
   js-cookie: 3.0.8
   'js-yaml@3': 3.15.1
   'js-yaml@4': 4.3.1
@@ -56,3 +57,6 @@ allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
   protobufjs: true
+
+minimumReleaseAgeExclude:
+  - browserslist@4.28.9
