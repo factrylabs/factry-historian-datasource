@@ -48,15 +48,17 @@ of the plugin:
 - **Backend**: build the plugin binary with coverage instrumentation first:
 
   ```sh
-  go build -cover -covermode=atomic -coverpkg=./pkg/... \
+  go build -cover -covermode=atomic -coverpkg=./pkg/... -tags e2ecover \
     -o dist/gpx_factry-historian-datasource_linux_amd64 ./pkg
   mkdir -p coverage/e2e-backend-raw && chmod 777 coverage/e2e-backend-raw
   ```
 
-  `docker-compose.e2e.yaml` sets `GOCOVERDIR` and forwards it to the plugin
-  subprocess; `pkg/coverageflush.go` flushes counters every 15s (Grafana kills
-  the plugin on shutdown, so the usual write-at-exit never runs). Raw counter
-  files land in `coverage/e2e-backend-raw/`.
+  `docker-compose.e2e.yaml` mounts `coverage/e2e-backend-raw` at `/coverage`;
+  `pkg/coverageflush.go`, compiled in only under the `e2ecover` build tag,
+  flushes counters to that path every 15s (Grafana kills the plugin on
+  shutdown, so the usual write-at-exit never runs). The path is hardcoded
+  because Grafana's plugin validator forbids reading environment variables.
+  Raw counter files land in `coverage/e2e-backend-raw/`.
 
 Render the combined report (also used by CI for the job summary):
 
