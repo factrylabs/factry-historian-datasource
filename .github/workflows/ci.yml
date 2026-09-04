@@ -257,7 +257,7 @@ jobs:
       - name: Build coverage-instrumented backend
         if: needs.build.outputs.has-backend == 'true'
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -cover -covermode=atomic -coverpkg=./pkg/... -o dist/gpx_factry-historian-datasource_linux_amd64 ./pkg
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -cover -covermode=atomic -coverpkg=./pkg/... -tags e2ecover -o dist/gpx_factry-historian-datasource_linux_amd64 ./pkg
           rm -f dist/MANIFEST.txt
 
       - name: Execute permissions on binary

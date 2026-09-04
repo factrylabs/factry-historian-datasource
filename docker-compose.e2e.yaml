@@ -19,11 +19,14 @@ services:
       # /etc/grafana/provisioning is ignored (docker-compose appends volume
       # lists, so we cannot replace the dev mount in place).
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning-e2e
-      # Backend e2e coverage: the plugin binary flushes Go coverage counters to
-      # GOCOVERDIR when built with `go build -cover` (see pkg/coverageflush.go).
-      # forward_host_env_vars takes PLUGIN IDs: Grafana >= 12.4 no longer
-      # passes host env vars to plugin subprocesses unless the plugin is
-      # listed. Both are no-ops for a regular (non -cover) binary.
+      # Backend e2e coverage: a binary built with
+      # `go build -cover -tags e2ecover` flushes Go coverage counters to the
+      # /coverage mount below (see pkg/coverageflush.go, which hardcodes that
+      # path because plugins may not read environment variables). GOCOVERDIR
+      # covers the runtime's own write-at-exit; forward_host_env_vars takes
+      # PLUGIN IDs, since Grafana >= 12.4 no longer passes host env vars to
+      # plugin subprocesses unless the plugin is listed. Both are no-ops for a
+      # regular (non -cover) binary.
       GOCOVERDIR: /coverage
       GF_PLUGINS_FORWARD_HOST_ENV_VARS: factry-historian-datasource
       # Grafana >= 11.5 preinstalls a few first-party apps (explore traces,
