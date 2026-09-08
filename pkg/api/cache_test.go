@@ -346,6 +346,7 @@ func TestCachedGettersServeRepeatsFromMemory(t *testing.T) {
 	serve("GET /api/event-types", `[{"Name":"batch"}]`)
 	serve("GET /api/event-type-properties", `[{"Name":"recipe"}]`)
 	serve("GET /api/event-configurations", `[{"Name":"configuration"}]`)
+	serve("GET /api/info", `{"Version":"v8.2.0"}`)
 
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -406,6 +407,10 @@ func TestCachedGettersServeRepeatsFromMemory(t *testing.T) {
 			}
 			require.Len(t, values, 1)
 			return values[0].Name, nil
+		}},
+		{"info", "/api/info", func(ctx context.Context) (string, error) {
+			value, err := client.GetInfoCached(ctx)
+			return value.Version, err
 		}},
 	}
 
