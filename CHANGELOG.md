@@ -3,6 +3,15 @@
 > ⚠️ **Minimum supported Factry Historian version: v7.3.0.**
 > Versions of this plugin from v4.0.0 onwards no longer ship compatibility code for Historian instances older than v7.3.0. Earlier Historian versions are not supported, so upgrade your Historian before updating this plugin.
 
+## v4.0.1
+
+released: 08/09/2026
+
+### Misc
+
+- Updated dependencies to close known security issues.
+- The test coverage tooling is no longer part of the released plugin.
+
 ## v4.0.0
 
 released: 31/08/2026
