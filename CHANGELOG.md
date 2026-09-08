@@ -3,6 +3,12 @@
 > ⚠️ **Minimum supported Factry Historian version: v7.3.0.**
 > Versions of this plugin from v4.0.0 onwards no longer ship compatibility code for Historian instances older than v7.3.0. Earlier Historian versions are not supported, so upgrade your Historian before updating this plugin.
 
+## Unreleased
+
+### Changes
+
+- **All resource lookups are now served from the backend resolution cache.** Measurements, collectors, event types, event type properties and event configurations join the assets, asset properties and databases cached in v4.0.0, under the same `resolutionCacheTTL` setting. Live data is never cached: tag keys and values, event property values, and the measurement and event queries themselves always reach Historian. The connection test still bypasses the cache.
+
 ## v4.0.1
 
 released: 08/09/2026

@@ -495,3 +495,31 @@ func TestGetMeasurementsWithUnresolvableDatabaseFilterReturnsNothing(t *testing.
 		assert.Equal(t, factory.UUID.String(), parsed.Get("DatabaseUUIDs[0]"), "the resolved filter must reach the historian")
 	})
 }
+
+// A dashboard refresh must not re-run a measurement search it already ran.
+func TestGetMeasurementsServesRepeatedSearchFromCache(t *testing.T) {
+	t.Parallel()
+
+	measurement := schemas.Measurement{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "temperature"}}
+	recorder := &requestRecorder{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/timeseries-databases", func(w http.ResponseWriter, r *http.Request) {
+		recorder.record(r.URL.Path, r.URL.RawQuery)
+		_ = json.NewEncoder(w).Encode([]schemas.TimeseriesDatabase{})
+	})
+	mux.HandleFunc("GET /api/measurements", func(w http.ResponseWriter, r *http.Request) {
+		recorder.record(r.URL.Path, r.URL.RawQuery)
+		_ = json.NewEncoder(w).Encode([]schemas.Measurement{measurement})
+	})
+	ds := newFakeHistorianDataSourceWithTTL(t, mux, time.Minute)
+
+	query := schemas.MeasurementQuery{Measurement: "temperature"}
+	first, err := ds.getMeasurements(t.Context(), query, 50)
+	require.NoError(t, err)
+	second, err := ds.getMeasurements(t.Context(), query, 50)
+	require.NoError(t, err)
+
+	assert.Equal(t, first, second)
+	assert.Len(t, recorder.queriesFor("/api/measurements"), 1, "the repeated search must be served from the cache")
+	assert.Len(t, recorder.queriesFor("/api/timeseries-databases"), 1, "the database list must be served from the cache")
+}

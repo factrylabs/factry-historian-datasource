@@ -20,13 +20,24 @@ const clientName = "factry-historian-datasource"
 type API struct {
 	client *http.Client
 
-	// Asset and measurement metadata resolve to the same result for every panel
-	// of a dashboard refresh, so each list endpoint gets a cache. The caches
-	// hold one client's results, which are already scoped to its token and
-	// organization, so they must not outlive the client.
-	assetCache         *resolutionCache[schemas.Asset]
-	assetPropertyCache *resolutionCache[schemas.AssetProperty]
-	databaseCache      *resolutionCache[schemas.TimeseriesDatabase]
+	// Resource lookups resolve to the same result for every panel of a
+	// dashboard refresh, so each resource endpoint gets a cache. Live data (tag
+	// keys and values, event property values, measurement and event queries)
+	// stays uncached. The caches hold one client's results, which are already
+	// scoped to its token and organization, so they must not outlive the client.
+	assetCache              *resolutionCache[schemas.Asset]
+	assetPropertyCache      *resolutionCache[schemas.AssetProperty]
+	databaseCache           *resolutionCache[schemas.TimeseriesDatabase]
+	measurementCache        *resolutionCache[schemas.Measurement]
+	collectorCache          *resolutionCache[schemas.Collector]
+	eventTypeCache          *resolutionCache[schemas.EventType]
+	eventTypePropertyCache  *resolutionCache[schemas.EventTypeProperty]
+	eventConfigurationCache *resolutionCache[schemas.EventConfiguration]
+
+	// measurementUUIDCache serves the single-measurement lookup by UUID. It is
+	// separate from measurementCache: the list keys are raw query strings, so a
+	// bare UUID key in the same cache could collide with one.
+	measurementUUIDCache *resolutionCache[schemas.Measurement]
 }
 
 // clientIdentifier returns the "<name>/<version>" string sent in the User-Agent
@@ -101,8 +112,8 @@ type Options struct {
 	Timeout            time.Duration
 	QueryTimeout       time.Duration
 	InsecureSkipVerify bool
-	// ResolutionCacheTTL is how long resolved asset and measurement metadata is
-	// reused. Zero disables the caches.
+	// ResolutionCacheTTL is how long resolved resources are reused. Zero
+	// disables the caches.
 	ResolutionCacheTTL time.Duration
 }
 
@@ -148,10 +159,16 @@ func NewAPIWithOptions(options Options) (*API, error) {
 	}
 
 	api := &API{
-		client:             client,
-		assetCache:         newResolutionCache[schemas.Asset](options.ResolutionCacheTTL),
-		assetPropertyCache: newResolutionCache[schemas.AssetProperty](options.ResolutionCacheTTL),
-		databaseCache:      newResolutionCache[schemas.TimeseriesDatabase](options.ResolutionCacheTTL),
+		client:                  client,
+		assetCache:              newResolutionCache[schemas.Asset](options.ResolutionCacheTTL),
+		assetPropertyCache:      newResolutionCache[schemas.AssetProperty](options.ResolutionCacheTTL),
+		databaseCache:           newResolutionCache[schemas.TimeseriesDatabase](options.ResolutionCacheTTL),
+		measurementCache:        newResolutionCache[schemas.Measurement](options.ResolutionCacheTTL),
+		measurementUUIDCache:    newResolutionCache[schemas.Measurement](options.ResolutionCacheTTL),
+		collectorCache:          newResolutionCache[schemas.Collector](options.ResolutionCacheTTL),
+		eventTypeCache:          newResolutionCache[schemas.EventType](options.ResolutionCacheTTL),
+		eventTypePropertyCache:  newResolutionCache[schemas.EventTypeProperty](options.ResolutionCacheTTL),
+		eventConfigurationCache: newResolutionCache[schemas.EventConfiguration](options.ResolutionCacheTTL),
 	}
 	return api, nil
 }

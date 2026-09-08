@@ -79,7 +79,7 @@ func (*HistorianDataSource) fallBackHandler(_ http.ResponseWriter, req *http.Req
 }
 
 func (ds *HistorianDataSource) handleGetMeasurements(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetMeasurements(req.Context(), req.URL.RawQuery)
+	return ds.API.GetMeasurementsCached(req.Context(), req.URL.RawQuery)
 }
 
 func (ds *HistorianDataSource) handleGetMeasurementByUUID(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
@@ -87,11 +87,11 @@ func (ds *HistorianDataSource) handleGetMeasurementByUUID(_ http.ResponseWriter,
 	if uuid == "" {
 		return nil, errors.New("uuid is required")
 	}
-	return ds.API.GetMeasurement(req.Context(), uuid)
+	return ds.API.GetMeasurementCached(req.Context(), uuid)
 }
 
 func (ds *HistorianDataSource) handleGetCollectors(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetCollectors(req.Context())
+	return ds.API.GetCollectorsCached(req.Context())
 }
 
 func (ds *HistorianDataSource) handleGetDatabases(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
@@ -107,19 +107,19 @@ func (ds *HistorianDataSource) handleGetAssetProperties(_ http.ResponseWriter, r
 }
 
 func (ds *HistorianDataSource) handleGetEventTypes(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetEventTypes(req.Context(), req.URL.RawQuery)
+	return ds.API.GetEventTypesCached(req.Context(), req.URL.RawQuery)
 }
 
 func (ds *HistorianDataSource) handleGetEventTypeProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetEventTypeProperties(req.Context(), req.URL.RawQuery)
+	return ds.API.GetEventTypePropertiesCached(req.Context(), req.URL.RawQuery)
 }
 
 func (ds *HistorianDataSource) handleGetEventConfigurations(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetEventConfigurations(req.Context())
+	return ds.API.GetEventConfigurationsCached(req.Context())
 }
 
 func (ds *HistorianDataSource) handleGetTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	measurements, err := ds.API.GetMeasurements(req.Context(), req.URL.RawQuery)
+	measurements, err := ds.API.GetMeasurementsCached(req.Context(), req.URL.RawQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (ds *HistorianDataSource) handleGetTagValueForMeasurementAndTagKey(_ http.R
 
 func (ds *HistorianDataSource) handleGetTagValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	// if no measurement in the path use the query parameters to get the measurements
-	measurements, err := ds.API.GetMeasurements(req.Context(), req.URL.RawQuery)
+	measurements, err := ds.API.GetMeasurementsCached(req.Context(), req.URL.RawQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,8 @@ func (ds *HistorianDataSource) handleGetTagValues(_ http.ResponseWriter, req *ht
 }
 
 func (ds *HistorianDataSource) handleGetHistorianInfo(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
-	return ds.API.GetInfo(req.Context())
+	// The editor shares the query path's historian info cache.
+	return ds.getHistorianInfo(req.Context())
 }
 
 func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
@@ -261,7 +262,7 @@ func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWrite
 		}
 		queryString := queryStringBuilder.String()
 
-		eventTypeProperties, err := ds.API.GetEventTypeProperties(req.Context(), queryString)
+		eventTypeProperties, err := ds.API.GetEventTypePropertiesCached(req.Context(), queryString)
 		if err != nil {
 			return nil, err
 		}

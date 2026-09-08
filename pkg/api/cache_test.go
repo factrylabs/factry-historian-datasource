@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -318,4 +320,147 @@ func TestResolutionCacheWaiterReturnsOnItsOwnCancellation(t *testing.T) {
 		close(release)
 		<-leaderDone
 	})
+}
+
+// Each resource getter has a *Cached variant wired to its own cache. This pins
+// the wiring: a repeat of the same lookup must not reach the historian.
+func TestCachedGettersServeRepeatsFromMemory(t *testing.T) {
+	t.Parallel()
+
+	const measurementUUID = "11111111-1111-1111-1111-111111111111"
+
+	var mu sync.Mutex
+	hits := map[string]int{}
+	mux := http.NewServeMux()
+	serve := func(pattern string, body string) {
+		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+			mu.Lock()
+			hits[r.URL.Path]++
+			mu.Unlock()
+			_, _ = w.Write([]byte(body))
+		})
+	}
+	serve("GET /api/measurements", `[{"Name":"temperature"}]`)
+	serve("GET /api/measurements/"+measurementUUID, `{"Name":"temperature"}`)
+	serve("GET /api/collectors", `[{"Name":"opcua"}]`)
+	serve("GET /api/event-types", `[{"Name":"batch"}]`)
+	serve("GET /api/event-type-properties", `[{"Name":"recipe"}]`)
+	serve("GET /api/event-configurations", `[{"Name":"configuration"}]`)
+
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	client, err := NewAPIWithOptions(Options{
+		URL:                srv.URL,
+		Token:              "tok",
+		Organization:       "org",
+		ResolutionCacheTTL: time.Minute,
+	})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name string
+		path string
+		call func(context.Context) (string, error)
+	}{
+		{"measurements", "/api/measurements", func(ctx context.Context) (string, error) {
+			values, err := client.GetMeasurementsCached(ctx, "Keyword=temp")
+			if err != nil {
+				return "", err
+			}
+			require.Len(t, values, 1)
+			return values[0].Name, nil
+		}},
+		{"measurement by UUID", "/api/measurements/" + measurementUUID, func(ctx context.Context) (string, error) {
+			value, err := client.GetMeasurementCached(ctx, measurementUUID)
+			return value.Name, err
+		}},
+		{"collectors", "/api/collectors", func(ctx context.Context) (string, error) {
+			values, err := client.GetCollectorsCached(ctx)
+			if err != nil {
+				return "", err
+			}
+			require.Len(t, values, 1)
+			return values[0].Name, nil
+		}},
+		{"event types", "/api/event-types", func(ctx context.Context) (string, error) {
+			values, err := client.GetEventTypesCached(ctx, "Keyword=batch")
+			if err != nil {
+				return "", err
+			}
+			require.Len(t, values, 1)
+			return values[0].Name, nil
+		}},
+		{"event type properties", "/api/event-type-properties", func(ctx context.Context) (string, error) {
+			values, err := client.GetEventTypePropertiesCached(ctx, "EventTypeUUIDs[0]=a")
+			if err != nil {
+				return "", err
+			}
+			require.Len(t, values, 1)
+			return values[0].Name, nil
+		}},
+		{"event configurations", "/api/event-configurations", func(ctx context.Context) (string, error) {
+			values, err := client.GetEventConfigurationsCached(ctx)
+			if err != nil {
+				return "", err
+			}
+			require.Len(t, values, 1)
+			return values[0].Name, nil
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			first, err := tt.call(context.Background())
+			require.NoError(t, err)
+			second, err := tt.call(context.Background())
+			require.NoError(t, err)
+
+			assert.Equal(t, first, second, "the cached repeat must return the same value")
+			mu.Lock()
+			hitCount := hits[tt.path]
+			mu.Unlock()
+			assert.Equal(t, 1, hitCount, "the repeat must be served from the cache")
+		})
+	}
+}
+
+// Two measurements must not share a cache entry.
+func TestGetMeasurementCachedKeysOnTheUUID(t *testing.T) {
+	t.Parallel()
+
+	const (
+		uuidA = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+		uuidB = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+	)
+
+	fetches := &atomic.Int64{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/measurements/{uuid}", func(w http.ResponseWriter, r *http.Request) {
+		fetches.Add(1)
+		_, _ = fmt.Fprintf(w, `{"Name":%q}`, r.PathValue("uuid"))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	client, err := NewAPIWithOptions(Options{
+		URL:                srv.URL,
+		Token:              "tok",
+		Organization:       "org",
+		ResolutionCacheTTL: time.Minute,
+	})
+	require.NoError(t, err)
+
+	for range 2 {
+		a, err := client.GetMeasurementCached(context.Background(), uuidA)
+		require.NoError(t, err)
+		b, err := client.GetMeasurementCached(context.Background(), uuidB)
+		require.NoError(t, err)
+		assert.Equal(t, uuidA, a.Name)
+		assert.Equal(t, uuidB, b.Name)
+	}
+
+	assert.Equal(t, int64(2), fetches.Load(), "each UUID is fetched once, then served from the cache")
 }

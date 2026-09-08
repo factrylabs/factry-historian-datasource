@@ -307,7 +307,7 @@ func (ds *HistorianDataSource) getMeasurements(ctx context.Context, measurementQ
 		for i, datatype := range measurementQuery.Options.Datatypes {
 			measurementsQuery.Set(fmt.Sprintf("Datatypes[%v]", i), datatype)
 		}
-		res, err := ds.API.GetMeasurements(ctx, measurementsQuery.Encode())
+		res, err := ds.API.GetMeasurementsCached(ctx, measurementsQuery.Encode())
 		if err != nil {
 			return nil, err
 		}

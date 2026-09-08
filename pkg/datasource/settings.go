@@ -11,7 +11,7 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
-// defaultResolutionCacheTTL is how long resolved metadata is reused when the
+// defaultResolutionCacheTTL is how long resolved resources are reused when the
 // datasource does not set resolutionCacheTTL. At a 2 second dashboard refresh it
 // removes about 97% of the resolution requests; a longer TTL wins little and
 // only widens the window in which a reconfigured asset stays unnoticed.
@@ -24,8 +24,9 @@ type Settings struct {
 	Organization string `json:"organization,omitempty"`
 	Timeout      string `json:"timeout,omitempty"`
 	QueryTimeout string `json:"queryTimeout,omitempty"`
-	// ResolutionCacheTTL is the number of seconds a resolved asset or
-	// measurement lookup is reused, as a string of seconds like the timeouts.
+	// ResolutionCacheTTL is the number of seconds a resolved resource lookup
+	// (assets, measurements, event types, ...) is reused, as a string of
+	// seconds like the timeouts.
 	// "0" disables the caches. It also bounds how long a dashboard can keep
 	// showing a measurement from a since-reconfigured asset.
 	ResolutionCacheTTL string `json:"resolutionCacheTTL,omitempty"`

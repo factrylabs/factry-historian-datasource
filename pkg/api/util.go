@@ -217,7 +217,7 @@ func (api *API) GetFilteredEventTypes(ctx context.Context, eventTypeStrings []st
 	for _, eventTypeString := range eventTypeStrings {
 		eventTypeQuery := url.Values{}
 		eventTypeQuery.Add("Keyword", eventTypeString)
-		eventTypes, err := api.GetEventTypes(ctx, eventTypeQuery.Encode())
+		eventTypes, err := api.GetEventTypesCached(ctx, eventTypeQuery.Encode())
 		if err != nil {
 			return nil, err
 		}
