@@ -38,7 +38,16 @@ type API struct {
 	// separate from measurementCache: the list keys are raw query strings, so a
 	// bare UUID key in the same cache could collide with one.
 	measurementUUIDCache *resolutionCache[schemas.Measurement]
+
+	// infoCache serves the historian info lookup. Its TTL is fixed at
+	// infoCacheTTL rather than the resolution TTL: the info changes on a
+	// historian upgrade, not on a reconfiguration, and disabling the resolution
+	// caches must not turn every query into an info request.
+	infoCache *resolutionCache[schemas.HistorianInfo]
 }
+
+// infoCacheTTL is how long the historian info is reused.
+const infoCacheTTL = 5 * time.Minute
 
 // clientIdentifier returns the "<name>/<version>" string sent in the User-Agent
 // header so Historian can attribute traffic by client type and version. Both
@@ -169,12 +178,14 @@ func NewAPIWithOptions(options Options) (*API, error) {
 		eventTypeCache:          newResolutionCache[schemas.EventType](options.ResolutionCacheTTL),
 		eventTypePropertyCache:  newResolutionCache[schemas.EventTypeProperty](options.ResolutionCacheTTL),
 		eventConfigurationCache: newResolutionCache[schemas.EventConfiguration](options.ResolutionCacheTTL),
+		infoCache:               newResolutionCache[schemas.HistorianInfo](infoCacheTTL),
 	}
 	return api, nil
 }
 
 // NewAPIWithToken creates a new instance of API using a token. It leaves the
-// resolution caches disabled; only the datasource settings turn them on.
+// resolution caches disabled; only the datasource settings turn them on. The
+// historian info cache has a fixed TTL and is always on.
 func NewAPIWithToken(baseURL string, token string, organization string) (*API, error) {
 	return NewAPIWithOptions(Options{
 		URL:          baseURL,

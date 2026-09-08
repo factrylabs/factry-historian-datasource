@@ -77,12 +77,12 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 		}
 
 		if query.HistorianInfo == nil {
-			info, err := ds.getHistorianInfo(ctx)
+			info, err := ds.API.GetInfoCached(ctx)
 			if err != nil {
 				response.Error = err
 				return response
 			}
-			query.HistorianInfo = info
+			query.HistorianInfo = &info
 		}
 
 		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
@@ -121,12 +121,12 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 		}
 
 		if query.HistorianInfo == nil {
-			info, err := ds.getHistorianInfo(ctx)
+			info, err := ds.API.GetInfoCached(ctx)
 			if err != nil {
 				response.Error = err
 				return response
 			}
-			query.HistorianInfo = info
+			query.HistorianInfo = &info
 		}
 
 		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)

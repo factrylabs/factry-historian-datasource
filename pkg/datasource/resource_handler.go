@@ -229,7 +229,7 @@ func (ds *HistorianDataSource) handleGetTagValues(_ http.ResponseWriter, req *ht
 
 func (ds *HistorianDataSource) handleGetHistorianInfo(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	// The editor shares the query path's historian info cache.
-	return ds.getHistorianInfo(req.Context())
+	return ds.API.GetInfoCached(req.Context())
 }
 
 func (ds *HistorianDataSource) handleGetEventPropertyValues(_ http.ResponseWriter, req *http.Request) (interface{}, error) {

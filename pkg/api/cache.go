@@ -215,3 +215,19 @@ func (api *API) GetEventConfigurationsCached(ctx context.Context) ([]schemas.Eve
 		return api.GetEventConfigurations(ctx)
 	})
 }
+
+// GetInfoCached is GetInfo served from the info cache. The info is stored as a
+// one-element slice under the empty key.
+func (api *API) GetInfoCached(ctx context.Context) (schemas.HistorianInfo, error) {
+	infos, err := api.infoCache.do(ctx, "", func(ctx context.Context) ([]schemas.HistorianInfo, error) {
+		info, err := api.GetInfo(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return []schemas.HistorianInfo{info}, nil
+	})
+	if err != nil || len(infos) == 0 {
+		return schemas.HistorianInfo{}, err
+	}
+	return infos[0], nil
+}
