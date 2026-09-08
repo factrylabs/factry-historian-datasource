@@ -310,13 +310,13 @@ There are two independent caches. They serve different call paths, so both are n
 
 ### Backend resolution cache (`pkg/api/cache.go`)
 
-`resolutionCache[T]` fronts the asset, asset-property and timeseries-database list endpoints. It is what keeps a dashboard refresh from re-resolving asset properties, and it is the only cache on the query path: `QueryData` never goes through the frontend, so alerting and recording rules depend on this one.
+`resolutionCache[T]` fronts every resource endpoint: assets, asset properties, timeseries databases, measurements (list and by UUID), collectors, event types, event type properties and event configurations. Live data stays uncached: tag keys and values, event property values, and the measurement and event queries themselves. The cache is what keeps a dashboard refresh from re-resolving resources, and it is the only cache on the query path: `QueryData` never goes through the frontend, so alerting and recording rules depend on this one.
 
 - TTL comes from the `resolutionCacheTTL` datasource setting (string of seconds, default `60`, `0` disables). It is provisioning-only, like `timeout` and `queryTimeout`.
 - Concurrent misses on one key share a request through `golang.org/x/sync/singleflight`. The shared fetch runs on `context.WithoutCancel`, so a cancelled panel query cannot fail the callers waiting on it; the HTTP client timeout still bounds it. A waiter whose own context is cancelled returns immediately with that error while the fetch keeps running.
 - A cache belongs to one `api.API`, which is built per datasource instance, so its contents are already scoped to that instance's token and organization. Never make one package-level.
 - Cache keys are encoded query strings, so any code building an indexed parameter from a map must use `util.AddSortedIndexedUUIDs` (or `util.AddSortedIndexedParams` for strings); `url.Values.Encode` sorts by key name only, never by value.
-- Callers opt in through `GetAssetsCached`, `GetAssetPropertiesCached` and `GetTimeseriesDatabasesCached`. The plain methods stay uncached; `CheckHealth` uses one on purpose.
+- Callers opt in through the `*Cached` variants (`GetAssetsCached`, `GetMeasurementsCached`, ...). The plain methods stay uncached; `CheckHealth` uses one on purpose.
 - Errors are not cached. Entries are bounded at `resolutionCacheMaxEntries` and evicted on write, so there is no janitor goroutine to dispose.
 
 ### Frontend metadata cache (`src/datasource.ts`)

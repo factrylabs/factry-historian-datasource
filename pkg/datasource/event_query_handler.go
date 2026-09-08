@@ -28,7 +28,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		return nil, err
 	}
 
-	allEventTypes, err := ds.API.GetEventTypes(ctx, "")
+	allEventTypes, err := ds.API.GetEventTypesCached(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 	if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) {
 		eventTypeQuery.Add("Types[0]", eventQuery.Type)
 	}
-	eventTypeProperties, err := ds.API.GetEventTypeProperties(ctx, eventTypeQuery.Encode())
+	eventTypeProperties, err := ds.API.GetEventTypePropertiesCached(ctx, eventTypeQuery.Encode())
 	if err != nil {
 		return nil, err
 	}

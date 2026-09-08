@@ -20,8 +20,8 @@ type cacheEntry[T any] struct {
 	expiry time.Time
 }
 
-// resolutionCache serves repeated asset and measurement metadata lookups from
-// memory for at most a TTL. Concurrent misses on the same key share a single
+// resolutionCache serves repeated resource lookups from memory for at most a
+// TTL. Concurrent misses on the same key share a single
 // request, so the moment an entry expires a dashboard refresh issues one round
 // trip instead of one per panel.
 //
@@ -158,5 +158,60 @@ func (api *API) GetAssetPropertiesCached(ctx context.Context, query string) ([]s
 func (api *API) GetTimeseriesDatabasesCached(ctx context.Context, query string) ([]schemas.TimeseriesDatabase, error) {
 	return api.databaseCache.do(ctx, query, func(ctx context.Context) ([]schemas.TimeseriesDatabase, error) {
 		return api.GetTimeseriesDatabases(ctx, query)
+	})
+}
+
+// GetMeasurementsCached is GetMeasurements served from the resolution cache.
+func (api *API) GetMeasurementsCached(ctx context.Context, query string) ([]schemas.Measurement, error) {
+	return api.measurementCache.do(ctx, query, func(ctx context.Context) ([]schemas.Measurement, error) {
+		return api.GetMeasurements(ctx, query)
+	})
+}
+
+// GetMeasurementCached is GetMeasurement served from the resolution cache. The
+// measurement is stored as a one-element slice keyed by its UUID.
+func (api *API) GetMeasurementCached(ctx context.Context, uuid string) (schemas.Measurement, error) {
+	measurements, err := api.measurementUUIDCache.do(ctx, uuid, func(ctx context.Context) ([]schemas.Measurement, error) {
+		measurement, err := api.GetMeasurement(ctx, uuid)
+		if err != nil {
+			return nil, err
+		}
+		return []schemas.Measurement{measurement}, nil
+	})
+	if err != nil || len(measurements) == 0 {
+		return schemas.Measurement{}, err
+	}
+	return measurements[0], nil
+}
+
+// GetCollectorsCached is GetCollectors served from the resolution cache. The
+// endpoint takes no query, so the cache holds a single entry.
+func (api *API) GetCollectorsCached(ctx context.Context) ([]schemas.Collector, error) {
+	return api.collectorCache.do(ctx, "", func(ctx context.Context) ([]schemas.Collector, error) {
+		return api.GetCollectors(ctx)
+	})
+}
+
+// GetEventTypesCached is GetEventTypes served from the resolution cache.
+func (api *API) GetEventTypesCached(ctx context.Context, query string) ([]schemas.EventType, error) {
+	return api.eventTypeCache.do(ctx, query, func(ctx context.Context) ([]schemas.EventType, error) {
+		return api.GetEventTypes(ctx, query)
+	})
+}
+
+// GetEventTypePropertiesCached is GetEventTypeProperties served from the
+// resolution cache.
+func (api *API) GetEventTypePropertiesCached(ctx context.Context, query string) ([]schemas.EventTypeProperty, error) {
+	return api.eventTypePropertyCache.do(ctx, query, func(ctx context.Context) ([]schemas.EventTypeProperty, error) {
+		return api.GetEventTypeProperties(ctx, query)
+	})
+}
+
+// GetEventConfigurationsCached is GetEventConfigurations served from the
+// resolution cache. The endpoint takes no query, so the cache holds a single
+// entry.
+func (api *API) GetEventConfigurationsCached(ctx context.Context) ([]schemas.EventConfiguration, error) {
+	return api.eventConfigurationCache.do(ctx, "", func(ctx context.Context) ([]schemas.EventConfiguration, error) {
+		return api.GetEventConfigurations(ctx)
 	})
 }
