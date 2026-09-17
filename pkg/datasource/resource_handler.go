@@ -66,6 +66,9 @@ func (ds *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHa
 	mux.HandleFunc("GET /tags", handleJSON(ds.handleGetTagKeys))
 	mux.HandleFunc("GET /tags/{tagKey}", handleJSON(ds.handleGetTagValues))
 
+	mux.HandleFunc("GET /lookup-tables", handleJSON(ds.handleGetLookupTables))
+	mux.HandleFunc("GET /lookup-tables/{uuid}/rows", handleJSON(ds.handleGetLookupTableRows))
+
 	mux.HandleFunc("GET /info", handleJSON(ds.handleGetHistorianInfo))
 
 	mux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(ds.handleGetEventPropertyValues))
@@ -116,6 +119,26 @@ func (ds *HistorianDataSource) handleGetEventTypeProperties(_ http.ResponseWrite
 
 func (ds *HistorianDataSource) handleGetEventConfigurations(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetEventConfigurationsCached(req.Context())
+}
+
+func (ds *HistorianDataSource) handleGetLookupTables(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetLookupTablesCached(req.Context(), req.URL.RawQuery)
+}
+
+// handleGetLookupTableRows serves the rows of one lookup table to the variable editor, which
+// reads one of their columns into a variable's values. It takes no filter and answers with the
+// whole table, which is what that one caller wants; the rows a panel shows travel the query
+// path, where the filter rides.
+//
+// It is a GET because it belongs to the plugin's own resource API, the one Grafana reads
+// through getResource, rather than mirroring the historian route behind it.
+func (ds *HistorianDataSource) handleGetLookupTableRows(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	lookupTableUUID := req.PathValue("uuid")
+	if lookupTableUUID == "" {
+		return nil, errors.New("uuid is required")
+	}
+
+	return ds.API.GetLookupTableRows(req.Context(), lookupTableUUID, nil)
 }
 
 func (ds *HistorianDataSource) handleGetTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {

@@ -29,6 +29,20 @@ export const NIL_UUID = '00000000-0000-0000-0000-000000000000'
 // loading the full asset tree.
 export const LAZY_LOADING_MIN_VERSION = '8.2.0'
 
+// Lookup tables are served by GET /lookup-tables and its /rows collection, added in
+// historian v8.3.0. On older historians the tab is hidden: there is no endpoint to fall
+// back to.
+export const LOOKUP_TABLES_MIN_VERSION = '8.3.0'
+
+export function isLookupTablesEnabled(version: string | undefined): boolean {
+  // Unknown version (info not loaded or unreachable): hide the tab rather than offer a
+  // query that can only 404.
+  if (!version) {
+    return false
+  }
+  return isFeatureEnabled(version, LOOKUP_TABLES_MIN_VERSION)
+}
+
 export function isLazyLoadingEnabled(version: string): boolean {
   // Unknown version (info not loaded or unreachable): take the eager fallback,
   // it works on every historian. Non-semver debug builds still count as newest.

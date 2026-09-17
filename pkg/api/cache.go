@@ -207,6 +207,16 @@ func (api *API) GetEventTypePropertiesCached(ctx context.Context, query string) 
 	})
 }
 
+// GetLookupTablesCached is GetLookupTables served from the resolution cache. The table
+// list carries the column definitions every row frame is built against, so the query path
+// needs it on every refresh. The rows themselves stay uncached: they are the query payload,
+// and the historian already answers them from its own snapshot of the table.
+func (api *API) GetLookupTablesCached(ctx context.Context, query string) ([]schemas.LookupTable, error) {
+	return api.lookupTableCache.do(ctx, query, func(ctx context.Context) ([]schemas.LookupTable, error) {
+		return api.GetLookupTables(ctx, query)
+	})
+}
+
 // GetEventConfigurationsCached is GetEventConfigurations served from the
 // resolution cache. The endpoint takes no query, so the cache holds a single
 // entry.
