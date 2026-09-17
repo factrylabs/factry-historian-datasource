@@ -8,6 +8,7 @@ import { MeasurementFilterRow } from './MeasurementFilter'
 import { AssetFilterRow } from './AssetFilter'
 import { AssetPropertyFilterRow } from './AssetPropertyFilter'
 import { DatabaseFilterRow } from './DatabaseFilter'
+import { LookupTableFilterRow } from './LookupTableFilter'
 import {
   fieldWidth,
   HistorianDataSourceOptions,
@@ -17,6 +18,7 @@ import {
   VariableQuery,
   VariableQueryType,
 } from 'types'
+import { isLookupTablesEnabled } from 'QueryEditor/util'
 import { EventTypePropertyFilterRow } from './EventTypePropertyFilter'
 import { EventTypeFilterRow } from './EventTypeFilter'
 import { PropertyValuesFilterRow } from './PropertyValuesFilter'
@@ -50,7 +52,7 @@ export function VariableQueryEditor(
   }, [loading, props.datasource])
 
   const queryTypeOptions = (): Array<SelectableValue<string>> => {
-    return [
+    const options: Array<SelectableValue<string>> = [
       { label: 'Measurement', value: VariableQueryType.MeasurementQuery },
       { label: 'Asset', value: VariableQueryType.AssetQuery },
       { label: 'Event type', value: VariableQueryType.EventTypeQuery },
@@ -59,6 +61,19 @@ export function VariableQueryEditor(
       { label: 'Asset property', value: VariableQueryType.AssetPropertyQuery },
       { label: 'Event property values', value: VariableQueryType.PropertyValuesQuery },
     ]
+
+    // Only offered on a historian with the lookup table endpoints, since a variable of this
+    // type could only 404 on one without them. A variable already saved as one keeps the
+    // option whatever the historian says, so that its own type does not go missing from the
+    // list it is selected in.
+    if (
+      isLookupTablesEnabled(historianInfo?.Version) ||
+      props.query.type === VariableQueryType.LookupTableValuesQuery
+    ) {
+      options.push({ label: 'Lookup table values', value: VariableQueryType.LookupTableValuesQuery })
+    }
+
+    return options
   }
 
   return loading ? (
@@ -123,6 +138,16 @@ export function VariableQueryEditor(
                   ...props.query,
                   type: value.value!,
                   valid: true,
+                  filter: {},
+                })
+              }
+              if (value.value! === VariableQueryType.LookupTableValuesQuery) {
+                props.onChange({
+                  ...props.query,
+                  type: value.value!,
+                  // Invalid until a table and a value column are picked, so the variable
+                  // does not query before it names anything.
+                  valid: false,
                   filter: {},
                 })
               }
@@ -229,6 +254,18 @@ export function VariableQueryEditor(
           onChange={(val) => {
             if (props.query.type === VariableQueryType.EventTypePropertyQuery) {
               props.onChange({ ...props.query, filter: val })
+            }
+          }}
+        />
+      )}
+      {props.query.type === VariableQueryType.LookupTableValuesQuery && (
+        <LookupTableFilterRow
+          datasource={props.datasource}
+          initialValue={props.query.filter}
+          templateVariables={templateVariables}
+          onChange={(val, valid) => {
+            if (props.query.type === VariableQueryType.LookupTableValuesQuery) {
+              props.onChange({ ...props.query, filter: val, valid: valid })
             }
           }}
         />

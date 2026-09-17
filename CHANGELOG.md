@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+### Features
+
+- **Lookup tables can be queried from the query editor.** A new tab lists the lookup tables of the Historian and reads one as a table panel: pick the table, optionally narrow it to some of its columns, and filter its rows. A filter is a tree: conditions combined with AND or OR, groups nested inside groups, so "line A or B, and a setpoint above 20" is one query. Conditions use the operators the rest of the plugin filters with: `IN` and `NOT IN` against a set of values, `>`, `>=`, `<` and `<=` on a number column, and `IS NULL` / `IS NOT NULL` to read whether a cell is filled in at all. A condition takes several values and a dashboard variable expands into them, so a multi-select variable narrows the table in one request, except under the orderings, which compare against a single value and read the first one a variable resolves to. Requires Historian v8.3.0 or newer, and the tab is hidden on older Historians.
+- **Lookup table columns can drive a dashboard variable.** A new "Lookup table values" variable type lists the values of one column. A second column can supply the text shown in the dropdown, so a variable can display a readable name while interpolating the key a query filters on.
+
 ### Changes
 
 - **All resource lookups are now served from the backend resolution cache.** Measurements, collectors, event types, event type properties and event configurations join the assets, asset properties and databases cached in v4.0.0, under the same `resolutionCacheTTL` setting. Live data is never cached: tag keys and values, event property values, and the measurement and event queries themselves always reach Historian.

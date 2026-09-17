@@ -24,6 +24,9 @@ jest.mock('QueryEditor/Events', () => ({
 jest.mock('QueryEditor/RawQueryEditor', () => ({
   RawQueryEditor: () => <div data-testid="raw-query-editor">Raw</div>,
 }))
+jest.mock('QueryEditor/LookupTables', () => ({
+  LookupTables: () => <div data-testid="lookup-tables-editor">Lookup tables</div>,
+}))
 
 const mockDatasource = {
   getInfo: jest.fn().mockResolvedValue({}),
@@ -67,6 +70,37 @@ describe('QueryEditor', () => {
       expect(screen.getByText('Measurements')).toBeInTheDocument()
       expect(screen.getByText('Events')).toBeInTheDocument()
       expect(screen.getByText('Raw')).toBeInTheDocument()
+    })
+  })
+
+  // The tab is offered on a historian that has the endpoints, and hidden on one that does
+  // not, since a query from it could only 404.
+  describe('the Lookup tables tab', () => {
+    const on = (version: string | undefined) =>
+      ({ ...mockDatasource, historianInfo: version ? { Version: version } : undefined } as unknown as DataSource)
+
+    it('is offered on a historian that supports it', async () => {
+      render(<QueryEditor {...defaultProps} datasource={on('v8.3.0')} />)
+
+      await waitFor(() => expect(screen.getByText('Lookup tables')).toBeInTheDocument())
+    })
+
+    it('is hidden on a historian that does not', async () => {
+      render(<QueryEditor {...defaultProps} datasource={on('v8.2.0')} />)
+
+      await waitFor(() => expect(screen.getByText('Measurements')).toBeInTheDocument())
+      expect(screen.queryByText('Lookup tables')).not.toBeInTheDocument()
+    })
+
+    // A panel saved on this tab keeps it even there: the tab index is persisted, so hiding the
+    // tab would leave the panel showing the editor with no tab selected above it. Moving it
+    // elsewhere would rewrite the query the panel holds.
+    it('is kept for a panel already saved as a lookup table query', async () => {
+      const query = makeQuery({ queryType: 'LookupTableQuery', tabIndex: TabIndex.LookupTables })
+      render(<QueryEditor {...defaultProps} datasource={on('v8.2.0')} query={query} />)
+
+      await waitFor(() => expect(screen.getByText('Lookup tables')).toBeInTheDocument())
+      expect(screen.getByTestId('lookup-tables-editor')).toBeInTheDocument()
     })
   })
 
