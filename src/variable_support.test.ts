@@ -19,6 +19,10 @@ function makeDataAPIStub(captured: { filter?: unknown }): DataAPI {
       captured.filter = filter
       return Promise.resolve([])
     }),
+    getLookupTableValues: jest.fn().mockImplementation((filter) => {
+      captured.filter = filter
+      return Promise.resolve([{ text: 'Bottling line 1', value: 'L1' }])
+    }),
     multiSelectReplace: (value: string | undefined) => [value === '$status' ? 'Good' : value ?? ''],
     replace: (value: string | undefined) => (value === '$status' ? 'Good' : value ?? ''),
   }
@@ -112,5 +116,35 @@ describe('unknown variable query type', () => {
     const vs = new VariableSupport(makeDataAPIStub({}))
     const request = makeVariableRequest({ refId: 'A', type: 'bogus', valid: true })
     expect(vs.query(request)).toBeDefined()
+  })
+})
+
+describe('LookupTableValuesQuery', () => {
+  it('passes the filter through and maps text and value separately', (done) => {
+    const captured: { filter?: unknown } = {}
+    const vs = new VariableSupport(makeDataAPIStub(captured))
+    const request = makeVariableRequest({
+      refId: 'A',
+      type: VariableQueryType.LookupTableValuesQuery,
+      valid: true,
+      filter: { LookupTable: 'a-uuid', ValueColumn: 'line', TextColumn: 'name' },
+    })
+
+    vs.query(request).subscribe((response) => {
+      expect(captured.filter).toMatchObject({ LookupTable: 'a-uuid', ValueColumn: 'line', TextColumn: 'name' })
+      expect(response.data).toEqual([{ text: 'Bottling line 1', value: 'L1' }])
+      done()
+    })
+  })
+
+  it('returns empty data for a filter-less query rather than throwing', () => {
+    const vs = new VariableSupport(makeDataAPIStub({}))
+    const request = makeVariableRequest({
+      refId: 'A',
+      type: VariableQueryType.LookupTableValuesQuery,
+      valid: true,
+    })
+
+    expect(() => vs.query(request)).not.toThrow()
   })
 })

@@ -360,3 +360,76 @@ func (api *API) GetDistinctEventPropertyValues(ctx context.Context, eventTypePro
 
 	return eventTypePropertyValues, nil
 }
+
+// GetLookupTables calls get lookup tables in the historian API
+func (api *API) GetLookupTables(ctx context.Context, query string) ([]schemas.LookupTable, error) {
+	lookupTables := []schemas.LookupTable{}
+
+	queryURL, err := AppendEscapedQuery("/api/lookup-tables", query)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := api.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return nil, handleHTTPError(resp)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&lookupTables); err != nil {
+		return nil, err
+	}
+
+	return lookupTables, nil
+}
+
+// GetLookupTableRows calls get lookup table rows in the historian API. The filter narrows the
+// rows server side, where they are answered from the historian's in-memory snapshot of the
+// table. No limit is sent on purpose: a lookup table is reference data a panel shows whole,
+// and the historian reads an absent limit as no pagination at all.
+func (api *API) GetLookupTableRows(ctx context.Context, lookupTableUUID string, filter *schemas.LookupTableRowFilter) ([]schemas.LookupTableRow, error) {
+	rows := []schemas.LookupTableRow{}
+
+	path := "/api/lookup-tables/" + url.PathEscape(lookupTableUUID) + "/rows"
+
+	// A filter with no condition groups narrows nothing, and the historian reads an absent
+	// one the same way, so it is left off the request entirely.
+	if filter != nil && len(filter.ConditionGroups) > 0 {
+		encoded, err := json.Marshal(filter)
+		if err != nil {
+			return nil, err
+		}
+
+		path += "?" + url.Values{"Filter": []string{string(encoded)}}.Encode()
+	}
+
+	req, err := newHTTPRequest(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := api.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return nil, handleHTTPError(resp)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}

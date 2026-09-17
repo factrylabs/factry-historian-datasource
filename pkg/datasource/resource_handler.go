@@ -66,6 +66,9 @@ func (ds *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHa
 	mux.HandleFunc("GET /tags", handleJSON(ds.handleGetTagKeys))
 	mux.HandleFunc("GET /tags/{tagKey}", handleJSON(ds.handleGetTagValues))
 
+	mux.HandleFunc("GET /lookup-tables", handleJSON(ds.handleGetLookupTables))
+	mux.HandleFunc("GET /lookup-tables/{uuid}/rows", handleJSON(ds.handleGetLookupTableRows))
+
 	mux.HandleFunc("GET /info", handleJSON(ds.handleGetHistorianInfo))
 
 	mux.HandleFunc("GET /event-property-values/{uuid}", handleJSON(ds.handleGetEventPropertyValues))
@@ -116,6 +119,22 @@ func (ds *HistorianDataSource) handleGetEventTypeProperties(_ http.ResponseWrite
 
 func (ds *HistorianDataSource) handleGetEventConfigurations(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetEventConfigurationsCached(req.Context())
+}
+
+func (ds *HistorianDataSource) handleGetLookupTables(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	return ds.API.GetLookupTablesCached(req.Context(), req.URL.RawQuery)
+}
+
+// handleGetLookupTableRows serves the rows of one lookup table to the query editor and to
+// variable queries. It takes no filters: both callers want the whole table, and the rows
+// are answered from the historian's own snapshot of it.
+func (ds *HistorianDataSource) handleGetLookupTableRows(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	uuid := req.PathValue("uuid")
+	if uuid == "" {
+		return nil, errors.New("uuid is required")
+	}
+
+	return ds.API.GetLookupTableRows(req.Context(), uuid, nil)
 }
 
 func (ds *HistorianDataSource) handleGetTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
