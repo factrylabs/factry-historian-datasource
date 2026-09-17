@@ -33,6 +33,7 @@ type API struct {
 	eventTypeCache          *resolutionCache[schemas.EventType]
 	eventTypePropertyCache  *resolutionCache[schemas.EventTypeProperty]
 	eventConfigurationCache *resolutionCache[schemas.EventConfiguration]
+	lookupTableCache        *resolutionCache[schemas.LookupTable]
 
 	// measurementUUIDCache serves the single-measurement lookup by UUID. It is
 	// separate from measurementCache: the list keys are raw query strings, so a
@@ -178,6 +179,7 @@ func NewAPIWithOptions(options Options) (*API, error) {
 		eventTypeCache:          newResolutionCache[schemas.EventType](options.ResolutionCacheTTL),
 		eventTypePropertyCache:  newResolutionCache[schemas.EventTypeProperty](options.ResolutionCacheTTL),
 		eventConfigurationCache: newResolutionCache[schemas.EventConfiguration](options.ResolutionCacheTTL),
+		lookupTableCache:        newResolutionCache[schemas.LookupTable](options.ResolutionCacheTTL),
 		infoCache:               newResolutionCache[schemas.HistorianInfo](infoCacheTTL),
 	}
 	return api, nil

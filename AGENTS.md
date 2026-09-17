@@ -77,7 +77,7 @@ factry-historian-datasource/
 
 ### Query Types (TabIndex enum)
 
-The plugin supports four query modes, selected via tabs in the Query Editor:
+The plugin supports five query modes, selected via tabs in the Query Editor:
 
 | Tab | TypeScript type | Description |
 |-----|----------------|-------------|
@@ -85,7 +85,9 @@ The plugin supports four query modes, selected via tabs in the Query Editor:
 | `TabIndex.Measurements` (1) | `MeasurementQuery` | Query by database and measurement name (supports regex) |
 | `TabIndex.Events` (2) | `EventQuery` | Query event data with property filtering |
 | `TabIndex.RawQuery` (3) | `RawQuery` | Raw query string against a specific database |
+| `TabIndex.LookupTables` (4) | `LookupTableQuery` | Rows of a lookup table as a table frame, gated on historian v8.3.0 |
 
+`TabIndex` is persisted in saved dashboards as `tabIndex`, and the tab array in `QueryEditor.tsx` is indexed by it. New members are appended, never inserted, and a tab hidden by a version gate stays in the array with `available: false` so the positions do not shift.
 
 ### Variable Query Types (VariableQueryType enum)
 
@@ -96,6 +98,7 @@ The plugin supports four query modes, selected via tabs in the Query Editor:
 - `EventTypePropertyQuery` — list event type properties
 - `AssetPropertyQuery` — list asset properties
 - `PropertyValuesQuery` — list property values for filtering
+- `LookupTableValuesQuery` — list the values of a lookup table column, with an optional separate display column
 
 ---
 
@@ -310,7 +313,7 @@ There are two independent caches. They serve different call paths, so both are n
 
 ### Backend resolution cache (`pkg/api/cache.go`)
 
-`resolutionCache[T]` fronts every resource endpoint: assets, asset properties, timeseries databases, measurements (list and by UUID), collectors, event types, event type properties, event configurations and the historian info. The info cache has a fixed 5-minute TTL (`infoCacheTTL`) instead of the resolution TTL: the info changes on a historian upgrade, and `"0"` must not turn every query into an info request. Live data stays uncached: tag keys and values, event property values, and the measurement and event queries themselves. The cache is what keeps a dashboard refresh from re-resolving resources, and it is the only cache on the query path: `QueryData` never goes through the frontend, so alerting and recording rules depend on this one.
+`resolutionCache[T]` fronts every resource endpoint: assets, asset properties, timeseries databases, measurements (list and by UUID), collectors, event types, event type properties, event configurations, lookup tables and the historian info. The info cache has a fixed 5-minute TTL (`infoCacheTTL`) instead of the resolution TTL: the info changes on a historian upgrade, and `"0"` must not turn every query into an info request. Live data stays uncached: tag keys and values, event property values, lookup table rows, and the measurement and event queries themselves. Lookup table rows are the query payload and the historian already answers them from its own snapshot of the table; only the table list is cached here, because the query path needs its column definitions to build the frame. The cache is what keeps a dashboard refresh from re-resolving resources, and it is the only cache on the query path: `QueryData` never goes through the frontend, so alerting and recording rules depend on this one.
 
 - TTL comes from the `resolutionCacheTTL` datasource setting (string of seconds, default `60`, `0` disables). It is provisioning-only, like `timeout` and `queryTimeout`.
 - Concurrent misses on one key share a request through `golang.org/x/sync/singleflight`. The shared fetch runs on `context.WithoutCancel`, so a cancelled panel query cannot fail the callers waiting on it; the HTTP client timeout still bounds it. A waiter whose own context is cancelled returns immediately with that error while the fetch keeps running.

@@ -28,6 +28,10 @@ const (
 	QueryTypeAsset = "AssetMeasurementQuery"
 	QueryTypeRaw   = "RawQuery"
 	QueryTypeEvent = "EventQuery"
+	// QueryTypeLookupTable reads the rows of a lookup table as a table frame. It has no
+	// time field: a lookup table is reference data that does not move with the dashboard's
+	// time range.
+	QueryTypeLookupTable = "LookupTableQuery"
 )
 
 // Query is a struct which holds the query
@@ -103,6 +107,15 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 
 		measurementQuery.Measurements = measurements
 		response.Frames, response.Error = ds.handleMeasurementQuery(ctx, measurementQuery, backendQuery.TimeRange, backendQuery.Interval)
+	case QueryTypeLookupTable:
+		lookupTableQuery := schemas.LookupTableQuery{}
+		if err := json.Unmarshal(query.Query, &lookupTableQuery); err != nil {
+			return backend.DataResponse{
+				Error: err,
+			}
+		}
+
+		response.Frames, response.Error = ds.handleLookupTableQuery(ctx, lookupTableQuery)
 	case QueryTypeRaw:
 		rawQuery := schemas.RawQuery{}
 		if err := json.Unmarshal(query.Query, &rawQuery); err != nil {
