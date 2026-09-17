@@ -5,8 +5,9 @@ import { getTemplateSrv } from '@grafana/runtime'
 import { Assets } from 'QueryEditor/Assets'
 import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
+import { LookupTables } from 'QueryEditor/LookupTables'
 import { Measurements } from 'QueryEditor/Measurements'
-import { defaultQueryOptions, migrateMeasurementQuery } from 'QueryEditor/util'
+import { defaultQueryOptions, isLookupTablesEnabled, migrateMeasurementQuery } from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import {
   HistorianDataSourceOptions,
@@ -20,6 +21,7 @@ import {
   PropertyType,
   EventPropertyFilter,
   TimeRange,
+  LookupTableQuery,
 } from './types'
 
 type Props = QueryEditorProps<DataSource, Query, HistorianDataSourceOptions>
@@ -31,6 +33,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     this.onChangeMeasurementQuery = this.onChangeMeasurementQuery.bind(this)
     this.onChangeAssetMeasurementQuery = this.onChangeAssetMeasurementQuery.bind(this)
     this.onChangeEventQuery = this.onChangeEventQuery.bind(this)
+    this.onChangeLookupTableQuery = this.onChangeLookupTableQuery.bind(this)
     this.onChangeSeriesLimit = this.onChangeSeriesLimit.bind(this)
   }
 
@@ -58,6 +61,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       Properties: [] as string[],
       QueryAssetProperties: false,
       OverrideAssets: [] as string[],
+      Ascending: false,
       Limit: 1000,
       OverrideTimeRange: false,
       TimeRange: {
@@ -67,6 +71,11 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     },
     rawQuery: {
       Query: '',
+      TimeseriesDatabase: '',
+    },
+    lookupTableQuery: {
+      LookupTable: '',
+      Columns: [] as string[],
     },
   } as QueryEditorState
 
@@ -120,6 +129,14 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           case TabIndex.RawQuery: {
             const query = this.props.query.queryType === 'RawQuery' ? (this.props.query.query as RawQuery) : undefined
             this.onChangeRawQuery(query ?? this.state.rawQuery)
+            break
+          }
+          case TabIndex.LookupTables: {
+            const query =
+              this.props.query.queryType === 'LookupTableQuery'
+                ? (this.props.query.query as LookupTableQuery)
+                : undefined
+            this.onChangeLookupTableQuery(query ?? this.state.lookupTableQuery)
             break
           }
         }
@@ -189,6 +206,21 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     this.setState({
       ...this.state,
       eventQuery: eventQuery,
+    } as QueryEditorState)
+  }
+
+  onChangeLookupTableQuery(lookupTableQuery: LookupTableQuery): void {
+    const { onChange, query } = this.props
+    const updatedQuery = JSON.parse(JSON.stringify(query)) as Query
+    updatedQuery.queryType = 'LookupTableQuery'
+    updatedQuery.query = lookupTableQuery
+    updatedQuery.tabIndex = TabIndex.LookupTables
+    updatedQuery.historianInfo = this.props.datasource.historianInfo
+    onChange(updatedQuery)
+    this.onRunQuery(this.props)
+    this.setState({
+      ...this.state,
+      lookupTableQuery: lookupTableQuery,
     } as QueryEditorState)
   }
 
@@ -275,6 +307,27 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           />
         ),
       },
+      {
+        title: 'Lookup tables',
+        // Hidden on a historian without the lookup table endpoints, but kept in the array:
+        // the tab index is the position here and is persisted in saved dashboards.
+        //
+        // A panel already saved as a lookup table query keeps its tab whatever the historian
+        // says, because the tab index is persisted too: hiding it would leave the panel on a
+        // tab that is not in the list, showing its editor with nothing selected above it. The
+        // editor then reports for itself that the tables cannot be read, which beats silently
+        // moving the panel to another tab and rewriting the query it holds.
+        available:
+          isLookupTablesEnabled(this.props.datasource.historianInfo?.Version) ||
+          this.props.query.queryType === 'LookupTableQuery',
+        content: this.props.query.queryType === 'LookupTableQuery' && (
+          <LookupTables
+            query={this.props.query.query as LookupTableQuery}
+            datasource={this.props.datasource}
+            onChangeLookupTableQuery={this.onChangeLookupTableQuery}
+          />
+        ),
+      },
     ]
 
     return (
@@ -284,7 +337,9 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
             <RadioButtonGroup
               onChange={(e) => this.setTabIndex(e ?? 0)}
               value={this.state.tabIndex}
-              options={tabs.map((tab, idx) => ({ label: tab.title, value: idx }))}
+              options={tabs
+                .map((tab, idx) => ({ label: tab.title, value: idx, available: tab.available ?? true }))
+                .filter((tab) => tab.available)}
             />
           </InlineField>
         </InlineFieldRow>

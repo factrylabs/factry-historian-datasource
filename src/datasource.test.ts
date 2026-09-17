@@ -4,6 +4,9 @@ import { TemplateSrv } from '@grafana/runtime'
 import {
   EventQuery,
   HistorianDataSourceOptions,
+  LookupTableQuery,
+  LookupTableRowConditionGroup,
+  LookupTableRowFilter,
   MeasurementQuery,
   MeasurementQueryOptions,
   Query,
@@ -137,6 +140,26 @@ function makeQuery(overrides?: Partial<Query>): Query {
     seriesLimit: undefined as unknown as number,
     query: makeMeasurementQuery(),
     ...overrides,
+  } as Query
+}
+
+// filterOn wraps one leaf condition in the AND group every filter is rooted in, so a case
+// reads as the condition it is about.
+function filterOn(group: LookupTableRowConditionGroup): LookupTableRowFilter {
+  return { Condition: 'and', ConditionGroups: [{ Operator: 'IN', ...group }] }
+}
+
+function makeLookupTableQuery(overrides?: Partial<LookupTableQuery>): Query {
+  return {
+    refId: 'A',
+    tabIndex: TabIndex.LookupTables,
+    queryType: 'LookupTableQuery',
+    seriesLimit: 50,
+    query: {
+      LookupTable: 'a-uuid',
+      Columns: [],
+      ...overrides,
+    },
   } as Query
 }
 
@@ -351,12 +374,13 @@ describe('DataSource resource filters handle empty variables', () => {
     const ds = makeDataSource(makeTemplateSrv(values))
     let captured: Record<string, unknown> | undefined
     let calls = 0
-    ;(ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }).getResource =
-      (_path: string, params?: Record<string, unknown>) => {
-        calls++
-        captured = params
-        return Promise.resolve([])
-      }
+    ;(
+      ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }
+    ).getResource = (_path: string, params?: Record<string, unknown>) => {
+      calls++
+      captured = params
+      return Promise.resolve([])
+    }
     return { ds, params: () => captured, calls: () => calls }
   }
 
@@ -392,7 +416,10 @@ describe('DataSource resource filters handle empty variables', () => {
 
   it('returns no tag values when the database variable resolves to ""', async () => {
     const { ds, calls } = makeCapturingDataSource({ db: '' })
-    const result = await ds.getTagValuesForMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, 'key')
+    const result = await ds.getTagValuesForMeasurements(
+      { Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} },
+      'key'
+    )
     expect(result).toEqual([])
     expect(calls()).toBe(0)
   })
@@ -435,5 +462,100 @@ describe('DataSource resource filters handle empty variables', () => {
     await ds.getEventTypeProperties({ ScopedVars: {} })
     expect(calls()).toBe(1)
     expect(params()?.EventTypeUUIDs).toBeUndefined()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// applyTemplateVariables — lookup table queries
+// ---------------------------------------------------------------------------
+
+describe('DataSource.applyTemplateVariables lookup tables', () => {
+  it('expands a multi-value variable into the values of one condition', () => {
+    const ds = makeDataSource(makeTemplateSrv({ line: ['L1', 'L2'] }))
+    const result = ds.applyTemplateVariables(
+      makeLookupTableQuery({ Filter: filterOn({ Column: 'line', Values: ['$line'] }) }),
+      {}
+    )
+    expect((result.query as LookupTableQuery).Filter).toEqual(filterOn({ Column: 'line', Values: ['L1', 'L2'] }))
+  })
+
+  it('keeps a single-value variable a single value', () => {
+    const ds = makeDataSource(makeTemplateSrv({ line: 'L1' }))
+    const result = ds.applyTemplateVariables(
+      makeLookupTableQuery({ Filter: filterOn({ Column: 'line', Values: ['$line'] }) }),
+      {}
+    )
+    expect((result.query as LookupTableQuery).Filter).toEqual(filterOn({ Column: 'line', Values: ['L1'] }))
+  })
+
+  it('leaves non-string filter values alone', () => {
+    const ds = makeDataSource(makeTemplateSrv({ line: ['L1', 'L2'] }))
+    const result = ds.applyTemplateVariables(
+      makeLookupTableQuery({ Filter: filterOn({ Column: 'setpoint', Values: [42, true, null] }) }),
+      {}
+    )
+    expect((result.query as LookupTableQuery).Filter).toEqual(
+      filterOn({ Column: 'setpoint', Values: [42, true, null] })
+    )
+  })
+
+  // The filter is a tree, so a variable sitting in a nested group has to be resolved just
+  // the same, and the tree has to come back out in the shape it went in.
+  it('expands a variable inside a nested group', () => {
+    const ds = makeDataSource(makeTemplateSrv({ line: ['L1', 'L2'] }))
+    const filter: LookupTableRowFilter = {
+      Condition: 'and',
+      ConditionGroups: [
+        { Column: 'setpoint', Operator: 'IS NOT NULL' },
+        {
+          Filter: {
+            Condition: 'or',
+            ConditionGroups: [{ Column: 'line', Operator: 'IN', Values: ['$line'] }],
+          },
+        },
+      ],
+    }
+
+    const result = ds.applyTemplateVariables(makeLookupTableQuery({ Filter: filter }), {})
+
+    expect((result.query as LookupTableQuery).Filter).toEqual({
+      Condition: 'and',
+      ConditionGroups: [
+        { Column: 'setpoint', Operator: 'IS NOT NULL', Values: undefined, Filter: undefined },
+        {
+          Column: undefined,
+          Operator: undefined,
+          Values: undefined,
+          Filter: {
+            Condition: 'or',
+            ConditionGroups: [{ Column: 'line', Operator: 'IN', Values: ['L1', 'L2'], Filter: undefined }],
+          },
+        },
+      ],
+    })
+  })
+
+  it('leaves a query without a filter without one', () => {
+    const ds = makeDataSource(makeTemplateSrv({ line: ['L1', 'L2'] }))
+    const result = ds.applyTemplateVariables(makeLookupTableQuery(), {})
+    expect((result.query as LookupTableQuery).Filter).toBeUndefined()
+  })
+
+  it('expands a multi-value variable in the column projection', () => {
+    const ds = makeDataSource(makeTemplateSrv({ cols: ['line', 'setpoint'] }))
+    const result = ds.applyTemplateVariables(makeLookupTableQuery({ Columns: ['$cols'] }), {})
+    expect((result.query as LookupTableQuery).Columns).toEqual(['line', 'setpoint'])
+  })
+
+  it('resolves a variable naming the table', () => {
+    const ds = makeDataSource(makeTemplateSrv({ table: 'other-uuid' }))
+    const result = ds.applyTemplateVariables(makeLookupTableQuery(), {} as never)
+    expect((result.query as LookupTableQuery).LookupTable).toBe('a-uuid')
+
+    const templated = ds.applyTemplateVariables(
+      { ...makeLookupTableQuery(), query: { LookupTable: '$table', Columns: [] } } as Query,
+      {}
+    )
+    expect((templated.query as LookupTableQuery).LookupTable).toBe('other-uuid')
   })
 })
