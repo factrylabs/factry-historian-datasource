@@ -6,6 +6,7 @@ import {
   getAggregations,
   getAggregationsForDatatypes,
   isLazyLoadingEnabled,
+  isLookupTablesEnabled,
   matchedAssets,
   migrateMeasurementQuery,
   parentEventTypeUUIDs,
@@ -618,6 +619,26 @@ describe('isLazyLoadingEnabled', () => {
 
   it('is enabled for non-semver debug builds', () => {
     expect(isLazyLoadingEnabled('debug')).toBe(true)
+  })
+})
+
+describe('isLookupTablesEnabled', () => {
+  it('is disabled for unknown version (info not loaded)', () => {
+    expect(isLookupTablesEnabled('')).toBe(false)
+    expect(isLookupTablesEnabled(undefined)).toBe(false)
+  })
+
+  it('is disabled before v8.3.0', () => {
+    expect(isLookupTablesEnabled('v8.2.0')).toBe(false)
+  })
+
+  it('is enabled from v8.3.0', () => {
+    expect(isLookupTablesEnabled('v8.3.0')).toBe(true)
+    expect(isLookupTablesEnabled('v9.0.0')).toBe(true)
+  })
+
+  it('is enabled for non-semver debug builds', () => {
+    expect(isLookupTablesEnabled('debug')).toBe(true)
   })
 })
 

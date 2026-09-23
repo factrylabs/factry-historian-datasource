@@ -15,6 +15,7 @@ import {
   EventTypePropertiesFilter,
   EventTypePropertiesValuesFilter,
   EventTypeProperty,
+  LookupTableValuesFilter,
   Measurement,
   MeasurementFilter,
   OldEventTypePropertiesValuesFilter,
@@ -39,6 +40,7 @@ export interface DataAPI {
   getEventTypeProperties(filter?: EventTypePropertiesFilter): Promise<EventTypeProperty[]>
   getEventConfigurations(): Promise<EventConfiguration[]>
   getDistinctEventPropertyValues(filter: EventTypePropertiesValuesFilter): Promise<string[]>
+  getLookupTableValues(filter: LookupTableValuesFilter): Promise<Array<{ text: string; value: string }>>
   multiSelectReplace(value: string | undefined, scopedVars: ScopedVars): string[]
   replace(value: string | undefined, scopedVars: ScopedVars): string
 }
@@ -282,6 +284,21 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
         ).pipe(
           map((values) => {
             return { data: values.map<MetricFindValue>((v) => ({ text: v, value: v })) }
+          })
+        )
+      }
+      case VariableQueryType.LookupTableValuesQuery: {
+        const parsed = cloneFilter(request.targets[0].filter) as LookupTableValuesFilter | undefined
+        if (!parsed) {
+          return of({ data: [] })
+        }
+        const filter = {
+          ...parsed,
+          ScopedVars: request.scopedVars,
+        }
+        return from(this.dataAPI.getLookupTableValues(filter)).pipe(
+          map((values) => {
+            return { data: values.map<MetricFindValue>((v) => ({ text: v.text, value: v.value })) }
           })
         )
       }

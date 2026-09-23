@@ -1,5 +1,6 @@
 import { DataSourceJsonData, ScopedVars } from '@grafana/data'
 import { DataQuery } from '@grafana/schema'
+import { KnownOperator } from './util/eventFilter'
 
 export const labelWidth = 25
 export const fieldWidth = 25
@@ -11,6 +12,9 @@ export enum TabIndex {
   Measurements,
   Events,
   RawQuery,
+  // Appended, never reordered: tabIndex is persisted in saved dashboards, so an inserted
+  // member would open every existing query on the wrong tab.
+  LookupTables,
 }
 
 export interface QueryEditorState {
@@ -19,10 +23,11 @@ export interface QueryEditorState {
   assetMeasurementQuery: AssetMeasurementQuery
   eventQuery: EventQuery
   rawQuery: RawQuery
+  lookupTableQuery: LookupTableQuery
 }
 
 export interface Query extends DataQuery {
-  query: MeasurementQuery | AssetMeasurementQuery | RawQuery | EventQuery
+  query: MeasurementQuery | AssetMeasurementQuery | RawQuery | EventQuery | LookupTableQuery
   seriesLimit: number | string
   tabIndex: number
   selectedAssetPath?: string
@@ -234,6 +239,89 @@ export interface RawQuery {
   Query: string
 }
 
+export type LookupTableColumnType = 'string' | 'number' | 'boolean'
+
+export interface LookupTableColumn {
+  Name: string
+  Type: LookupTableColumnType
+}
+
+export interface LookupTable {
+  UUID: string
+  Name: string
+  Attributes: {
+    Columns?: LookupTableColumn[]
+    Description?: string
+  }
+}
+
+/**
+ * One row of a lookup table. Cells holds one value per column of the table, in the column
+ * order of its attributes. A null is a cell that is not filled in, and a row written before
+ * a column was added stops short of it, so Cells can be shorter than the column list.
+ */
+export interface LookupTableRow {
+  UUID: string
+  Index: number
+  Cells: Array<string | number | boolean | null>
+}
+
+export type LookupTableRowCondition = 'and' | 'or'
+
+/**
+ * How a leaf condition compares the column it names, out of the operators the historian
+ * filters with elsewhere: IN and NOT IN against a set of values, the orderings against a
+ * number, and the two that read whether the cell is filled in at all.
+ */
+export type LookupTableRowOperator = Extract<
+  KnownOperator,
+  'IN' | 'NOT IN' | '>' | '>=' | '<' | '<=' | 'IS NULL' | 'IS NOT NULL'
+>
+
+/**
+ * A logical group of conditions on the rows of a lookup table, combined by Condition. It
+ * nests recursively through LookupTableRowConditionGroup to form arbitrary AND/OR trees, and
+ * a group holding no condition groups narrows nothing.
+ */
+export interface LookupTableRowFilter {
+  Condition: LookupTableRowCondition
+  ConditionGroups: LookupTableRowConditionGroup[]
+}
+
+/** The operators reading whether the cell is filled in, which compare against no value. */
+export const valuelessLookupTableOperators: LookupTableRowOperator[] = ['IS NULL', 'IS NOT NULL']
+
+/** The orderings, which compare against a single value rather than a set of them. */
+export const singleValueLookupTableOperators: LookupTableRowOperator[] = ['>', '>=', '<', '<=']
+
+/**
+ * Either a leaf condition on one column of the table or another filter, nested. A group
+ * carrying a Filter is that nested filter and its own fields are not read.
+ *
+ * A leaf compares its column against any one of Values: "IN" keeps the rows holding one of
+ * them, where a null among them matches a cell that is not filled in, and "NOT IN" the rows
+ * holding none; ">", ">=", "<" and "<=" compare numerically against a single value, so a
+ * cell that does not hold a number never matches one; "IS NULL" and "IS NOT NULL" read
+ * whether the cell is filled in at all and take no values.
+ *
+ * A condition that is not finished, naming no column or holding no values where its operator
+ * reads them, is dropped before the query goes out, so an empty Values cannot be sent to mean
+ * no rows.
+ */
+export interface LookupTableRowConditionGroup {
+  Column?: string
+  Operator?: LookupTableRowOperator
+  Values?: Array<string | number | boolean | null>
+  Filter?: LookupTableRowFilter
+}
+
+export interface LookupTableQuery {
+  LookupTable: string
+  Filter?: LookupTableRowFilter
+  /** The columns to return. Empty takes every column of the table. */
+  Columns: string[]
+}
+
 export interface Collector {
   Name: string
   UUID: string
@@ -329,6 +417,7 @@ export enum VariableQueryType {
   EventTypePropertyQuery = 'EventTypePropertyQuery',
   AssetPropertyQuery = 'AssetPropertyQuery',
   PropertyValuesQuery = 'PropertyValuesQuery',
+  LookupTableValuesQuery = 'LookupTableValuesQuery',
 }
 
 export type MeasurementVariableQuery = {
@@ -379,6 +468,25 @@ export type PropertyValuesVariableQuery = {
   filter?: EventTypePropertiesValuesFilter
 }
 
+/**
+ * LookupTableValuesFilter lists the values of one lookup table column. TextColumn is what
+ * the variable's dropdown shows; leaving it unset shows the value itself, so a table can
+ * carry a key to query with and a readable name to pick from.
+ */
+export type LookupTableValuesFilter = {
+  LookupTable?: string
+  ValueColumn?: string
+  TextColumn?: string
+  ScopedVars?: ScopedVars
+}
+
+export type LookupTableValuesVariableQuery = {
+  refId: string
+  type: VariableQueryType.LookupTableValuesQuery
+  filter?: LookupTableValuesFilter
+  valid: boolean
+}
+
 export type VariableQuery =
   | MeasurementVariableQuery
   | AssetVariableQuery
@@ -387,6 +495,7 @@ export type VariableQuery =
   | EventTypePropertyVariableQuery
   | AssetPropertyVariableQuery
   | PropertyValuesVariableQuery
+  | LookupTableValuesVariableQuery
 
 export interface HistorianInfo {
   Version: string

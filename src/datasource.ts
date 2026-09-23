@@ -20,6 +20,12 @@ import {
   EventTypeProperty,
   HistorianDataSourceOptions,
   HistorianInfo,
+  LookupTable,
+  LookupTableQuery,
+  LookupTableRow,
+  LookupTableRowConditionGroup,
+  LookupTableRowFilter,
+  LookupTableValuesFilter,
   Measurement,
   MeasurementFilter,
   MeasurementQuery,
@@ -28,6 +34,7 @@ import {
   PropertyDatatype,
   Query,
   RawQuery,
+  singleValueLookupTableOperators,
   TabIndex,
   TimeseriesDatabase,
   TimeseriesDatabaseFilter,
@@ -104,9 +111,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
 
   private applyTemplateVariablesToQuery(
     queryType: string | undefined,
-    query: AssetMeasurementQuery | MeasurementQuery | RawQuery | EventQuery | undefined,
+    query: AssetMeasurementQuery | MeasurementQuery | RawQuery | EventQuery | LookupTableQuery | undefined,
     scopedVars: ScopedVars
-  ): AssetMeasurementQuery | MeasurementQuery | RawQuery | EventQuery | null {
+  ): AssetMeasurementQuery | MeasurementQuery | RawQuery | EventQuery | LookupTableQuery | null {
     switch (queryType) {
       case 'AssetMeasurementQuery': {
         const q = JSON.parse(JSON.stringify(query)) as AssetMeasurementQuery
@@ -133,11 +140,65 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         q.Query = this.templateSrv.replace(q.Query, scopedVars)
         return q
       }
+      case 'LookupTableQuery': {
+        const q = JSON.parse(JSON.stringify(query)) as LookupTableQuery
+        q.LookupTable = this.templateSrv.replace(q.LookupTable, scopedVars)
+        q.Columns = q.Columns?.flatMap((e) => this.multiSelectReplace(e, scopedVars)).filter((e) => e !== '')
+        q.Filter = this.applyTemplateVariablesToLookupTableFilter(q.Filter, scopedVars)
+        return q
+      }
       case 'EventQuery':
         return this.applyTemplateVariablesToEventQuery(query as EventQuery, scopedVars)
       default:
         return null
     }
+  }
+
+  /**
+   * Interpolates a lookup table filter, walking the tree it is. A multi-value variable
+   * expands into several values of one condition, which the historian matches as a set. Only
+   * a string can carry a template, and a condition reading whether a cell is filled in
+   * carries no values at all.
+   */
+  private applyTemplateVariablesToLookupTableFilter(
+    filter: LookupTableRowFilter | undefined,
+    scopedVars: ScopedVars
+  ): LookupTableRowFilter | undefined {
+    if (!filter) {
+      return filter
+    }
+
+    return {
+      ...filter,
+      ConditionGroups: filter.ConditionGroups.map((group) => ({
+        ...group,
+        Column: group.Column === undefined ? undefined : this.templateSrv.replace(group.Column, scopedVars),
+        Values: this.applyTemplateVariablesToLookupTableValues(group, scopedVars),
+        Filter: this.applyTemplateVariablesToLookupTableFilter(group.Filter, scopedVars),
+      })),
+    }
+  }
+
+  /**
+   * Interpolates the values of one condition. An ordering compares against a single value and
+   * its editor holds one, but a variable in that box can resolve to several, and the historian
+   * reads every operator's values as "any one of": sending them all would turn one comparison
+   * into the loosest of them, silently widening the query. Only the first is kept.
+   */
+  private applyTemplateVariablesToLookupTableValues(
+    group: LookupTableRowConditionGroup,
+    scopedVars: ScopedVars
+  ): Array<string | number | boolean | null> | undefined {
+    const values = group.Values?.flatMap(
+      (value): Array<string | number | boolean | null> =>
+        typeof value === 'string' ? this.multiSelectReplace(value, scopedVars) : [value]
+    )
+
+    if (values && singleValueLookupTableOperators.includes(group.Operator ?? 'IN')) {
+      return values.slice(0, 1)
+    }
+
+    return values
   }
 
   private applyTemplateVariablesToEventQuery(query: EventQuery, scopedVars: ScopedVars): EventQuery {
@@ -473,6 +534,52 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     }
     const cacheKey = `eventTypeProperties:${JSON.stringify(params)}`
     return this.cachedRequest(cacheKey, () => this.getResource('event-type-properties', params))
+  }
+
+  async getLookupTables(): Promise<LookupTable[]> {
+    const cacheKey = 'lookupTables'
+    return this.cachedRequest(cacheKey, () => this.getResource('lookup-tables'))
+  }
+
+  async getLookupTableRows(lookupTableUUID: string): Promise<LookupTableRow[]> {
+    const cacheKey = `lookupTableRows-${lookupTableUUID}`
+    return this.cachedRequest(cacheKey, () => this.getResource(`lookup-tables/${lookupTableUUID}/rows`))
+  }
+
+  /**
+   * Lists the values of one lookup table column, for a dashboard variable. Cells are
+   * positional, so the table definition resolves a column name to the index to read, and a
+   * row that stops short of that column has no value for it. Values are de-duplicated,
+   * keeping the table's own row order.
+   */
+  async getLookupTableValues(filter: LookupTableValuesFilter): Promise<Array<{ text: string; value: string }>> {
+    const lookupTable = this.templateSrv.replace(filter.LookupTable ?? '', filter.ScopedVars)
+    if (!lookupTable || !filter.ValueColumn) {
+      return []
+    }
+
+    const lookupTables = await this.getLookupTables()
+    const columns = lookupTables.find((e) => e.UUID === lookupTable)?.Attributes?.Columns ?? []
+    const valueIndex = columns.findIndex((e) => e.Name === filter.ValueColumn)
+    if (valueIndex < 0) {
+      return []
+    }
+    const textIndex = filter.TextColumn ? columns.findIndex((e) => e.Name === filter.TextColumn) : -1
+
+    const rows = await this.getLookupTableRows(lookupTable)
+    const seen = new Set<string>()
+    const values: Array<{ text: string; value: string }> = []
+    for (const row of rows) {
+      const cell = row.Cells?.[valueIndex]
+      if (cell === undefined || cell === null || seen.has(String(cell))) {
+        continue
+      }
+      seen.add(String(cell))
+      const text = textIndex >= 0 ? row.Cells?.[textIndex] : undefined
+      values.push({ text: text === undefined || text === null ? String(cell) : String(text), value: String(cell) })
+    }
+
+    return values
   }
 
   async getEventConfigurations(): Promise<EventConfiguration[]> {
