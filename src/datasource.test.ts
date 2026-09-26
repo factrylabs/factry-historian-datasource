@@ -1,13 +1,18 @@
 import { DataSource } from './datasource'
-import { DataSourceInstanceSettings, ScopedVars } from '@grafana/data'
+import { VariableSupport } from './variable_support'
+import { dateTime, DataSourceInstanceSettings, ScopedVars } from '@grafana/data'
+import { lastValueFrom } from 'rxjs'
 import { TemplateSrv } from '@grafana/runtime'
 import {
+  EventPropertyFilter,
   EventQuery,
   HistorianDataSourceOptions,
   MeasurementQuery,
   MeasurementQueryOptions,
+  PropertyDatatype,
   Query,
   TabIndex,
+  VariableQueryType,
 } from './types'
 
 const TEMPLATE_VARIABLE_PATTERN =
@@ -351,12 +356,13 @@ describe('DataSource resource filters handle empty variables', () => {
     const ds = makeDataSource(makeTemplateSrv(values))
     let captured: Record<string, unknown> | undefined
     let calls = 0
-    ;(ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }).getResource =
-      (_path: string, params?: Record<string, unknown>) => {
-        calls++
-        captured = params
-        return Promise.resolve([])
-      }
+    ;(
+      ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }
+    ).getResource = (_path: string, params?: Record<string, unknown>) => {
+      calls++
+      captured = params
+      return Promise.resolve([])
+    }
     return { ds, params: () => captured, calls: () => calls }
   }
 
@@ -392,7 +398,10 @@ describe('DataSource resource filters handle empty variables', () => {
 
   it('returns no tag values when the database variable resolves to ""', async () => {
     const { ds, calls } = makeCapturingDataSource({ db: '' })
-    const result = await ds.getTagValuesForMeasurements({ Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} }, 'key')
+    const result = await ds.getTagValuesForMeasurements(
+      { Keyword: 'pump', DatabaseUUIDs: ['$db'], ScopedVars: {} },
+      'key'
+    )
     expect(result).toEqual([])
     expect(calls()).toBe(0)
   })
@@ -436,4 +445,66 @@ describe('DataSource resource filters handle empty variables', () => {
     expect(calls()).toBe(1)
     expect(params()?.EventTypeUUIDs).toBeUndefined()
   })
+})
+
+// Operators without a value (EXISTS, NOT EXISTS, IS NULL, IS NOT NULL) must not
+// send one: String(undefined) turned a missing value into "undefined" (NaN for
+// numbers, false for bools), which Historian rejects.
+describe('property filters without a value', () => {
+  const noValueOperators = ['EXISTS', 'NOT EXISTS', 'IS NULL', 'IS NOT NULL']
+  const datatypes = Object.values(PropertyDatatype)
+
+  function makeFilter(operator: string, datatype: string): EventPropertyFilter {
+    return { Property: 'line', Datatype: datatype, Operator: operator, Condition: 'AND', Parent: false }
+  }
+
+  it.each(noValueOperators.flatMap((operator) => datatypes.map((datatype) => [operator, datatype])))(
+    'sends no value for %s on a %s property in an event query',
+    (operator, datatype) => {
+      const ds = makeDataSource(makeTemplateSrv({}))
+      const [filter] = ds.replaceEventPropertyFilter([makeFilter(operator, datatype)], {})
+      expect(filter.Value).toBeUndefined()
+    }
+  )
+
+  it.each(noValueOperators.flatMap((operator) => datatypes.map((datatype) => [operator, datatype])))(
+    'sends no value for %s on a %s property in an event property values variable',
+    async (operator, datatype) => {
+      const ds = makeDataSource(makeTemplateSrv({}))
+      let captured: Record<string, unknown> | undefined
+      ;(
+        ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }
+      ).getResource = (_path: string, params?: Record<string, unknown>) => {
+        captured = params
+        return Promise.resolve([])
+      }
+
+      await lastValueFrom(
+        new VariableSupport(ds).query({
+          targets: [
+            {
+              refId: 'A',
+              type: VariableQueryType.PropertyValuesQuery,
+              filter: {
+                EventFilter: {
+                  Type: 'simple',
+                  Assets: ['asset-uuid'],
+                  EventTypes: ['event-type-uuid'],
+                  Statuses: [],
+                  Properties: ['product'],
+                  PropertyFilter: [makeFilter(operator, datatype)],
+                  QueryAssetProperties: false,
+                },
+              },
+            },
+          ],
+          scopedVars: {},
+          range: { from: dateTime('2026-01-01T00:00:00Z'), to: dateTime('2026-01-02T00:00:00Z') },
+        } as never)
+      )
+
+      expect(captured?.['PropertyFilter[0].Operator']).toBe(operator)
+      expect(captured?.['PropertyFilter[0].Value']).toBeUndefined()
+    }
+  )
 })
