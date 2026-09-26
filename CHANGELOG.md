@@ -9,6 +9,7 @@
 
 - Fixed the event property values variable query failing or ignoring its property filters when a filter uses `EXISTS`, `NOT EXISTS`, `IS NULL` or `IS NOT NULL`.
 - Fixed the event property values variable query ignoring parent property filters and filters on a boolean property set to `true`.
+- Fixed event property filters whose template variable resolves to nothing being sent as `NaN` or an empty value instead of being skipped, and variables in property filters of older saved queries not being resolved.
 
 ### Changes
 

@@ -218,7 +218,7 @@ export interface OldEventTypePropertiesValuesFilter extends EventTypePropertiesV
 export interface EventPropertyFilter extends ResourceFilter {
   Property: string
   Datatype: string
-  Value?: string | number | boolean | string[]
+  Value?: string | number | boolean | Array<string | number | boolean>
   Operator: string
   Condition: string
   Parent: boolean

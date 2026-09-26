@@ -199,48 +199,49 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     eventPropertyFilter: EventPropertyFilter[],
     scopedVars: ScopedVars
   ): EventPropertyFilter[] {
+    // A filter whose value is empty, or resolves to empty, is dropped
     return (
-      eventPropertyFilter
-        ?.filter((e) => {
-          if (!needsValue(e.Operator as KnownOperator)) {
-            return true
-          }
+      eventPropertyFilter?.flatMap((e) => {
+        e.Property = this.templateSrv.replace(e.Property, scopedVars)
+        if (e.Parent) {
+          e.Property = e.Property.replace('parent:', '')
+        }
 
-          if ((typeof e.Value === 'number' && isNaN(e.Value)) || (typeof e.Value === 'string' && e.Value === '')) {
-            return false
-          }
+        if (!needsValue(e.Operator as KnownOperator)) {
+          delete e.Value
+          return [e]
+        }
 
-          return true
-        })
-        .map((e) => {
-          e.Property = this.templateSrv.replace(e.Property, scopedVars)
-          if (!needsValue(e.Operator as KnownOperator)) {
-            delete e.Value
-          } else if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
-            const replacedValue = this.multiSelectReplace(String(e.Value), scopedVars)
-            if (replacedValue.length === 0) {
-              return e
-            }
-            e.Value = replacedValue
-          } else {
-            switch (e.Datatype) {
-              case PropertyDatatype.Number:
-                e.Value = parseFloat(this.templateSrv.replace(String(e.Value), scopedVars))
-                break
-              case PropertyDatatype.Bool:
-                e.Value = this.templateSrv.replace(String(e.Value), scopedVars) === 'true'
-                break
-              case PropertyDatatype.String:
-                e.Value = this.templateSrv.replace(String(e.Value), scopedVars)
-                break
-            }
-            e.Value = [e.Value as string]
+        if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+          const values = this.multiSelectReplace(String(e.Value ?? ''), scopedVars).filter((v) => v !== '')
+          if (values.length === 0) {
+            return []
           }
-          if (e.Parent) {
-            e.Property = e.Property.replace('parent:', '')
+          e.Value = values
+          return [e]
+        }
+
+        const resolved = this.templateSrv.replace(String(e.Value ?? ''), scopedVars)
+        if (resolved === '') {
+          return []
+        }
+        switch (e.Datatype) {
+          case PropertyDatatype.Number: {
+            const value = parseFloat(resolved)
+            if (isNaN(value)) {
+              return []
+            }
+            e.Value = [value]
+            break
           }
-          return e
-        }) ?? []
+          case PropertyDatatype.Bool:
+            e.Value = [resolved === 'true']
+            break
+          default:
+            e.Value = [resolved]
+        }
+        return [e]
+      }) ?? []
     )
   }
 
