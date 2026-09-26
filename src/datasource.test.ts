@@ -1,6 +1,6 @@
 import { DataSource } from './datasource'
 import { VariableSupport } from './variable_support'
-import { dateTime, DataSourceInstanceSettings, ScopedVars } from '@grafana/data'
+import { dateTime, DataSourceInstanceSettings, ScopedVars, urlUtil } from '@grafana/data'
 import { lastValueFrom } from 'rxjs'
 import { TemplateSrv } from '@grafana/runtime'
 import {
@@ -347,25 +347,25 @@ describe('DataSource.applyTemplateVariables seriesLimit falls back on an empty v
 // grafana serializes as 'X='. Such an entry must be dropped from the request,
 // and a filter left without any value must return no results instead of
 // querying every database / asset / event type.
-describe('DataSource resource filters handle empty variables', () => {
-  function makeCapturingDataSource(values: Record<string, string | string[]>): {
-    ds: DataSource
-    params: () => Record<string, unknown> | undefined
-    calls: () => number
-  } {
-    const ds = makeDataSource(makeTemplateSrv(values))
-    let captured: Record<string, unknown> | undefined
-    let calls = 0
-    ;(
-      ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }
-    ).getResource = (_path: string, params?: Record<string, unknown>) => {
-      calls++
-      captured = params
-      return Promise.resolve([])
-    }
-    return { ds, params: () => captured, calls: () => calls }
+function makeCapturingDataSource(values: Record<string, string | string[]>): {
+  ds: DataSource
+  params: () => Record<string, unknown> | undefined
+  calls: () => number
+} {
+  const ds = makeDataSource(makeTemplateSrv(values))
+  let captured: Record<string, unknown> | undefined
+  let calls = 0
+  ;(
+    ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }
+  ).getResource = (_path: string, params?: Record<string, unknown>) => {
+    calls++
+    captured = params
+    return Promise.resolve([])
   }
+  return { ds, params: () => captured, calls: () => calls }
+}
 
+describe('DataSource resource filters handle empty variables', () => {
   it('returns no measurements when the database variable resolves to ""', async () => {
     const { ds, calls } = makeCapturingDataSource({ db: '' })
     const result = await ds.getMeasurements(
@@ -447,64 +447,93 @@ describe('DataSource resource filters handle empty variables', () => {
   })
 })
 
-// Operators without a value (EXISTS, NOT EXISTS, IS NULL, IS NOT NULL) must not
-// send one: String(undefined) turned a missing value into "undefined" (NaN for
-// numbers, false for bools), which Historian rejects.
-describe('property filters without a value', () => {
+// The property values variable sends its filter as query parameters through
+// getResource. Operators without a value (EXISTS, NOT EXISTS, IS NULL, IS NOT
+// NULL) must not send one: String(undefined) turned a missing value into
+// "undefined" (NaN for numbers, false for bools), which Historian rejects.
+// Booleans must be sent as "true": getResource serialises a boolean true as a
+// bare key, which the backend decodes as false.
+describe('property filters on the event property values variable', () => {
   const noValueOperators = ['EXISTS', 'NOT EXISTS', 'IS NULL', 'IS NOT NULL']
   const datatypes = Object.values(PropertyDatatype)
 
-  function makeFilter(operator: string, datatype: string): EventPropertyFilter {
-    return { Property: 'line', Datatype: datatype, Operator: operator, Condition: 'AND', Parent: false }
+  function makeFilter(overrides: Partial<EventPropertyFilter>): EventPropertyFilter {
+    return {
+      Property: 'line',
+      Datatype: PropertyDatatype.String,
+      Operator: '=',
+      Condition: 'AND',
+      Parent: false,
+      ...overrides,
+    }
   }
 
-  it.each(noValueOperators.flatMap((operator) => datatypes.map((datatype) => [operator, datatype])))(
-    'sends no value for %s on a %s property in an event query',
-    (operator, datatype) => {
-      const ds = makeDataSource(makeTemplateSrv({}))
-      const [filter] = ds.replaceEventPropertyFilter([makeFilter(operator, datatype)], {})
-      expect(filter.Value).toBeUndefined()
-    }
-  )
-
-  it.each(noValueOperators.flatMap((operator) => datatypes.map((datatype) => [operator, datatype])))(
-    'sends no value for %s on a %s property in an event property values variable',
-    async (operator, datatype) => {
-      const ds = makeDataSource(makeTemplateSrv({}))
-      let captured: Record<string, unknown> | undefined
-      ;(
-        ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }
-      ).getResource = (_path: string, params?: Record<string, unknown>) => {
-        captured = params
-        return Promise.resolve([])
-      }
-
-      await lastValueFrom(
-        new VariableSupport(ds).query({
-          targets: [
-            {
-              refId: 'A',
-              type: VariableQueryType.PropertyValuesQuery,
-              filter: {
-                EventFilter: {
-                  Type: 'simple',
-                  Assets: ['asset-uuid'],
-                  EventTypes: ['event-type-uuid'],
-                  Statuses: [],
-                  Properties: ['product'],
-                  PropertyFilter: [makeFilter(operator, datatype)],
-                  QueryAssetProperties: false,
-                },
+  // Runs a property values variable query and returns the query string getResource would send.
+  async function queryString(
+    propertyFilter: EventPropertyFilter[],
+    values: Record<string, string | string[]> = {}
+  ): Promise<URLSearchParams> {
+    const { ds, params } = makeCapturingDataSource(values)
+    await lastValueFrom(
+      new VariableSupport(ds).query({
+        targets: [
+          {
+            refId: 'A',
+            type: VariableQueryType.PropertyValuesQuery,
+            filter: {
+              EventFilter: {
+                Type: 'simple',
+                Assets: ['asset-uuid'],
+                EventTypes: ['event-type-uuid'],
+                Statuses: [],
+                Properties: ['product'],
+                PropertyFilter: propertyFilter,
+                QueryAssetProperties: false,
               },
             },
-          ],
-          scopedVars: {},
-          range: { from: dateTime('2026-01-01T00:00:00Z'), to: dateTime('2026-01-02T00:00:00Z') },
-        } as never)
-      )
+          },
+        ],
+        scopedVars: {},
+        range: { from: dateTime('2026-01-01T00:00:00Z'), to: dateTime('2026-01-02T00:00:00Z') },
+      } as never)
+    )
+    return new URLSearchParams(urlUtil.toUrlParams(params() ?? {}))
+  }
 
-      expect(captured?.['PropertyFilter[0].Operator']).toBe(operator)
-      expect(captured?.['PropertyFilter[0].Value']).toBeUndefined()
-    }
-  )
+  const noValueCases = noValueOperators.flatMap((operator) => datatypes.map((datatype) => [operator, datatype]))
+
+  it.each(noValueCases)('sends no value for %s on a %s property in an event query', (operator, datatype) => {
+    const ds = makeDataSource(makeTemplateSrv({}))
+    const [filter] = ds.replaceEventPropertyFilter([makeFilter({ Operator: operator, Datatype: datatype })], {})
+    expect(filter.Value).toBeUndefined()
+  })
+
+  it.each(noValueCases)('sends no value for %s on a %s property', async (operator, datatype) => {
+    const query = await queryString([makeFilter({ Operator: operator, Datatype: datatype })])
+    expect(query.get('PropertyFilter[0].Operator')).toBe(operator)
+    expect(query.has('PropertyFilter[0].Value')).toBe(false)
+  })
+
+  it('sends a true bool value and a parent flag as "true"', async () => {
+    const query = await queryString([
+      makeFilter({ Property: 'parent:approved', Datatype: PropertyDatatype.Bool, Value: 'true', Parent: true }),
+    ])
+    expect(query.get('PropertyFilter[0].Property')).toBe('approved')
+    expect(query.get('PropertyFilter[0].Parent')).toBe('true')
+    expect(query.getAll('PropertyFilter[0].Value')).toEqual(['true'])
+  })
+
+  it('sends a false parent flag as "false"', async () => {
+    const query = await queryString([makeFilter({ Value: 'L1' })])
+    expect(query.get('PropertyFilter[0].Parent')).toBe('false')
+  })
+
+  it('resolves template variables in values', async () => {
+    const query = await queryString(
+      [makeFilter({ Value: '$line' }), makeFilter({ Property: 'product', Operator: 'IN', Value: '$products' })],
+      { line: 'L1', products: ['A', 'B'] }
+    )
+    expect(query.getAll('PropertyFilter[0].Value')).toEqual(['L1'])
+    expect(query.getAll('PropertyFilter[1].Value')).toEqual(['A', 'B'])
+  })
 })
