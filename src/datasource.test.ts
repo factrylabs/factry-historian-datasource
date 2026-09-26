@@ -537,3 +537,71 @@ describe('property filters on the event property values variable', () => {
     expect(query.getAll('PropertyFilter[1].Value')).toEqual(['A', 'B'])
   })
 })
+
+// A property filter value is interpolated before it is checked: a variable that
+// resolves to nothing drops the filter, the same as a value left empty in the
+// editor, instead of sending NaN or an empty string. Saved queries from before
+// property filters carried a Datatype are interpolated as strings, matching the
+// backend which defaults the datatype to string.
+describe('DataSource.replaceEventPropertyFilter interpolates before checking the value', () => {
+  function makeFilter(overrides: Partial<EventPropertyFilter>): EventPropertyFilter {
+    return {
+      Property: 'line',
+      Datatype: PropertyDatatype.String,
+      Operator: '=',
+      Condition: 'AND',
+      Parent: false,
+      ...overrides,
+    }
+  }
+
+  it.each([
+    ['a number', PropertyDatatype.Number, '>'],
+    ['a string', PropertyDatatype.String, '='],
+    ['a bool', PropertyDatatype.Bool, '='],
+    ['an IN', PropertyDatatype.String, 'IN'],
+  ])('drops %s filter whose variable resolves to empty', (_name, datatype, operator) => {
+    const ds = makeDataSource(makeTemplateSrv({ empty: '' }))
+    const filters = ds.replaceEventPropertyFilter(
+      [makeFilter({ Datatype: datatype, Operator: operator, Value: '$empty' })],
+      {}
+    )
+    expect(filters).toEqual([])
+  })
+
+  it('keeps the other filters when one is dropped', () => {
+    const ds = makeDataSource(makeTemplateSrv({ empty: '', line: 'L1' }))
+    const filters = ds.replaceEventPropertyFilter(
+      [
+        makeFilter({ Datatype: PropertyDatatype.Number, Operator: '>', Value: '$empty' }),
+        makeFilter({ Value: '$line' }),
+      ],
+      {}
+    )
+    expect(filters.map((e) => e.Value)).toEqual([['L1']])
+  })
+
+  it('drops a number filter whose variable resolves to a non-number', () => {
+    const ds = makeDataSource(makeTemplateSrv({ min: 'All' }))
+    const filters = ds.replaceEventPropertyFilter(
+      [makeFilter({ Datatype: PropertyDatatype.Number, Operator: '>', Value: '$min' })],
+      {}
+    )
+    expect(filters).toEqual([])
+  })
+
+  it('resolves a number filter variable', () => {
+    const ds = makeDataSource(makeTemplateSrv({ min: '10' }))
+    const [filter] = ds.replaceEventPropertyFilter(
+      [makeFilter({ Datatype: PropertyDatatype.Number, Operator: '>', Value: '$min' })],
+      {}
+    )
+    expect(filter.Value).toEqual([10])
+  })
+
+  it('interpolates a filter without a Datatype as a string', () => {
+    const ds = makeDataSource(makeTemplateSrv({ line: 'L1' }))
+    const [filter] = ds.replaceEventPropertyFilter([makeFilter({ Datatype: '', Value: '$line' })], {})
+    expect(filter.Value).toEqual(['L1'])
+  })
+})
