@@ -5,6 +5,10 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- Fixed the event property values variable query failing or ignoring its property filters when a filter uses `EXISTS`, `NOT EXISTS`, `IS NULL` or `IS NOT NULL`.
+
 ### Changes
 
 - **All resource lookups are now served from the backend resolution cache.** Measurements, collectors, event types, event type properties and event configurations join the assets, asset properties and databases cached in v4.0.0, under the same `resolutionCacheTTL` setting. Live data is never cached: tag keys and values, event property values, and the measurement and event queries themselves always reach Historian.

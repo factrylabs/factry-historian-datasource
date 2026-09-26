@@ -21,6 +21,7 @@ function makeDataAPIStub(captured: { filter?: unknown }): DataAPI {
     }),
     multiSelectReplace: (value: string | undefined) => [value === '$status' ? 'Good' : value ?? ''],
     replace: (value: string | undefined) => (value === '$status' ? 'Good' : value ?? ''),
+    replaceEventPropertyFilter: (eventPropertyFilter) => eventPropertyFilter,
   }
 }
 

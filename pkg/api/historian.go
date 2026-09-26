@@ -327,7 +327,7 @@ func (api *API) GetDistinctEventPropertyValues(ctx context.Context, eventTypePro
 		StopTime:       &request.To,
 		PropertyFilter: request.PropertyFilter,
 	}
-	urlValues, err := newFormEncoder().Encode(filter)
+	urlValues, err := getEventFilter(filter)
 	if err != nil {
 		return nil, err
 	}
