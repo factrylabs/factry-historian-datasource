@@ -10,6 +10,7 @@ import {
   AssetPropertyFilter,
   Collector,
   EventConfiguration,
+  EventPropertyFilter,
   EventType,
   EventTypeFilter,
   EventTypePropertiesFilter,
@@ -19,7 +20,6 @@ import {
   MeasurementFilter,
   OldEventTypePropertiesValuesFilter,
   Pagination,
-  PropertyDatatype,
   TimeseriesDatabase,
   TimeseriesDatabaseFilter,
   VariableQuery,
@@ -41,6 +41,7 @@ export interface DataAPI {
   getDistinctEventPropertyValues(filter: EventTypePropertiesValuesFilter): Promise<string[]>
   multiSelectReplace(value: string | undefined, scopedVars: ScopedVars): string[]
   replace(value: string | undefined, scopedVars: ScopedVars): string
+  replaceEventPropertyFilter(eventPropertyFilter: EventPropertyFilter[], scopedVars: ScopedVars): EventPropertyFilter[]
 }
 
 // Deep-clones a filter, returning undefined when there is nothing to clone so
@@ -244,31 +245,11 @@ export class VariableSupport extends CustomVariableSupport<DataSource> {
             this.dataAPI.multiSelectReplace(e, request.scopedVars)
           )
         }
-        if ((filter.EventFilter?.PropertyFilter?.length ?? 0) > 0) {
-          filter.EventFilter!.PropertyFilter = filter.EventFilter!.PropertyFilter?.map((e) => {
-            e.Property = this.dataAPI.replace(e.Property, request.scopedVars)
-            if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
-              const replacedValue = this.dataAPI.multiSelectReplace(String(e.Value), request.scopedVars)
-              if (replacedValue.length === 0) {
-                return e
-              }
-              e.Value = replacedValue
-            } else {
-              switch (e.Datatype) {
-                case PropertyDatatype.Number:
-                  e.Value = parseFloat(this.dataAPI.replace(String(e.Value), request.scopedVars))
-                  break
-                case PropertyDatatype.Bool:
-                  e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars) === 'true'
-                  break
-                case PropertyDatatype.String:
-                  e.Value = this.dataAPI.replace(String(e.Value), request.scopedVars)
-                  break
-              }
-            }
-
-            return e
-          })
+        if (filter.EventFilter?.PropertyFilter) {
+          filter.EventFilter.PropertyFilter = this.dataAPI.replaceEventPropertyFilter(
+            filter.EventFilter.PropertyFilter,
+            request.scopedVars
+          )
         }
 
         return from(

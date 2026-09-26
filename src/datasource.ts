@@ -33,6 +33,7 @@ import {
   TimeseriesDatabaseFilter,
 } from './types'
 import { isRegex, isValidRegex } from 'util/util'
+import { KnownOperator, needsValue } from 'util/eventFilter'
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   defaultTab: TabIndex
@@ -201,12 +202,7 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return (
       eventPropertyFilter
         ?.filter((e) => {
-          if (
-            e.Operator === 'IS NULL' ||
-            e.Operator === 'IS NOT NULL' ||
-            e.Operator === 'EXISTS' ||
-            e.Operator === 'NOT EXISTS'
-          ) {
+          if (!needsValue(e.Operator as KnownOperator)) {
             return true
           }
 
@@ -218,7 +214,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         })
         .map((e) => {
           e.Property = this.templateSrv.replace(e.Property, scopedVars)
-          if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
+          if (!needsValue(e.Operator as KnownOperator)) {
+            delete e.Value
+          } else if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
             const replacedValue = this.multiSelectReplace(String(e.Value), scopedVars)
             if (replacedValue.length === 0) {
               return e
