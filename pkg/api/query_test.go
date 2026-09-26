@@ -92,3 +92,54 @@ func TestGetDistinctEventPropertyValuesEncodesUUIDFiltersAsStrings(t *testing.T)
 	assert.Equal(t, testAssetUUID.String(), gotQuery.Get("AssetUUIDs[0]"))
 	assert.Equal(t, testEventTypeUUID.String(), gotQuery.Get("EventTypeUUIDs[0]"))
 }
+
+func TestGetDistinctEventPropertyValuesNormalisesPropertyFilters(t *testing.T) {
+	t.Parallel()
+
+	var gotQuery url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/api/assets"):
+			_, _ = fmt.Fprintf(w, `[{"UUID":%q,"Name":"Line 1","AssetPath":"Line 1"}]`, testAssetUUID)
+		case strings.HasPrefix(r.URL.Path, "/api/event-types"):
+			_, _ = fmt.Fprintf(w, `[{"UUID":%q,"Name":"Batch"}]`, testEventTypeUUID)
+		default:
+			gotQuery = r.URL.Query()
+			_, _ = w.Write([]byte(`[]`))
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+	require.NoError(t, err)
+
+	operators := []string{"EXISTS", "NOT EXISTS", "IS NULL", "IS NOT NULL"}
+	propertyFilter := make([]schemas.EventPropertyValueFilter, 0, len(operators))
+	for _, operator := range operators {
+		// older saved queries have no Datatype, and the frontend sends a dummy value for operators without one
+		propertyFilter = append(propertyFilter, schemas.EventPropertyValueFilter{
+			Property: "line",
+			Operator: operator,
+			Value:    []interface{}{"undefined"},
+		})
+	}
+
+	_, err = client.GetDistinctEventPropertyValues(context.Background(), uuid.NewString(), schemas.EventPropertyValuesRequest{
+		EventQuery: schemas.EventQuery{
+			Assets:         []string{testAssetUUID.String()},
+			EventTypes:     []string{testEventTypeUUID.String()},
+			PropertyFilter: propertyFilter,
+		},
+		HistorianInfo: schemas.HistorianInfo{Version: "v8.2.0"},
+		TimeRange:     backend.TimeRange{},
+	})
+	require.NoError(t, err)
+
+	for i, operator := range operators {
+		assert.Equal(t, operator, gotQuery.Get(fmt.Sprintf("PropertyFilter[%d].Operator", i)))
+		assert.Equal(t, "string", gotQuery.Get(fmt.Sprintf("PropertyFilter[%d].Datatype", i)))
+		for key := range gotQuery {
+			assert.NotContains(t, key, fmt.Sprintf("PropertyFilter[%d].Value", i), "%s must not send a value", operator)
+		}
+	}
+}
