@@ -8,6 +8,7 @@
 ### Bug fixes
 
 - Fixed the event property values variable query failing or ignoring its property filters when a filter uses `EXISTS`, `NOT EXISTS`, `IS NULL` or `IS NOT NULL`.
+- Fixed the event property values variable query ignoring parent property filters and filters on a boolean property set to `true`.
 
 ### Changes
 

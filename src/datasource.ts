@@ -535,19 +535,17 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     }
 
     delete params.PropertyFilter
-    if (filter.EventFilter.PropertyFilter) {
-      for (let i = 0; i < filter.EventFilter.PropertyFilter.length; i++) {
-        params['PropertyFilter[' + i + '].Condition'] = filter.EventFilter.PropertyFilter[i].Condition
-        params['PropertyFilter[' + i + '].Datatype'] = filter.EventFilter.PropertyFilter[i].Datatype
-        params['PropertyFilter[' + i + '].Operator'] = filter.EventFilter.PropertyFilter[i].Operator
-        params['PropertyFilter[' + i + '].Property'] = filter.EventFilter.PropertyFilter[i].Property.replace(
-          'parent:',
-          ''
-        )
-        params['PropertyFilter[' + i + '].Value'] = filter.EventFilter.PropertyFilter[i].Value
-        params['PropertyFilter[' + i + '].Parent'] = filter.EventFilter.PropertyFilter[i].Parent
+    // getResource serialises a boolean true as a bare key, which the backend decodes as false, so booleans go as strings
+    filter.EventFilter.PropertyFilter?.forEach((e, i) => {
+      params[`PropertyFilter[${i}].Condition`] = e.Condition
+      params[`PropertyFilter[${i}].Datatype`] = e.Datatype
+      params[`PropertyFilter[${i}].Operator`] = e.Operator
+      params[`PropertyFilter[${i}].Property`] = e.Property.replace('parent:', '')
+      params[`PropertyFilter[${i}].Parent`] = String(Boolean(e.Parent))
+      if (e.Value !== undefined) {
+        params[`PropertyFilter[${i}].Value`] = Array.isArray(e.Value) ? e.Value.map(String) : String(e.Value)
       }
-    }
+    })
     if (!filter.EventFilter.Properties || filter.EventFilter.Properties.length === 0) {
       return Promise.resolve([])
     }
