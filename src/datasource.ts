@@ -35,6 +35,24 @@ import {
 import { isRegex, isValidRegex } from 'util/util'
 import { KnownOperator, needsValue } from 'util/eventFilter'
 
+// Converts a resolved property filter value to the property's datatype. An empty value, or one that is not a number
+// for a number property, yields nothing so the caller can drop it.
+function typedPropertyValue(value: string, datatype: string): Array<string | number | boolean> {
+  if (value === '') {
+    return []
+  }
+  switch (datatype) {
+    case PropertyDatatype.Number: {
+      const parsed = parseFloat(value)
+      return isNaN(parsed) ? [] : [parsed]
+    }
+    case PropertyDatatype.Bool:
+      return [value === 'true']
+    default:
+      return [value]
+  }
+}
+
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   defaultTab: TabIndex
   historianInfo: HistorianInfo | undefined
@@ -212,34 +230,15 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
           return [e]
         }
 
-        if (e.Operator === 'IN' || e.Operator === 'NOT IN') {
-          const values = this.multiSelectReplace(String(e.Value ?? ''), scopedVars).filter((v) => v !== '')
-          if (values.length === 0) {
-            return []
-          }
-          e.Value = values
-          return [e]
-        }
-
-        const resolved = this.templateSrv.replace(String(e.Value ?? ''), scopedVars)
-        if (resolved === '') {
+        const resolved =
+          e.Operator === 'IN' || e.Operator === 'NOT IN'
+            ? this.multiSelectReplace(String(e.Value ?? ''), scopedVars)
+            : [this.templateSrv.replace(String(e.Value ?? ''), scopedVars)]
+        const values = resolved.flatMap((v) => typedPropertyValue(v, e.Datatype))
+        if (values.length === 0) {
           return []
         }
-        switch (e.Datatype) {
-          case PropertyDatatype.Number: {
-            const value = parseFloat(resolved)
-            if (isNaN(value)) {
-              return []
-            }
-            e.Value = [value]
-            break
-          }
-          case PropertyDatatype.Bool:
-            e.Value = [resolved === 'true']
-            break
-          default:
-            e.Value = [resolved]
-        }
+        e.Value = values
         return [e]
       }) ?? []
     )
