@@ -605,3 +605,61 @@ describe('DataSource.replaceEventPropertyFilter interpolates before checking the
     expect(filter.Value).toEqual(['L1'])
   })
 })
+
+// IN / NOT IN values are typed by the property's datatype, the same as a single
+// value: a number property sends numbers and a bool property sends booleans,
+// not the strings a multi-value variable resolves to.
+describe('DataSource.replaceEventPropertyFilter types IN values by datatype', () => {
+  function makeFilter(overrides: Partial<EventPropertyFilter>): EventPropertyFilter {
+    return {
+      Property: 'line',
+      Datatype: PropertyDatatype.String,
+      Operator: 'IN',
+      Condition: 'AND',
+      Parent: false,
+      ...overrides,
+    }
+  }
+
+  it.each(['IN', 'NOT IN'])('sends numbers for %s on a number property', (operator) => {
+    const ds = makeDataSource(makeTemplateSrv({ quantity: ['1893.1634646808411', '103'] }))
+    const [filter] = ds.replaceEventPropertyFilter(
+      [makeFilter({ Datatype: PropertyDatatype.Number, Operator: operator, Value: '$quantity' })],
+      {}
+    )
+    expect(filter.Value).toEqual([1893.1634646808411, 103])
+  })
+
+  it('drops IN entries that are not a number on a number property', () => {
+    const ds = makeDataSource(makeTemplateSrv({ quantity: ['103', 'All'] }))
+    const [filter] = ds.replaceEventPropertyFilter(
+      [makeFilter({ Datatype: PropertyDatatype.Number, Value: '$quantity' })],
+      {}
+    )
+    expect(filter.Value).toEqual([103])
+  })
+
+  it('drops an IN filter on a number property when no entry is a number', () => {
+    const ds = makeDataSource(makeTemplateSrv({ quantity: ['All'] }))
+    const filters = ds.replaceEventPropertyFilter(
+      [makeFilter({ Datatype: PropertyDatatype.Number, Value: '$quantity' })],
+      {}
+    )
+    expect(filters).toEqual([])
+  })
+
+  it('sends booleans for IN on a bool property', () => {
+    const ds = makeDataSource(makeTemplateSrv({ approved: ['true', 'false'] }))
+    const [filter] = ds.replaceEventPropertyFilter(
+      [makeFilter({ Datatype: PropertyDatatype.Bool, Value: '$approved' })],
+      {}
+    )
+    expect(filter.Value).toEqual([true, false])
+  })
+
+  it('keeps strings for IN on a string property', () => {
+    const ds = makeDataSource(makeTemplateSrv({ line: ['103', 'L2'] }))
+    const [filter] = ds.replaceEventPropertyFilter([makeFilter({ Value: '$line' })], {})
+    expect(filter.Value).toEqual(['103', 'L2'])
+  })
+})
