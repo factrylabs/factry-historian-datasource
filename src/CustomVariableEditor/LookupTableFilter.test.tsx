@@ -7,16 +7,10 @@ import { LookupTable } from 'types'
 import { notifyError } from 'util/notify'
 
 // Test doubles for the Grafana form controls: a select carrying its options, so a test can
-// read what the editor offers and pick from it.
-jest.mock('@grafana/ui', () => ({
-  InlineField: ({ label, children }: { label?: string; children: React.ReactNode }) => (
-    <div>
-      {label && <label>{label}</label>}
-      {children}
-    </div>
-  ),
-  InlineFieldRow: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  Select: ({
+// read what the editor offers and pick from it. The filter builder renders through the same
+// doubles, which is why the buttons and the styles hook are here too.
+jest.mock('@grafana/ui', () => {
+  const asSelect = ({
     'aria-label': label,
     options,
     onChange,
@@ -32,8 +26,33 @@ jest.mock('@grafana/ui', () => ({
         </option>
       ))}
     </select>
-  ),
-}))
+  )
+
+  return {
+    InlineField: ({ label, children }: { label?: string; children: React.ReactNode }) => (
+      <div>
+        {label && <label>{label}</label>}
+        {children}
+      </div>
+    ),
+    InlineFieldRow: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Button: ({ children, onClick }: { children: React.ReactNode; onClick: () => void }) => (
+      <button onClick={onClick}>{children}</button>
+    ),
+    IconButton: ({ 'aria-label': label, onClick }: { 'aria-label': string; onClick: () => void }) => (
+      <button aria-label={label} onClick={onClick} />
+    ),
+    Select: asSelect,
+    MultiSelect: ({
+      'aria-label': label,
+      onChange,
+    }: {
+      'aria-label': string
+      onChange: (values: Array<SelectableValue<string>>) => void
+    }) => <input aria-label={label} onChange={(e) => onChange(e.target.value.split(',').map((value) => ({ value })))} />,
+    useStyles2: () => ({}),
+  }
+})
 
 jest.mock('util/notify', () => ({ notifyError: jest.fn() }))
 
@@ -73,7 +92,7 @@ describe('LookupTableFilterRow', () => {
     await waitFor(() => expect(screen.getByLabelText('Value column')).toBeInTheDocument())
 
     const options = Array.from(screen.getByLabelText('Value column').querySelectorAll('option')).map((o) => o.value)
-    expect(options).toEqual(['label', 'number'])
+    expect(options).toEqual(['label', 'number', '$table'])
 
     fireEvent.change(screen.getByLabelText('Value column'), { target: { value: 'label' } })
     expect(onChange).toHaveBeenCalledWith({ LookupTable: '$table', ValueColumn: 'label' }, true)
@@ -113,6 +132,52 @@ describe('LookupTableFilterRow', () => {
     await waitFor(() => expect(screen.getByLabelText('Value column')).toBeInTheDocument())
 
     const options = Array.from(screen.getByLabelText('Value column').querySelectorAll('option')).map((o) => o.value)
-    expect(options).toEqual(['label', 'number'])
+    expect(options).toEqual(['label', 'number', '$table'])
+  })
+
+  // A variable lists the values of the rows a filter keeps, which is what lets one variable
+  // stand on another: the condition names a column of the table and the value can be a
+  // variable of its own.
+  it('carries a filter on the rows the values are read from', async () => {
+    const onChange = jest.fn()
+    render(
+      <LookupTableFilterRow
+        datasource={datasource}
+        initialValue={{ LookupTable: 'a-uuid', ValueColumn: 'label' }}
+        templateVariables={templateVariables}
+        onChange={onChange}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Add condition')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Add condition'))
+
+    expect(onChange).toHaveBeenCalledWith(
+      {
+        LookupTable: 'a-uuid',
+        ValueColumn: 'label',
+        Filter: { Condition: 'and', ConditionGroups: [{ Column: '', Operator: 'IN', Values: [] }] },
+      },
+      true
+    )
+  })
+
+  // The filter is no part of what makes a variable worth running: a table and the column to
+  // read are, and a filter narrowing nothing leaves the variable as valid as it was.
+  it('keeps a variable valid while its filter is being filled in', async () => {
+    const onChange = jest.fn()
+    render(
+      <LookupTableFilterRow
+        datasource={datasource}
+        initialValue={{ LookupTable: 'a-uuid', ValueColumn: 'label' }}
+        templateVariables={templateVariables}
+        onChange={onChange}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Add condition')).toBeInTheDocument())
+    fireEvent.click(screen.getByText('Add condition'))
+
+    expect(onChange).toHaveBeenCalledWith(expect.anything(), true)
   })
 })

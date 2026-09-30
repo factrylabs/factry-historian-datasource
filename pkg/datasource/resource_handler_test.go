@@ -1,9 +1,11 @@
 package datasource
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -156,4 +158,64 @@ func TestEventPropertyValuesLookupOmitsEmptyEventTypesAndType(t *testing.T) {
 		}
 	}
 	assert.Equal(t, []string{eventTypeUUID.String()}, query["EventTypeUUIDs[0]"], "the resolved event type must still be sent")
+}
+
+// The variable editor reads the rows of one lookup table through this route, narrowed by the
+// filter it carries. The values of that filter reach the plugin as strings, whether they were
+// typed or resolved from a variable, so they are typed by the column they are compared against
+// before the historian sees them: a string on a number column matches no cell at all.
+func TestQueryLookupTableRowsTypesTheFilterByItsColumns(t *testing.T) {
+	t.Parallel()
+
+	body := ""
+	ds := fakeLookupTableHistorian(t, lookupTableFixture(), lookupTableRows(), &body)
+
+	resourceMux := http.NewServeMux()
+	resourceMux.HandleFunc("POST /lookup-tables/{uuid}/rows/query", handleJSON(ds.handleQueryLookupTableRows))
+
+	request := `{"Filter":{"Condition":"and","ConditionGroups":[{"Column":"setpoint","Operator":"IN","Values":["42"]}]}}`
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
+		"/lookup-tables/"+lookupTableUUID.String()+"/rows/query", strings.NewReader(request))
+	rec := httptest.NewRecorder()
+	resourceMux.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	decoded := &schemas.LookupTableRowFilter{}
+	require.NoError(t, json.Unmarshal([]byte(sentFilter(t, body)), decoded))
+	assert.Equal(t, &schemas.LookupTableRowFilter{
+		Condition: schemas.LookupTableRowConditionAnd,
+		ConditionGroups: []schemas.LookupTableRowConditionGroup{
+			{Column: "setpoint", Operator: schemas.LookupTableRowOperatorIn, Values: []interface{}{42.0}},
+		},
+	}, decoded)
+}
+
+// A variable that names no filter reads the whole table, and the request says so by carrying
+// no filter rather than one that narrows nothing.
+func TestQueryLookupTableRowsWithoutAFilterReadsTheWholeTable(t *testing.T) {
+	t.Parallel()
+
+	for name, request := range map[string]string{
+		"empty body":  "",
+		"empty query": "{}",
+		"null filter": `{"Filter":null}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			body := "unset"
+			ds := fakeLookupTableHistorian(t, lookupTableFixture(), lookupTableRows(), &body)
+
+			resourceMux := http.NewServeMux()
+			resourceMux.HandleFunc("POST /lookup-tables/{uuid}/rows/query", handleJSON(ds.handleQueryLookupTableRows))
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost,
+				"/lookup-tables/"+lookupTableUUID.String()+"/rows/query", strings.NewReader(request))
+			rec := httptest.NewRecorder()
+			resourceMux.ServeHTTP(rec, req)
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+			assert.JSONEq(t, `{"Limit":0}`, body)
+		})
+	}
 }

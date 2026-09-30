@@ -542,9 +542,16 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return this.cachedRequest(cacheKey, () => this.getResource('lookup-tables'))
   }
 
-  async getLookupTableRows(lookupTableUUID: string): Promise<LookupTableRow[]> {
-    const cacheKey = `lookupTableRows-${lookupTableUUID}`
-    return this.cachedRequest(cacheKey, () => this.getResource(`lookup-tables/${lookupTableUUID}/rows`))
+  /**
+   * Reads the rows of one lookup table, narrowed by the filter. The filter travels in a body
+   * because it is a tree, and it is part of the cache key: two filters on one table are two
+   * different sets of rows.
+   */
+  async getLookupTableRows(lookupTableUUID: string, filter?: LookupTableRowFilter): Promise<LookupTableRow[]> {
+    const cacheKey = `lookupTableRows-${lookupTableUUID}-${JSON.stringify(filter ?? null)}`
+    return this.cachedRequest(cacheKey, () =>
+      this.postResource(`lookup-tables/${lookupTableUUID}/rows/query`, { Filter: filter })
+    )
   }
 
   /**
@@ -552,6 +559,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
    * positional, so the table definition resolves a column name to the index to read, and a
    * row that stops short of that column has no value for it. Values are de-duplicated,
    * keeping the table's own row order.
+   *
+   * The filter narrows the rows first, interpolated against the variable's own scope, so a
+   * variable can list the values of the rows another variable picked out.
    */
   async getLookupTableValues(filter: LookupTableValuesFilter): Promise<Array<{ text: string; value: string }>> {
     const lookupTable = this.templateSrv.replace(filter.LookupTable ?? '', filter.ScopedVars)
@@ -567,7 +577,10 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     }
     const textIndex = filter.TextColumn ? columns.findIndex((e) => e.Name === filter.TextColumn) : -1
 
-    const rows = await this.getLookupTableRows(lookupTable)
+    const rows = await this.getLookupTableRows(
+      lookupTable,
+      this.applyTemplateVariablesToLookupTableFilter(filter.Filter, filter.ScopedVars ?? {})
+    )
     const seen = new Set<string>()
     const values: Array<{ text: string; value: string }> = []
     for (const row of rows) {

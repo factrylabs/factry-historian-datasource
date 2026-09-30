@@ -484,11 +484,15 @@ export type PropertyValuesVariableQuery = {
  * LookupTableValuesFilter lists the values of one lookup table column. TextColumn is what
  * the variable's dropdown shows; leaving it unset shows the value itself, so a table can
  * carry a key to query with and a readable name to pick from.
+ *
+ * Filter narrows the rows the values are read from, which is what lets one variable stand on
+ * another: a filter naming a variable resolves against the dashboard the way a panel's does.
  */
 export type LookupTableValuesFilter = {
   LookupTable?: string
   ValueColumn?: string
   TextColumn?: string
+  Filter?: LookupTableRowFilter
   ScopedVars?: ScopedVars
 }
 

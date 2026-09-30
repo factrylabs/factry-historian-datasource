@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -67,7 +69,7 @@ func (ds *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHa
 	mux.HandleFunc("GET /tags/{tagKey}", handleJSON(ds.handleGetTagValues))
 
 	mux.HandleFunc("GET /lookup-tables", handleJSON(ds.handleGetLookupTables))
-	mux.HandleFunc("GET /lookup-tables/{uuid}/rows", handleJSON(ds.handleGetLookupTableRows))
+	mux.HandleFunc("POST /lookup-tables/{uuid}/rows/query", handleJSON(ds.handleQueryLookupTableRows))
 
 	mux.HandleFunc("GET /info", handleJSON(ds.handleGetHistorianInfo))
 
@@ -125,20 +127,49 @@ func (ds *HistorianDataSource) handleGetLookupTables(_ http.ResponseWriter, req 
 	return ds.API.GetLookupTablesCached(req.Context(), req.URL.RawQuery)
 }
 
-// handleGetLookupTableRows serves the rows of one lookup table to the variable editor, which
-// reads one of their columns into a variable's values. It takes no filter and answers with the
-// whole table, which is what that one caller wants; the rows a panel shows travel the query
-// path, where the filter rides.
+// lookupTableRowsRequest is the body the rows query takes: the filter narrowing the rows, and
+// nothing else. The table is named in the path.
+type lookupTableRowsRequest struct {
+	Filter *schemas.LookupTableRowFilter
+}
+
+// handleQueryLookupTableRows serves the rows of one lookup table to the variable editor, which
+// reads one of their columns into a variable's values. It is a POST because the filter is a
+// tree, which has no shape a query parameter can carry, and a body is where the historian takes
+// one too.
 //
-// It is a GET because it belongs to the plugin's own resource API, the one Grafana reads
-// through getResource, rather than mirroring the historian route behind it.
-func (ds *HistorianDataSource) handleGetLookupTableRows(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+// The filter values are typed by the column they are compared against, the way the query path
+// types them: a filter value arrives as a string whichever way it was entered, and the historian
+// compares it to the stored cell as JSON.
+func (ds *HistorianDataSource) handleQueryLookupTableRows(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	lookupTableUUID := req.PathValue("uuid")
 	if lookupTableUUID == "" {
 		return nil, errors.New("uuid is required")
 	}
 
-	return ds.API.GetLookupTableRows(req.Context(), lookupTableUUID, nil)
+	request := lookupTableRowsRequest{}
+	if err := json.NewDecoder(req.Body).Decode(&request); err != nil && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+
+	filter := request.Filter
+	if filter != nil {
+		lookupTables, err := ds.API.GetLookupTablesCached(req.Context(), "")
+		if err != nil {
+			return nil, err
+		}
+
+		index := slices.IndexFunc(lookupTables, func(lookupTable schemas.LookupTable) bool {
+			return lookupTable.UUID.String() == lookupTableUUID
+		})
+		if index < 0 {
+			return nil, errors.Errorf("lookup table %q not found", lookupTableUUID)
+		}
+
+		filter = coerceLookupTableFilter(lookupTables[index].Attributes.Columns, filter)
+	}
+
+	return ds.API.GetLookupTableRows(req.Context(), lookupTableUUID, filter)
 }
 
 func (ds *HistorianDataSource) handleGetTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
