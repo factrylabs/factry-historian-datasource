@@ -820,3 +820,97 @@ describe('DataSource.applyTemplateVariables lookup tables', () => {
     expect((templated.query as LookupTableQuery).LookupTable).toBe('other-uuid')
   })
 })
+
+// ---------------------------------------------------------------------------
+// getLookupTableValues — the rows a variable reads its values from
+// ---------------------------------------------------------------------------
+
+describe('DataSource.getLookupTableValues', () => {
+  const lookupTable = {
+    UUID: 'a-uuid',
+    Name: 'Machines',
+    Attributes: {
+      Columns: [
+        { Name: 'id', Type: 'string' },
+        { Name: 'name', Type: 'string' },
+        { Name: 'line', Type: 'number' },
+      ],
+    },
+  }
+
+  const rows = [
+    { UUID: 'r1', Index: 0, Cells: ['M-1', 'Filler', 1] },
+    { UUID: 'r2', Index: 1, Cells: ['M-2', 'Capper', 2] },
+  ]
+
+  function makeCapturingDataSource(values: Record<string, string | string[]> = {}): {
+    ds: DataSource
+    bodies: () => Array<Record<string, unknown> | undefined>
+  } {
+    const ds = makeDataSource(makeTemplateSrv(values))
+    const bodies: Array<Record<string, unknown> | undefined> = []
+    ;(ds as unknown as { getResource: (path: string) => Promise<unknown> }).getResource = () =>
+      Promise.resolve([lookupTable])
+    ;(
+      ds as unknown as { postResource: (path: string, body?: Record<string, unknown>) => Promise<unknown> }
+    ).postResource = (_path: string, body?: Record<string, unknown>) => {
+      bodies.push(body)
+      return Promise.resolve(rows)
+    }
+    return { ds, bodies: () => bodies }
+  }
+
+  it('reads a column as the values of the variable, shown by the display column', async () => {
+    const { ds } = makeCapturingDataSource()
+
+    const values = await ds.getLookupTableValues({ LookupTable: 'a-uuid', ValueColumn: 'id', TextColumn: 'name' })
+
+    expect(values).toEqual([
+      { text: 'Filler', value: 'M-1' },
+      { text: 'Capper', value: 'M-2' },
+    ])
+  })
+
+  // The filter is what lets one variable stand on another, so it reaches the request with the
+  // variables in it resolved against the scope the variable runs in.
+  it('sends the filter with its variables resolved', async () => {
+    const { ds, bodies } = makeCapturingDataSource({ lines: ['1', '2'] })
+
+    await ds.getLookupTableValues({
+      LookupTable: 'a-uuid',
+      ValueColumn: 'id',
+      Filter: { Condition: 'and', ConditionGroups: [{ Column: 'line', Operator: 'IN', Values: ['$lines'] }] },
+    })
+
+    expect(bodies()[0]).toEqual({
+      Filter: { Condition: 'and', ConditionGroups: [{ Column: 'line', Operator: 'IN', Values: ['1', '2'] }] },
+    })
+  })
+
+  it('sends no filter when the variable carries none', async () => {
+    const { ds, bodies } = makeCapturingDataSource()
+
+    await ds.getLookupTableValues({ LookupTable: 'a-uuid', ValueColumn: 'id' })
+
+    expect(bodies()[0]).toEqual({ Filter: undefined })
+  })
+
+  // Two filters on one table are two different sets of rows, so one must not be served the
+  // other's cached answer.
+  it('reads the rows again for a different filter', async () => {
+    const { ds, bodies } = makeCapturingDataSource()
+
+    await ds.getLookupTableValues({
+      LookupTable: 'a-uuid',
+      ValueColumn: 'id',
+      Filter: { Condition: 'and', ConditionGroups: [{ Column: 'line', Operator: 'IN', Values: ['1'] }] },
+    })
+    await ds.getLookupTableValues({
+      LookupTable: 'a-uuid',
+      ValueColumn: 'id',
+      Filter: { Condition: 'and', ConditionGroups: [{ Column: 'line', Operator: 'IN', Values: ['2'] }] },
+    })
+
+    expect(bodies()).toHaveLength(2)
+  })
+})

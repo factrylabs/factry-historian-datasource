@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { SelectableValue } from '@grafana/data'
 import { InlineField, InlineFieldRow, Select } from '@grafana/ui'
 import { DataSource } from 'datasource'
+import { emptyLookupTableFilter, LookupTableFilterGroup } from 'QueryEditor/LookupTableFilterGroup'
 import { fieldWidth, labelWidth, LookupTable, LookupTableValuesFilter } from 'types'
 import { notifyError } from 'util/notify'
 
@@ -52,20 +53,31 @@ export function LookupTableFilterRow(props: {
   const columns =
     lookupTables.find((e) => e.UUID === props.datasource.replace(filter.LookupTable ?? ''))?.Attributes?.Columns ?? []
 
+  // The variables follow what the list is of, which is where every other picker in the plugin
+  // holds them.
   const selectableTables: Array<SelectableValue<string>> = [
-    ...props.templateVariables,
     ...lookupTables.map((table) => ({
       label: table.Name,
       value: table.UUID,
       description: table.Attributes?.Description,
     })),
+    ...props.templateVariables,
   ]
 
-  const selectableColumns: Array<SelectableValue<string>> = columns.map((column) => ({
-    label: column.Name,
-    value: column.Name,
-    description: column.Type,
-  }))
+  // A variable carries the type of the column it stands for, which is what the filter reads to
+  // decide whether the column can be ordered. It is resolved the way the variable resolves it
+  // when it runs.
+  const selectableColumns: Array<SelectableValue<string>> = [
+    ...columns.map((column) => ({
+      label: column.Name,
+      value: column.Name,
+      description: column.Type,
+    })),
+    ...props.templateVariables.map((variable) => ({
+      ...variable,
+      description: columns.find((column) => column.Name === props.datasource.replace(variable.value ?? ''))?.Type,
+    })),
+  ]
 
   // A filter is only worth running once it names a table and the column to read. Until then
   // it is marked invalid, which is what keeps the variable from querying on every keystroke.
@@ -132,6 +144,13 @@ export function LookupTableFilterRow(props: {
               />
             </InlineField>
           </InlineFieldRow>
+          <LookupTableFilterGroup
+            label="Filters"
+            filter={filter.Filter ?? emptyLookupTableFilter}
+            columns={selectableColumns}
+            templateVariables={props.templateVariables}
+            onChange={(rowFilter) => change({ ...filter, Filter: rowFilter })}
+          />
         </>
       )}
     </>
