@@ -3,6 +3,14 @@
 > ⚠️ **Minimum supported Factry Historian version: v7.3.0.**
 > Versions of this plugin from v4.0.0 onwards no longer ship compatibility code for Historian instances older than v7.3.0. Earlier Historian versions are not supported, so upgrade your Historian before updating this plugin.
 
+## Compatibility Matrix
+
+| Historian Grafana Datasource Version | Compatible Factry Historian Versions |
+| ------------------------------------ | ------------------------------------ |
+| <= v1.2.x                            | <= v6.3.x                            |
+| v2.x - v3.x                          | > v6.3                               |
+| >= v4.0.0                            | >= v7.3.0                            |
+
 ## Unreleased
 
 ### Features
