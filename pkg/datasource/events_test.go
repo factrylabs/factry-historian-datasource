@@ -166,8 +166,9 @@ type fakeHistorianData struct {
 	eventTypesByKey map[string]schemas.EventType
 	allEventTypes   []schemas.EventType
 	events          []schemas.Event
-	// onEventsRequest, when set, is called with every /api/events request so a
-	// test can assert on the query the datasource built.
+	// onEventsRequest, when set, is called with every /api/events and
+	// /api/events/query request so a test can assert on the query the
+	// datasource built.
 	onEventsRequest func(*http.Request)
 }
 
@@ -218,6 +219,13 @@ func newFakeHistorianServer(t *testing.T, fixture fakeHistorianData) *httptest.S
 	})
 
 	mux.HandleFunc("/api/events", func(w http.ResponseWriter, r *http.Request) {
+		if fixture.onEventsRequest != nil {
+			fixture.onEventsRequest(r)
+		}
+		writeJSON(w, fixture.events)
+	})
+
+	mux.HandleFunc("/api/events/query", func(w http.ResponseWriter, r *http.Request) {
 		if fixture.onEventsRequest != nil {
 			fixture.onEventsRequest(r)
 		}
@@ -538,11 +546,66 @@ func TestHandleEventQuery_OmitsStatusFromEmptyVariable(t *testing.T) {
 				Assets:     []string{asset.AssetPath},
 				EventTypes: []string{eventType.Name},
 				Statuses:   tt.statuses,
-			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.2.0"})
+			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.1.0"})
 			require.NoError(t, err)
 			require.NotNil(t, eventsQuery, "the event query must reach /api/events")
 
 			assert.Equal(t, tt.want, eventsQuery["Status"])
+		})
+	}
+}
+
+// Release candidates count as their release, so a Historian 8.2 RC uses the
+// POST endpoint too.
+func TestHandleEventQueryUsesPostEndpointFromHistorian82(t *testing.T) {
+	t.Parallel()
+
+	asset := schemas.Asset{
+		BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "machine"},
+		AssetPath: `\\site\\machine`,
+	}
+	eventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Batch"}}
+
+	tests := []struct {
+		version    string
+		wantMethod string
+		wantPath   string
+	}{
+		{version: "v8.1.3", wantMethod: http.MethodGet, wantPath: "/api/events"},
+		{version: "v8.2.0-rc.1", wantMethod: http.MethodPost, wantPath: "/api/events/query"},
+		{version: "v8.2.0", wantMethod: http.MethodPost, wantPath: "/api/events/query"},
+		{version: "v8.3.1", wantMethod: http.MethodPost, wantPath: "/api/events/query"},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.version, func(t *testing.T) {
+			t.Parallel()
+
+			var gotMethod, gotPath string
+			server := newFakeHistorianServer(t, fakeHistorianData{
+				assetsByPath:    map[string]schemas.Asset{asset.AssetPath: asset},
+				assetsByUUID:    map[string]schemas.Asset{asset.UUID.String(): asset},
+				eventTypesByKey: map[string]schemas.EventType{eventType.Name: eventType},
+				allEventTypes:   []schemas.EventType{eventType},
+				onEventsRequest: func(r *http.Request) { gotMethod, gotPath = r.Method, r.URL.Path },
+			})
+			t.Cleanup(server.Close)
+
+			apiClient, err := api.NewAPIWithToken(server.URL, "test-token", "test-org")
+			require.NoError(t, err)
+			ds := &HistorianDataSource{API: apiClient}
+
+			startTime := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+			_, err = ds.handleEventQuery(context.Background(), schemas.EventQuery{
+				Type:       string(schemas.EventTypePropertyTypeSimple),
+				Assets:     []string{asset.AssetPath},
+				EventTypes: []string{eventType.Name},
+			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: tt.version})
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.wantMethod, gotMethod)
+			assert.Equal(t, tt.wantPath, gotPath)
 		})
 	}
 }

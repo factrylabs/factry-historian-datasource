@@ -179,6 +179,7 @@ func TestQueryDataAttributesHistorianErrorsToDownstream(t *testing.T) {
 			mux.HandleFunc("POST /api/timeseries/query", fail)
 			mux.HandleFunc("POST /api/timeseries/{uuid}/raw-query", fail)
 			mux.HandleFunc("GET /api/events", fail)
+			mux.HandleFunc("POST /api/events/query", fail)
 
 			ds := newFakeHistorianDataSource(t, mux)
 
