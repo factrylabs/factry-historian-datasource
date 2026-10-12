@@ -12,6 +12,7 @@ import (
 
 	arrow_pb "github.com/factrylabs/factry-historian-datasource.git/pkg/proto"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
 	"github.com/go-playground/form"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -96,20 +97,17 @@ func (api *API) RawQuery(ctx context.Context, timeseriesDatabaseUUID string, que
 	return handleDataFramesResponse(resp)
 }
 
-// EventQuery executes an event query
-func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter) ([]schemas.Event, error) {
+// EventQuery executes an event query. Historian 8.2+ takes the filter as a JSON body
+// on POST /events/query, older versions take it as query parameters on GET /events.
+func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter, historianInfo *schemas.HistorianInfo) ([]schemas.Event, error) {
 	queryResult := []schemas.Event{}
-	eventFilterParams, err := getEventFilter(filter)
-	if err != nil {
-		return nil, err
+	var req *http.Request
+	var err error
+	if util.CheckMinimumVersion(historianInfo, "8.2.0", true) {
+		req, err = newEventQueryPostRequest(ctx, filter)
+	} else {
+		req, err = newEventQueryGetRequest(ctx, filter)
 	}
-
-	queryURL := "/api/events"
-	if len(eventFilterParams) > 0 {
-		queryURL += "?" + eventFilterParams.Encode()
-	}
-
-	req, err := newHTTPRequest(ctx, "GET", queryURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -129,6 +127,35 @@ func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter) ([]s
 	}
 
 	return queryResult, nil
+}
+
+func newEventQueryGetRequest(ctx context.Context, filter schemas.EventFilter) (*http.Request, error) {
+	eventFilterParams, err := getEventFilter(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	queryURL := "/api/events"
+	if len(eventFilterParams) > 0 {
+		queryURL += "?" + eventFilterParams.Encode()
+	}
+
+	return newHTTPRequest(ctx, "GET", queryURL, nil)
+}
+
+func newEventQueryPostRequest(ctx context.Context, filter schemas.EventFilter) (*http.Request, error) {
+	body, err := json.Marshal(struct {
+		Filter schemas.EventFilter
+		Limit  int
+	}{
+		Filter: fixPropertyFilterValues(filter),
+		Limit:  filter.Limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return newHTTPRequest(ctx, "POST", "/api/events/query", bytes.NewReader(body))
 }
 
 // GetTagKeys queries the tag keys for a measurement
