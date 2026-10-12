@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +51,7 @@ func TestEventQueryEncodesUUIDFiltersAsStrings(t *testing.T) {
 	_, err = client.EventQuery(context.Background(), schemas.EventFilter{
 		AssetUUIDs:     []uuid.UUID{testAssetUUID},
 		EventTypeUUIDs: []uuid.UUID{testEventTypeUUID},
-	})
+	}, &schemas.HistorianInfo{Version: "v8.1.0"})
 	require.NoError(t, err)
 
 	assertNoOctetIndexedKeys(t, gotQuery)
@@ -142,4 +143,44 @@ func TestGetDistinctEventPropertyValuesNormalisesPropertyFilters(t *testing.T) {
 			assert.NotContains(t, key, fmt.Sprintf("PropertyFilter[%d].Value", i), "%s must not send a value", operator)
 		}
 	}
+}
+
+func TestEventQueryPostsFilterAsJSONBodyFromHistorian82(t *testing.T) {
+	t.Parallel()
+
+	var gotMethod, gotPath string
+	var gotBody map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod, gotPath = r.Method, r.URL.Path
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+	require.NoError(t, err)
+
+	_, err = client.EventQuery(context.Background(), schemas.EventFilter{
+		AssetUUIDs:     []uuid.UUID{testAssetUUID},
+		EventTypeUUIDs: []uuid.UUID{testEventTypeUUID},
+		Limit:          25,
+		PropertyFilter: []schemas.EventPropertyValueFilter{{Property: "line", Operator: "EXISTS", Value: []interface{}{"undefined"}}},
+	}, &schemas.HistorianInfo{Version: "v8.2.0"})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, gotMethod)
+	assert.Equal(t, "/api/events/query", gotPath)
+	assert.InDelta(t, 25, gotBody["Limit"], 0)
+
+	filter, ok := gotBody["Filter"].(map[string]interface{})
+	require.True(t, ok, "the filter must be sent as the Filter object")
+	assert.NotContains(t, filter, "Limit", "Limit belongs on the query, not on the filter")
+	assert.Equal(t, []interface{}{testAssetUUID.String()}, filter["AssetUUIDs"])
+	assert.Equal(t, []interface{}{testEventTypeUUID.String()}, filter["EventTypeUUIDs"])
+
+	propertyFilter, ok := filter["PropertyFilter"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, propertyFilter, 1)
+	assert.Equal(t, "string", propertyFilter[0].(map[string]interface{})["Datatype"], "property filters must be normalised like on the GET path")
+	assert.Nil(t, propertyFilter[0].(map[string]interface{})["Value"])
 }
