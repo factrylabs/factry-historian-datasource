@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 
 	arrow_pb "github.com/factrylabs/factry-historian-datasource.git/pkg/proto"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -104,7 +106,7 @@ func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter, hist
 	var req *http.Request
 	var err error
 	if util.CheckMinimumVersion(historianInfo, "8.2.0", true) {
-		req, err = newEventQueryPostRequest(ctx, filter)
+		req, err = newEventQueryPostRequest(ctx, filter, historianInfo)
 	} else {
 		req, err = newEventQueryGetRequest(ctx, filter)
 	}
@@ -126,7 +128,31 @@ func (api *API) EventQuery(ctx context.Context, filter schemas.EventFilter, hist
 		return nil, err
 	}
 
+	// Older versions don't support filtering properties, so it's done manually
+	if !util.CheckMinimumVersion(historianInfo, "8.3.0", true) {
+		removeUnselectedProperties(queryResult, filter.Properties)
+	}
+
 	return queryResult, nil
+}
+
+func removeUnselectedProperties(events []schemas.Event, properties []schemas.EventTypeProperty) {
+	if len(properties) == 0 {
+		return
+	}
+
+	names := make([]string, 0, len(properties))
+	for _, property := range properties {
+		names = append(names, property.Name)
+	}
+
+	for i := range events {
+		if events[i].Properties != nil {
+			maps.DeleteFunc(events[i].Properties.Properties, func(name string, _ interface{}) bool {
+				return !slices.Contains(names, name)
+			})
+		}
+	}
 }
 
 func newEventQueryGetRequest(ctx context.Context, filter schemas.EventFilter) (*http.Request, error) {
@@ -143,19 +169,27 @@ func newEventQueryGetRequest(ctx context.Context, filter schemas.EventFilter) (*
 	return newHTTPRequest(ctx, "GET", queryURL, nil)
 }
 
-func newEventQueryPostRequest(ctx context.Context, filter schemas.EventFilter) (*http.Request, error) {
-	body, err := json.Marshal(struct {
-		Filter schemas.EventFilter
-		Limit  int
+func newEventQueryPostRequest(ctx context.Context, filter schemas.EventFilter, historianInfo *schemas.HistorianInfo) (*http.Request, error) {
+	body := struct {
+		Filter                     schemas.EventFilter
+		IncludedEventPropertyUUIDs []uuid.UUID `json:",omitempty"`
+		Limit                      int
 	}{
 		Filter: fixPropertyFilterValues(filter),
 		Limit:  filter.Limit,
-	})
+	}
+	if util.CheckMinimumVersion(historianInfo, "8.3.0", true) {
+		for _, property := range filter.Properties {
+			body.IncludedEventPropertyUUIDs = append(body.IncludedEventPropertyUUIDs, property.UUID)
+		}
+	}
+
+	encodedBody, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 
-	return newHTTPRequest(ctx, "POST", "/api/events/query", bytes.NewReader(body))
+	return newHTTPRequest(ctx, "POST", "/api/events/query", bytes.NewReader(encodedBody))
 }
 
 // GetTagKeys queries the tag keys for a measurement
