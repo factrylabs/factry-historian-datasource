@@ -55,6 +55,8 @@ type EventFilter struct {
 	ExcludeManualEvents bool
 	Ascending           bool
 	PreloadProperties   bool
+	// Event type properties to return. Empty returns all properties.
+	Properties []EventTypeProperty `form:"-" json:"-"`
 }
 
 // EventProperties is the database representation of event properties

@@ -62,6 +62,15 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		Ascending:         eventQuery.Ascending,
 	}
 
+	// Periodic queries label each series with every simple property, so only simple queries
+	// limit the fetched properties.
+	if eventQuery.Type == string(schemas.EventTypePropertyTypeSimple) && len(eventQuery.Properties) > 0 {
+		filter.Properties, err = ds.selectedEventTypeProperties(ctx, eventTypes, eventQuery.Properties)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	events, err := ds.API.EventQuery(ctx, filter, historianInfo)
 	if err != nil {
 		return nil, err
@@ -229,6 +238,25 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 	}
 
 	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
+}
+
+// selectedEventTypeProperties resolves the selected property names or UUIDs to the properties
+// of the given event types.
+func (ds *HistorianDataSource) selectedEventTypeProperties(ctx context.Context, eventTypes map[uuid.UUID]schemas.EventType, selected []string) ([]schemas.EventTypeProperty, error) {
+	query := url.Values{}
+	util.AddSortedIndexedUUIDs(query, "EventTypeUUIDs", eventTypes)
+	properties, err := ds.API.GetEventTypePropertiesCached(ctx, query.Encode())
+	if err != nil {
+		return nil, err
+	}
+
+	selectedProperties := []schemas.EventTypeProperty{}
+	for _, property := range properties {
+		if slices.Contains(selected, property.Name) || slices.Contains(selected, property.UUID.String()) {
+			selectedProperties = append(selectedProperties, property)
+		}
+	}
+	return selectedProperties, nil
 }
 
 func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Frames, includeAssetPath bool) map[string]data.FieldType {
