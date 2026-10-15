@@ -50,10 +50,13 @@ type EventFilter struct {
 	Status              []string
 	EventConfigurations []uuid.UUID
 	PropertyFilter      []EventPropertyValueFilter
-	Limit               int
+	// Not part of the JSON filter: POST /events/query takes Limit next to the filter.
+	Limit               int `json:"-"`
 	ExcludeManualEvents bool
 	Ascending           bool
 	PreloadProperties   bool
+	// Event type properties to return. Empty returns all properties.
+	Properties []EventTypeProperty `form:"-" json:"-"`
 }
 
 // EventProperties is the database representation of event properties

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"testing"
 	"time"
 
@@ -166,8 +167,11 @@ type fakeHistorianData struct {
 	eventTypesByKey map[string]schemas.EventType
 	allEventTypes   []schemas.EventType
 	events          []schemas.Event
-	// onEventsRequest, when set, is called with every /api/events request so a
-	// test can assert on the query the datasource built.
+	// eventTypeProperties is filtered by the EventTypeUUIDs of the request.
+	eventTypeProperties []schemas.EventTypeProperty
+	// onEventsRequest, when set, is called with every /api/events and
+	// /api/events/query request so a test can assert on the query the
+	// datasource built.
 	onEventsRequest func(*http.Request)
 }
 
@@ -224,8 +228,22 @@ func newFakeHistorianServer(t *testing.T, fixture fakeHistorianData) *httptest.S
 		writeJSON(w, fixture.events)
 	})
 
-	mux.HandleFunc("/api/event-type-properties", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, []schemas.EventTypeProperty{})
+	mux.HandleFunc("/api/events/query", func(w http.ResponseWriter, r *http.Request) {
+		if fixture.onEventsRequest != nil {
+			fixture.onEventsRequest(r)
+		}
+		writeJSON(w, fixture.events)
+	})
+
+	mux.HandleFunc("/api/event-type-properties", func(w http.ResponseWriter, r *http.Request) {
+		eventTypeUUIDs := indexedValues(r.URL.Query(), "EventTypeUUIDs")
+		matched := []schemas.EventTypeProperty{}
+		for _, property := range fixture.eventTypeProperties {
+			if slices.Contains(eventTypeUUIDs, property.EventTypeUUID.String()) {
+				matched = append(matched, property)
+			}
+		}
+		writeJSON(w, matched)
 	})
 
 	return httptest.NewServer(mux)
@@ -538,11 +556,126 @@ func TestHandleEventQuery_OmitsStatusFromEmptyVariable(t *testing.T) {
 				Assets:     []string{asset.AssetPath},
 				EventTypes: []string{eventType.Name},
 				Statuses:   tt.statuses,
-			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.2.0"})
+			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.1.0"})
 			require.NoError(t, err)
 			require.NotNil(t, eventsQuery, "the event query must reach /api/events")
 
 			assert.Equal(t, tt.want, eventsQuery["Status"])
+		})
+	}
+}
+
+// Release candidates count as their release, so a Historian 8.2 RC uses the
+// POST endpoint too.
+func TestHandleEventQueryUsesPostEndpointFromHistorian82(t *testing.T) {
+	t.Parallel()
+
+	asset := schemas.Asset{
+		BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "machine"},
+		AssetPath: `\\site\\machine`,
+	}
+	eventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Batch"}}
+
+	tests := []struct {
+		version    string
+		wantMethod string
+		wantPath   string
+	}{
+		{version: "v8.1.3", wantMethod: http.MethodGet, wantPath: "/api/events"},
+		{version: "v8.2.0-rc.1", wantMethod: http.MethodPost, wantPath: "/api/events/query"},
+		{version: "v8.2.0", wantMethod: http.MethodPost, wantPath: "/api/events/query"},
+		{version: "v8.3.1", wantMethod: http.MethodPost, wantPath: "/api/events/query"},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.version, func(t *testing.T) {
+			t.Parallel()
+
+			var gotMethod, gotPath string
+			server := newFakeHistorianServer(t, fakeHistorianData{
+				assetsByPath:    map[string]schemas.Asset{asset.AssetPath: asset},
+				assetsByUUID:    map[string]schemas.Asset{asset.UUID.String(): asset},
+				eventTypesByKey: map[string]schemas.EventType{eventType.Name: eventType},
+				allEventTypes:   []schemas.EventType{eventType},
+				onEventsRequest: func(r *http.Request) { gotMethod, gotPath = r.Method, r.URL.Path },
+			})
+			t.Cleanup(server.Close)
+
+			apiClient, err := api.NewAPIWithToken(server.URL, "test-token", "test-org")
+			require.NoError(t, err)
+			ds := &HistorianDataSource{API: apiClient}
+
+			startTime := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+			_, err = ds.handleEventQuery(context.Background(), schemas.EventQuery{
+				Type:       string(schemas.EventTypePropertyTypeSimple),
+				Assets:     []string{asset.AssetPath},
+				EventTypes: []string{eventType.Name},
+			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: tt.version})
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.wantMethod, gotMethod)
+			assert.Equal(t, tt.wantPath, gotPath)
+		})
+	}
+}
+
+// Only simple queries limit the fetched properties to the selection. Periodic
+// queries select periodic properties but label each series with every simple
+// property, so they need all of them.
+func TestHandleEventQueryLimitsFetchedPropertiesForSimpleQueries(t *testing.T) {
+	t.Parallel()
+
+	asset := schemas.Asset{
+		BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "machine"},
+		AssetPath: `\\site\\machine`,
+	}
+	eventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Batch"}}
+	batch := schemas.EventTypeProperty{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "batch"}, EventTypeUUID: eventType.UUID, Type: schemas.EventTypePropertyTypeSimple}
+	recipe := schemas.EventTypeProperty{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "recipe"}, EventTypeUUID: eventType.UUID, Type: schemas.EventTypePropertyTypeSimple}
+
+	tests := []struct {
+		name       string
+		queryType  schemas.PropertyType
+		properties []string
+		want       []string
+	}{
+		{name: "simple query", queryType: schemas.EventTypePropertyTypeSimple, properties: []string{"batch"}, want: []string{batch.UUID.String()}},
+		{name: "simple query selecting by property UUID", queryType: schemas.EventTypePropertyTypeSimple, properties: []string{recipe.UUID.String()}, want: []string{recipe.UUID.String()}},
+		{name: "simple query without a selection", queryType: schemas.EventTypePropertyTypeSimple, want: nil},
+		{name: "periodic query", queryType: schemas.EventTypePropertyTypePeriodic, properties: []string{"profile"}, want: nil},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var gotBody struct{ IncludedEventPropertyUUIDs []string }
+			server := newFakeHistorianServer(t, fakeHistorianData{
+				assetsByPath:        map[string]schemas.Asset{asset.AssetPath: asset},
+				assetsByUUID:        map[string]schemas.Asset{asset.UUID.String(): asset},
+				eventTypesByKey:     map[string]schemas.EventType{eventType.Name: eventType},
+				allEventTypes:       []schemas.EventType{eventType},
+				eventTypeProperties: []schemas.EventTypeProperty{batch, recipe},
+				onEventsRequest:     func(r *http.Request) { _ = json.NewDecoder(r.Body).Decode(&gotBody) },
+			})
+			t.Cleanup(server.Close)
+
+			apiClient, err := api.NewAPIWithToken(server.URL, "test-token", "test-org")
+			require.NoError(t, err)
+			ds := &HistorianDataSource{API: apiClient}
+
+			startTime := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+			_, err = ds.handleEventQuery(context.Background(), schemas.EventQuery{
+				Type:       string(tt.queryType),
+				Assets:     []string{asset.AssetPath},
+				EventTypes: []string{eventType.Name},
+				Properties: tt.properties,
+			}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.3.0"})
+			require.NoError(t, err)
+
+			assert.ElementsMatch(t, tt.want, gotBody.IncludedEventPropertyUUIDs)
 		})
 	}
 }
