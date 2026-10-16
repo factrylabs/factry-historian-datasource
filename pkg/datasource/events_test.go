@@ -576,7 +576,7 @@ func TestEventTableSelectedPropertyNamedLikeBuiltInColumn(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, rowLen)
 	assert.Equal(t, []float64{60, 60}, concreteFloats(t, frames[0], DurationColumnName))
-	assert.Equal(t, []float64{5, 5}, concreteFloats(t, frames[0], DurationColumnName+" (property)"))
+	assert.Equal(t, []float64{5, 5}, concreteFloats(t, frames[0], DurationColumnName+propertyColumnSuffix))
 }
 
 // The parent columns follow the same rule: a parent event property named like a
@@ -607,7 +607,7 @@ func TestEventTableParentPropertyNamedLikeBuiltInColumn(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, rowLen)
 	assert.Equal(t, []float64{60}, concreteFloats(t, frames[0], parentEventPrefix+DurationColumnName))
-	assert.Equal(t, []float64{5}, concreteFloats(t, frames[0], parentEventPrefix+DurationColumnName+" (property)"))
+	assert.Equal(t, []float64{5}, concreteFloats(t, frames[0], parentEventPrefix+DurationColumnName+propertyColumnSuffix))
 }
 
 // Historian >= 8.2 validates query parameters against its OpenAPI spec and

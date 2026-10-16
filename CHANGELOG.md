@@ -17,6 +17,7 @@
 - Fixed event property filters whose template variable resolves to nothing being sent as `NaN` or an empty value instead of being skipped, and variables in property filters of older saved queries not being resolved.
 - Fixed `IN` and `NOT IN` event property filters on a number or boolean property sending their values as strings, so filtering on a multi-value variable did not apply.
 - Fixed the search suggestions of the asset picker staying open after clicking outside it. They now also close on Escape.
+- Fixed event queries failing with "frame has different field lengths" when the event type has a property named like a built-in column, such as `Duration` or `StartTime`. Such a property now shows as its own column with a ` (property)` suffix.
 
 ### Changes
 
