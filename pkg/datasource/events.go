@@ -29,7 +29,34 @@ const (
 	EventTypeUUIDColumnName   = "EventTypeUUID"
 
 	parentEventPrefix = "Parent_"
+
+	// propertyColumnSuffix is appended to an event property column whose name
+	// matches a built-in event column, so both can live in the same frame
+	propertyColumnSuffix = " (property)"
 )
+
+// builtInEventColumnNames are the columns every simple event frame starts with
+var builtInEventColumnNames = map[string]struct{}{
+	EventUUIDColumnName:       {},
+	ParentEventUUIDColumnName: {},
+	AssetUUIDColumnName:       {},
+	EventTypeUUIDColumnName:   {},
+	AssetColumnName:           {},
+	AssetPathColumnName:       {},
+	EventTypeColumnName:       {},
+	StartTimeColumnName:       {},
+	StopTimeColumnName:        {},
+	DurationColumnName:        {},
+}
+
+// propertyColumnName returns the column name of an event property in a simple
+// event frame
+func propertyColumnName(prefix string, propertyName string) string {
+	if _, ok := builtInEventColumnNames[propertyName]; ok {
+		return prefix + propertyName + propertyColumnSuffix
+	}
+	return prefix + propertyName
+}
 
 // EventQueryResultToDataFrame converts a event query result to data frames
 func EventQueryResultToDataFrame(includeParentInfo bool, multipleAssetsSelected bool, assets []schemas.Asset, events []schemas.Event, eventTypes []schemas.EventType, eventTypeProperties []schemas.EventTypeProperty, selectedProperties map[string]struct{}, assetPropertyFieldTypes map[string]data.FieldType, eventAssetPropertyFrames map[uuid.UUID]data.Frames) (data.Frames, error) {
@@ -374,7 +401,7 @@ func buildSimpleFieldsForEvent(prefix string, eventTypeProperties []schemas.Even
 			}
 		}
 
-		parentPropertyFieldName := prefix + parentEventTypeProperty.Name
+		parentPropertyFieldName := propertyColumnName(prefix, parentEventTypeProperty.Name)
 		var parentField *data.Field
 		switch parentEventTypeProperty.Datatype {
 		case schemas.EventTypePropertyDatatypeBool:
@@ -419,17 +446,18 @@ func fillFields(prefix string, fieldByColumn map[string]*data.Field, event *sche
 			continue
 		}
 
-		if _, ok := fieldByColumn[prefix+eventTypeProperty.Name]; !ok {
+		field, ok := fieldByColumn[propertyColumnName(prefix, eventTypeProperty.Name)]
+		if !ok {
 			continue
 		}
 
 		if event.Properties == nil {
-			addValueToField(fieldByColumn[prefix+eventTypeProperty.Name], nil)
+			addValueToField(field, nil)
 			continue
 		}
 
-		setUOMFieldConfig(fieldByColumn[prefix+eventTypeProperty.Name], eventTypeProperty)
-		addValueToField(fieldByColumn[prefix+eventTypeProperty.Name], event.Properties.Properties[eventTypeProperty.Name])
+		setUOMFieldConfig(field, eventTypeProperty)
+		addValueToField(field, event.Properties.Properties[eventTypeProperty.Name])
 	}
 }
 
@@ -558,7 +586,8 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 			continue
 		}
 
-		if _, ok := fieldByColumn[eventTypeProperty.Name]; ok {
+		columnName := propertyColumnName("", eventTypeProperty.Name)
+		if _, ok := fieldByColumn[columnName]; ok {
 			continue
 		}
 
@@ -573,18 +602,18 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 		var field *data.Field
 		switch eventTypeProperty.Datatype {
 		case schemas.EventTypePropertyDatatypeBool:
-			field = data.NewField(eventTypeProperty.Name, nil, []*bool{})
+			field = data.NewField(columnName, nil, []*bool{})
 		case schemas.EventTypePropertyDatatypeNumber:
-			field = data.NewField(eventTypeProperty.Name, nil, []*float64{})
+			field = data.NewField(columnName, nil, []*float64{})
 		case schemas.EventTypePropertyDatatypeString:
-			field = data.NewField(eventTypeProperty.Name, nil, []*string{})
+			field = data.NewField(columnName, nil, []*string{})
 		default:
 			// Unknown datatypes fall back to a nullable string column
-			field = data.NewField(eventTypeProperty.Name, nil, []*string{})
+			field = data.NewField(columnName, nil, []*string{})
 		}
 
 		fields = append(fields, field)
-		fieldByColumn[eventTypeProperty.Name] = field
+		fieldByColumn[columnName] = field
 	}
 
 	parentFields := []*data.Field{}
