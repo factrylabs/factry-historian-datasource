@@ -194,6 +194,8 @@ Returns simple event info and properties in a format usable for the table panel.
 - Duration
 - ... (properties)
 
+A property named like one of the columns above gets a ` (property)` suffix, e.g. `Duration (property)`.
+
 The name of the frame is the name of the event type
 
 #### Periodic query
