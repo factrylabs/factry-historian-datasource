@@ -16,6 +16,7 @@ import {
   matchedAssets,
   NIL_UUID,
   resolveAssetLabel,
+  resolveAssetsWithProperties,
   resolveSelectedAssets,
   searchAssetsAndProperties,
   templateVariablesToCascaderOptions,
@@ -67,11 +68,9 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
     const selectedValue = props.overrideAssets?.[0]
     const { label, asset } = await resolveAssetLabel(props.datasource, selectedValue)
     setInitialLabel(label)
-    if (asset) {
-      setSelectedAssets([asset])
-      const properties = await props.datasource.getAssetProperties({ AssetUUIDs: [asset.UUID] })
-      setAssetProperties(properties)
-    }
+    const { assets, properties } = await resolveAssetsWithProperties(props.datasource, selectedValue, asset)
+    setSelectedAssets(assets)
+    setAssetProperties(properties)
   }, [props.overrideAssets, props.datasource])
 
   const fetchAssetsAndProperties = useCallback(async () => {
@@ -92,12 +91,18 @@ export const EventAssetProperties = (props: Props): JSX.Element => {
   useEffect(() => {
     if (loading) {
       ;(async () => {
-        if (lazyEnabled) {
-          await Promise.all([fetchRootAssets(), resolveInitialLabel()])
-        } else {
-          await fetchAssetsAndProperties()
+        try {
+          if (lazyEnabled) {
+            await Promise.all([fetchRootAssets(), resolveInitialLabel()])
+          } else {
+            await fetchAssetsAndProperties()
+          }
+        } catch (error) {
+          notifyError('Failed to load assets or properties', error)
+        } finally {
+          // Render the editor even when loading fails, so the query can be fixed.
+          setLoading(false)
         }
-        setLoading(false)
       })()
     }
   }, [loading, lazyEnabled, fetchRootAssets, resolveInitialLabel, fetchAssetsAndProperties])

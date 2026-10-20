@@ -148,19 +148,27 @@ export async function searchAssetsAndProperties(
   return assetResults.concat(propertyResults)
 }
 
-// Resolves a cascader selection (UUID, regex, or template variable) to the
-// concrete assets it refers to (lazy, >= v8.2.0 path).
+// Resolves a cascader selection (UUID, path, regex, or template variable) to the
+// concrete assets it refers to (lazy, >= v8.2.0 path), the way the query does.
 export async function resolveSelectedAssets(datasource: DataSource, asset: string): Promise<Asset[]> {
-  if (isUUID(asset)) {
-    return (await datasource.getAssets({ UUIDs: [asset] })).filter((a) => a.UUID === asset)
-  }
-  if (isRegex(asset)) {
-    const candidates = await datasource.getAssets({ Keyword: asset })
-    return matchedAssets(datasource.multiSelectReplace(asset), candidates)
-  }
-  // Template variable: expand to UUIDs.
-  const uuids = datasource.multiSelectReplace(asset).filter(isUUID)
-  return uuids.length > 0 ? datasource.getAssets({ UUIDs: uuids }) : []
+  return datasource.resolveAssets(datasource.multiSelectReplace(asset))
+}
+
+// Resolves a saved selection to its assets and their asset properties (lazy,
+// >= v8.2.0 path). An asset resolveAssetLabel already found is used as is.
+export async function resolveAssetsWithProperties(
+  datasource: DataSource,
+  selectedValue: string | undefined,
+  resolvedAsset?: Asset
+): Promise<{ assets: Asset[]; properties: AssetProperty[] }> {
+  const assets = resolvedAsset
+    ? [resolvedAsset]
+    : selectedValue
+      ? await resolveSelectedAssets(datasource, selectedValue)
+      : []
+  const properties =
+    assets.length > 0 ? await datasource.getAssetProperties({ AssetUUIDs: assets.map((a) => a.UUID) }) : []
+  return { assets, properties }
 }
 
 // Fetches the child options of an asset node for lazy loading: child assets

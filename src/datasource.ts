@@ -478,6 +478,18 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
     return this.cachedRequest(cacheKey, () => this.getResource('assets', params))
   }
 
+  // Resolves asset UUIDs, paths and regexes to assets in the plugin backend, with
+  // the code the query uses (GetFilteredAssets).
+  async resolveAssets(values: string[]): Promise<Asset[]> {
+    // Drop an invalid regex like getAssets does, the historian would reject it.
+    const params = { Assets: values.filter((v) => v !== '' && !(isRegex(v) && !isValidRegex(v))) }
+    if (params.Assets.length === 0) {
+      return []
+    }
+    const cacheKey = `resolveAssets:${JSON.stringify(params)}`
+    return this.cachedRequest(cacheKey, () => this.getResource('assets/resolve', params))
+  }
+
   async getAssetProperties(filter?: AssetPropertyFilter): Promise<AssetProperty[]> {
     let params: Record<string, unknown> = {}
     if (filter) {

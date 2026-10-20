@@ -56,6 +56,7 @@ func (ds *HistorianDataSource) initializeResourceRoutes() backend.CallResourceHa
 	mux.HandleFunc("GET /databases", handleJSON(ds.handleGetDatabases))
 
 	mux.HandleFunc("GET /assets", handleJSON(ds.handleGetAssets))
+	mux.HandleFunc("GET /assets/resolve", handleJSON(ds.handleResolveAssets))
 
 	mux.HandleFunc("GET /asset-properties", handleJSON(ds.handleGetAssetProperties))
 
@@ -105,6 +106,29 @@ func (ds *HistorianDataSource) handleGetDatabases(_ http.ResponseWriter, req *ht
 
 func (ds *HistorianDataSource) handleGetAssets(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
 	return ds.API.GetAssetsCached(req.Context(), req.URL.RawQuery)
+}
+
+// handleResolveAssets resolves asset UUIDs, paths and regexes with the code the
+// query uses, so the query editor offers the assets a query returns.
+func (ds *HistorianDataSource) handleResolveAssets(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
+	historianInfo, err := ds.API.GetInfoCached(req.Context())
+	if err != nil {
+		return nil, err
+	}
+
+	assets, err := ds.API.GetFilteredAssets(req.Context(), req.URL.Query()["Assets"], &historianInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	resolved := make([]schemas.Asset, 0, len(assets))
+	for _, asset := range assets {
+		resolved = append(resolved, asset)
+	}
+	slices.SortFunc(resolved, func(a, b schemas.Asset) int {
+		return strings.Compare(a.AssetPath, b.AssetPath)
+	})
+	return resolved, nil
 }
 
 func (ds *HistorianDataSource) handleGetAssetProperties(_ http.ResponseWriter, req *http.Request) (interface{}, error) {
