@@ -1,3 +1,5 @@
+import React from 'react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { Cascader, CascaderOption, CascaderProps } from './Cascader'
 import { createTheme } from '@grafana/data'
 
@@ -238,5 +240,74 @@ describe('Cascader.onSearchAsync', () => {
     const searchable = cascader.getSearchableOptions(options)
     expect(searchable).toHaveLength(2)
     expect(searchable.map((s) => s.label)).toEqual(['Alpha', 'Beta'])
+  })
+})
+
+const searchOptions: CascaderOption[] = [
+  { label: 'Pump-01', value: 'pump-uuid' },
+  { label: 'Tank-01', value: 'tank-uuid' },
+]
+
+function renderCascader(overrides: Partial<React.ComponentProps<typeof Cascader>> = {}) {
+  const onSelect = jest.fn()
+  render(<Cascader theme={createTheme()} options={searchOptions} onSelect={onSelect} {...overrides} />)
+  return { input: screen.getByRole('textbox'), onSelect }
+}
+
+describe('Cascader search suggestions', () => {
+  it('closes the suggestions when the input loses focus', () => {
+    const { input } = renderCascader()
+    fireEvent.change(input, { target: { value: 'Pump' } })
+    expect(screen.getByText('Pump-01')).toBeInTheDocument()
+
+    fireEvent.blur(input)
+
+    expect(screen.queryByText('Pump-01')).not.toBeInTheDocument()
+  })
+
+  it('closes the suggestions on Escape and keeps the typed text', () => {
+    const { input } = renderCascader()
+    fireEvent.change(input, { target: { value: 'Pump' } })
+
+    fireEvent.keyDown(input, { key: 'Escape', keyCode: 27 })
+
+    expect(screen.queryByText('Pump-01')).not.toBeInTheDocument()
+    expect(input).toHaveValue('Pump')
+  })
+
+  it('keeps focus in the input while a suggestion is pressed so the click still selects it', () => {
+    const { input, onSelect } = renderCascader()
+    fireEvent.change(input, { target: { value: 'Pump' } })
+    const suggestion = screen.getByText('Pump-01')
+    // jsdom does not implement innerText, which the click handler reads.
+    Object.defineProperty(suggestion, 'innerText', { value: suggestion.textContent })
+
+    // A false return means the default (moving focus out of the input) was prevented.
+    expect(fireEvent.mouseDown(suggestion)).toBe(false)
+    fireEvent.click(suggestion)
+
+    expect(onSelect).toHaveBeenLastCalledWith('pump-uuid')
+  })
+
+  it('does not reopen the suggestions when an async search resolves after the input lost focus', async () => {
+    jest.useFakeTimers()
+    try {
+      let resolve: (v: Array<{ label: string; value: string[] }>) => void = () => {}
+      const onSearchAsync = jest.fn(() => new Promise<Array<{ label: string; value: string[] }>>((r) => (resolve = r)))
+      const { input } = renderCascader({ onSearchAsync })
+      fireEvent.change(input, { target: { value: '/Pump.*/' } })
+      act(() => {
+        jest.advanceTimersByTime(300)
+      })
+
+      fireEvent.blur(input)
+      await act(async () => {
+        resolve([{ label: 'Pump-01', value: ['pump-uuid'] }])
+      })
+
+      expect(screen.queryByText('Pump-01')).not.toBeInTheDocument()
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })
