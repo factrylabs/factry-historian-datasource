@@ -28,8 +28,15 @@ jest.mock('components/Cascader/Cascader', () => ({
   ),
 }))
 
+// AssetProperties test double: list the property options Assets offers.
 jest.mock('components/util/AssetPropertiesSelect', () => ({
-  AssetProperties: () => null,
+  AssetProperties: ({ assetProperties }: { assetProperties: Array<{ UUID: string; Name: string }> }) => (
+    <ul data-testid="properties">
+      {assetProperties.map((p) => (
+        <li key={p.UUID}>{p.Name}</li>
+      ))}
+    </ul>
+  ),
 }))
 
 jest.mock('./QueryOptions', () => ({
@@ -43,7 +50,7 @@ const createMockDatasource = () =>
     multiSelectReplace: (value: string) => [value],
   }) as unknown as DataSource
 
-const renderComponent = (assets: string[]) => {
+const renderComponent = (assets: string[], datasource: DataSource = createMockDatasource()) => {
   const query: AssetMeasurementQuery = {
     Assets: assets,
     AssetProperties: [],
@@ -54,7 +61,7 @@ const renderComponent = (assets: string[]) => {
     <Assets
       query={query}
       seriesLimit={0}
-      datasource={createMockDatasource()}
+      datasource={datasource}
       appIsAlertingType={false}
       templateVariables={[]}
       onChangeAssetMeasurementQuery={jest.fn()}
@@ -78,5 +85,30 @@ describe('Assets', () => {
     await waitFor(() => {
       expect(screen.getByTestId('assets')).toHaveValue('$myVar')
     })
+  })
+
+  it('offers the properties of every asset a saved multi-level regex matches', async () => {
+    const tank1 = { UUID: 'a1', Name: 'Tank', AssetPath: 'Site\\Line 1\\Tank' }
+    const tank2 = { UUID: 'a2', Name: 'Tank', AssetPath: 'Site\\Line 2\\Tank' }
+    const datasource = {
+      ...createMockDatasource(),
+      historianInfo: { Version: 'v8.2.0' },
+      // The historian matches a regex Path against the asset path.
+      getAssets: jest.fn(async (filter?: { Path?: string }) => (filter?.Path ? [tank1, tank2] : [])),
+      getAssetProperties: jest.fn(async (filter?: { AssetUUIDs?: string[] }) =>
+        filter?.AssetUUIDs?.includes('a1') && filter.AssetUUIDs.includes('a2')
+          ? [
+              { UUID: 'p1', Name: 'Level', AssetUUID: 'a1' },
+              { UUID: 'p2', Name: 'Temperature', AssetUUID: 'a2' },
+            ]
+          : []
+      ),
+    } as unknown as DataSource
+    renderComponent(['/Site\\\\Line.*\\\\Tank/'], datasource)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('properties')).toHaveTextContent('Level')
+    })
+    expect(screen.getByTestId('properties')).toHaveTextContent('Temperature')
   })
 })

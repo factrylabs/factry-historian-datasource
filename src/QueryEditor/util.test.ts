@@ -86,12 +86,14 @@ describe('resolveSelectedAssets', () => {
     expect(ds.getAssets).toHaveBeenCalledWith({ UUIDs: [UUID] })
   })
 
-  it('resolves a regex selection via keyword search, then matches by regex', async () => {
-    const a1 = { UUID: 'u1', Name: 'pump-1', AssetPath: 'pump-1' } as Asset
-    const a2 = { UUID: 'u2', Name: 'valve-1', AssetPath: 'valve-1' } as Asset
-    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([a1, a2]) })
-    expect(await resolveSelectedAssets(ds, '/pump.*/')).toEqual([a1])
-    expect(ds.getAssets).toHaveBeenCalledWith({ Keyword: '/pump.*/' })
+  it('resolves a regex selection against the asset path, like the query does', async () => {
+    const tank = { UUID: 'u1', Name: 'Tank', AssetPath: 'Site\\Line 1\\Tank' } as Asset
+    // The historian matches a regex Keyword against the asset name and a regex
+    // Path against the asset path.
+    const ds = makeDS({
+      getAssets: jest.fn(async (filter: { Keyword?: string; Path?: string }) => (filter.Path ? [tank] : [])),
+    })
+    expect(await resolveSelectedAssets(ds, '/Site\\\\Line.*\\\\Tank/')).toEqual([tank])
   })
 
   it('expands a template variable to UUIDs', async () => {
