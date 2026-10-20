@@ -914,3 +914,46 @@ describe('DataSource.getLookupTableValues', () => {
     expect(bodies()).toHaveLength(2)
   })
 })
+
+describe('DataSource.resolveAssets', () => {
+  function makeResolvingDataSource(): { ds: DataSource; requests: Array<{ path: string; params?: Record<string, unknown> }> } {
+    const ds = makeDataSource(makeTemplateSrv({}))
+    const requests: Array<{ path: string; params?: Record<string, unknown> }> = []
+    ;(
+      ds as unknown as { getResource: (path: string, params?: Record<string, unknown>) => Promise<unknown> }
+    ).getResource = (path: string, params?: Record<string, unknown>) => {
+      requests.push({ path, params })
+      return Promise.resolve([])
+    }
+    return { ds, requests }
+  }
+
+  it('asks the backend to resolve the values the way the query does', async () => {
+    const { ds, requests } = makeResolvingDataSource()
+    await ds.resolveAssets(['11111111-1111-1111-1111-111111111111', 'Site\\Line 1\\Tank', '', '/Line 2/'])
+    expect(requests).toEqual([
+      {
+        path: 'assets/resolve',
+        params: { Assets: ['11111111-1111-1111-1111-111111111111', 'Site\\Line 1\\Tank', '/Line 2/'] },
+      },
+    ])
+  })
+
+  it('drops a slash-wrapped value that is not a valid regex, like getAssets', async () => {
+    const { ds, requests } = makeResolvingDataSource()
+    await ds.resolveAssets(['/Site(/', 'Site\\Line 1\\Tank'])
+    expect(requests).toEqual([{ path: 'assets/resolve', params: { Assets: ['Site\\Line 1\\Tank'] } }])
+  })
+
+  it('sends no request when only an invalid regex is left', async () => {
+    const { ds, requests } = makeResolvingDataSource()
+    expect(await ds.resolveAssets(['/Site(/'])).toEqual([])
+    expect(requests).toEqual([])
+  })
+
+  it('sends no request without a value to resolve', async () => {
+    const { ds, requests } = makeResolvingDataSource()
+    expect(await ds.resolveAssets(['', ''])).toEqual([])
+    expect(requests).toEqual([])
+  })
+})

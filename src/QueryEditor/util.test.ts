@@ -79,35 +79,32 @@ describe('resolveAssetLabel', () => {
 })
 
 describe('resolveSelectedAssets', () => {
-  it('fetches a UUID selection by UUIDs', async () => {
+  // The plugin backend resolves the values with GetFilteredAssets, the code the
+  // query uses: UUIDs by UUID, any other value (a path or a regex) by Path.
+  it('resolves a UUID selection through the backend', async () => {
     const asset = { UUID, Name: 'Pump' } as Asset
-    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([asset]) })
+    const ds = makeDS({ resolveAssets: jest.fn().mockResolvedValue([asset]) })
     expect(await resolveSelectedAssets(ds, UUID)).toEqual([asset])
-    expect(ds.getAssets).toHaveBeenCalledWith({ UUIDs: [UUID] })
+    expect(ds.resolveAssets).toHaveBeenCalledWith([UUID])
   })
 
-  it('resolves a regex selection via keyword search, then matches by regex', async () => {
-    const a1 = { UUID: 'u1', Name: 'pump-1', AssetPath: 'pump-1' } as Asset
-    const a2 = { UUID: 'u2', Name: 'valve-1', AssetPath: 'valve-1' } as Asset
-    const ds = makeDS({ getAssets: jest.fn().mockResolvedValue([a1, a2]) })
-    expect(await resolveSelectedAssets(ds, '/pump.*/')).toEqual([a1])
-    expect(ds.getAssets).toHaveBeenCalledWith({ Keyword: '/pump.*/' })
-  })
-
-  it('expands a template variable to UUIDs', async () => {
-    const asset = { UUID, Name: 'Pump' } as Asset
-    const ds = makeDS({
-      getAssets: jest.fn().mockResolvedValue([asset]),
-      multiSelectReplace: jest.fn(() => [UUID]),
-    })
-    expect(await resolveSelectedAssets(ds, '$asset')).toEqual([asset])
-    expect(ds.getAssets).toHaveBeenCalledWith({ UUIDs: [UUID] })
-  })
-
-  it('returns empty (without fetching) when a template expands to no UUIDs', async () => {
-    const ds = makeDS({ multiSelectReplace: jest.fn(() => ['not-a-uuid']) })
-    expect(await resolveSelectedAssets(ds, '$asset')).toEqual([])
+  it('resolves a regex selection through the backend, like the query does', async () => {
+    const tank = { UUID: 'u1', Name: 'Tank', AssetPath: 'Site\\Line 1\\Tank' } as Asset
+    const ds = makeDS({ resolveAssets: jest.fn().mockResolvedValue([tank]) })
+    expect(await resolveSelectedAssets(ds, '/Site\\\\Line.*\\\\Tank/')).toEqual([tank])
+    expect(ds.resolveAssets).toHaveBeenCalledTimes(1)
+    expect(ds.resolveAssets).toHaveBeenCalledWith(['/Site\\\\Line.*\\\\Tank/'])
     expect(ds.getAssets).not.toHaveBeenCalled()
+  })
+
+  it('expands a template variable before resolving its values', async () => {
+    const tank = { UUID: 'u1', Name: 'Tank', AssetPath: 'Site\\Line 1\\Tank' } as Asset
+    const ds = makeDS({
+      resolveAssets: jest.fn().mockResolvedValue([tank]),
+      multiSelectReplace: jest.fn(() => [UUID, 'Site\\Line 1\\Tank']),
+    })
+    expect(await resolveSelectedAssets(ds, '$asset')).toEqual([tank])
+    expect(ds.resolveAssets).toHaveBeenCalledWith([UUID, 'Site\\Line 1\\Tank'])
   })
 })
 

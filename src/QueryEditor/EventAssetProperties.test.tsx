@@ -5,6 +5,7 @@ import { DataSource } from 'datasource'
 
 jest.mock('@grafana/runtime', () => ({
   getTemplateSrv: () => ({ getVariables: () => [] }),
+  getAppEvents: () => ({ publish: jest.fn() }),
   config: { featureToggles: {} },
 }))
 
@@ -27,8 +28,24 @@ jest.mock('components/Cascader/Cascader', () => ({
   ),
 }))
 
+// AssetProperties test double: list the property options offered, which like
+// the real select are the properties of the selected assets.
 jest.mock('components/util/AssetPropertiesSelect', () => ({
-  AssetProperties: () => null,
+  AssetProperties: ({
+    assetProperties,
+    selectedAssets,
+  }: {
+    assetProperties: Array<{ UUID: string; Name: string; AssetUUID: string }>
+    selectedAssets: Array<{ UUID: string }>
+  }) => (
+    <ul data-testid="properties">
+      {assetProperties
+        .filter((p) => selectedAssets.some((a) => a.UUID === p.AssetUUID))
+        .map((p) => (
+          <li key={p.UUID}>{p.Name}</li>
+        ))}
+    </ul>
+  ),
 }))
 
 jest.mock('./QueryOptions', () => ({
@@ -42,10 +59,10 @@ const createMockDatasource = () =>
     multiSelectReplace: jest.fn((value?: string) => (value ? [value] : [])),
   }) as unknown as DataSource
 
-const renderComponent = (overrideAssets: string[]) =>
+const renderComponent = (overrideAssets: string[], datasource: DataSource = createMockDatasource()) =>
   render(
     <EventAssetProperties
-      datasource={createMockDatasource()}
+      datasource={datasource}
       seriesLimit={0}
       overrideAssets={overrideAssets}
       selectedAssetProperties={[]}
@@ -73,6 +90,44 @@ describe('EventAssetProperties', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('override-assets')).toHaveValue('$myVar')
+    })
+  })
+
+  it('offers the properties of every asset a saved multi-level regex matches', async () => {
+    const tank1 = { UUID: 'a1', Name: 'Tank', AssetPath: 'Site\\Line 1\\Tank' }
+    const tank2 = { UUID: 'a2', Name: 'Tank', AssetPath: 'Site\\Line 2\\Tank' }
+    const datasource = {
+      ...createMockDatasource(),
+      historianInfo: { Version: 'v8.2.0' },
+      resolveAssets: jest.fn().mockResolvedValue([tank1, tank2]),
+      getAssetProperties: jest.fn(async (filter?: { AssetUUIDs?: string[] }) =>
+        filter?.AssetUUIDs?.includes('a1') && filter.AssetUUIDs.includes('a2')
+          ? [
+              { UUID: 'p1', Name: 'Level', AssetUUID: 'a1' },
+              { UUID: 'p2', Name: 'Temperature', AssetUUID: 'a2' },
+            ]
+          : []
+      ),
+    } as unknown as DataSource
+    renderComponent(['/Site\\\\Line.*\\\\Tank/'], datasource)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('properties')).toHaveTextContent('Level')
+    })
+    expect(screen.getByTestId('properties')).toHaveTextContent('Temperature')
+  })
+
+  it('still renders the editor when resolving a saved regex fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    const datasource = {
+      ...createMockDatasource(),
+      historianInfo: { Version: 'v8.2.0' },
+      resolveAssets: jest.fn().mockRejectedValue(new Error('invalid regex')),
+    } as unknown as DataSource
+    renderComponent(['/Site(/'], datasource)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('override-assets')).toHaveValue('/Site(/')
     })
   })
 })
