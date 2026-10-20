@@ -155,8 +155,9 @@ export async function resolveSelectedAssets(datasource: DataSource, asset: strin
     return (await datasource.getAssets({ UUIDs: [asset] })).filter((a) => a.UUID === asset)
   }
   if (isRegex(asset)) {
-    const candidates = await datasource.getAssets({ Keyword: asset })
-    return matchedAssets(datasource.multiSelectReplace(asset), candidates)
+    // Match on the asset path, as the query does: a regex Keyword only matches
+    // the asset name, so a pattern spanning tree levels would match nothing.
+    return datasource.getAssets({ Path: asset })
   }
   // Template variable: expand to UUIDs.
   const uuids = datasource.multiSelectReplace(asset).filter(isUUID)

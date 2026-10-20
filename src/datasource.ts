@@ -465,6 +465,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
       if (filter.Keyword) {
         params.Keyword = this.templateSrv.replace(filter.Keyword, filter.ScopedVars)
       }
+      if (filter.Path) {
+        params.Path = this.templateSrv.replace(filter.Path, filter.ScopedVars)
+      }
 
       if (filter.Keyword && isRegex(filter.Keyword) && !isValidRegex(filter.Keyword)) {
         return []

@@ -62,9 +62,14 @@ export const Assets = (props: Props): JSX.Element => {
     const selectedValue = props.query.Assets?.[0]
     const { label, asset } = await resolveAssetLabel(props.datasource, selectedValue)
     setInitialLabel(label)
-    if (asset) {
-      setSelectedAssets([asset])
-      const properties = await props.datasource.getAssetProperties({ AssetUUIDs: [asset.UUID] })
+    const assets = asset
+      ? [asset]
+      : selectedValue && (isRegex(selectedValue) || selectedValue.startsWith('$'))
+        ? await resolveSelectedAssets(props.datasource, selectedValue)
+        : []
+    if (assets.length > 0) {
+      setSelectedAssets(assets)
+      const properties = await props.datasource.getAssetProperties({ AssetUUIDs: assets.map((a) => a.UUID) })
       setAssetProperties(properties)
     }
   }, [props.query.Assets, props.datasource])
