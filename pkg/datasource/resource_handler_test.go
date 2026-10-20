@@ -10,6 +10,7 @@ import (
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
+	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -218,4 +219,57 @@ func TestQueryLookupTableRowsWithoutAFilterReadsTheWholeTable(t *testing.T) {
 			assert.JSONEq(t, `{"Limit":0}`, body)
 		})
 	}
+}
+
+// The query editor resolves a saved asset selection through the same code as
+// the query (GetFilteredAssets), so a UUID, a literal path and a regex offer
+// the assets the query returns.
+func TestResolveAssetsResolvesLikeTheQuery(t *testing.T) {
+	t.Parallel()
+
+	pump := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Pump"}, AssetPath: `Site\Line 1\Pump`}
+	tank := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Tank"}, AssetPath: `Site\Line 1\Tank`}
+	mixer := schemas.Asset{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Mixer"}, AssetPath: `Site\Line 2\Mixer`}
+
+	historianMux := http.NewServeMux()
+	historianMux.HandleFunc("GET /api/info", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, schemas.HistorianInfo{Version: "v8.2.0"})
+	})
+	historianMux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		switch {
+		case query.Get("UUIDs[0]") == pump.UUID.String():
+			writeJSON(w, []schemas.Asset{pump})
+		case query.Get("Path") == tank.AssetPath:
+			writeJSON(w, []schemas.Asset{tank})
+		case query.Get("Path") == "/Line 2/":
+			writeJSON(w, []schemas.Asset{mixer})
+		default:
+			writeJSON(w, []schemas.Asset{})
+		}
+	})
+	ds := newFakeHistorianDataSource(t, historianMux)
+	ds.resourceHandler = ds.initializeResourceRoutes()
+
+	params := url.Values{"Assets": {pump.UUID.String(), tank.AssetPath, "/Line 2/"}}
+	var response *backend.CallResourceResponse
+	err := ds.CallResource(t.Context(), &backend.CallResourceRequest{
+		Method: http.MethodGet,
+		Path:   "assets/resolve",
+		URL:    "assets/resolve?" + params.Encode(),
+	}, backend.CallResourceResponseSenderFunc(func(res *backend.CallResourceResponse) error {
+		response = res
+		return nil
+	}))
+	require.NoError(t, err)
+	require.NotNil(t, response)
+	require.Equal(t, http.StatusOK, response.Status, string(response.Body))
+
+	assets := []schemas.Asset{}
+	require.NoError(t, json.Unmarshal(response.Body, &assets))
+	resolved := make([]uuid.UUID, 0, len(assets))
+	for _, asset := range assets {
+		resolved = append(resolved, asset.UUID)
+	}
+	assert.ElementsMatch(t, []uuid.UUID{pump.UUID, tank.UUID, mixer.UUID}, resolved)
 }
