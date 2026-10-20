@@ -27,7 +27,9 @@ export const Autocomplete = ({
   if (showSuggestions && activeLabel && !focusCascade) {
     if (filteredSuggestions.length) {
       suggestionsListComponent = (
-        <ul className={styles.container}>
+        // Keep focus in the input while a suggestion is pressed: the input's blur
+        // closes this list, which would otherwise swallow the click.
+        <ul className={styles.container} onMouseDown={(e) => e.preventDefault()}>
           {filteredSuggestions.map((suggestion, index) => {
             let className = styles.option
 

@@ -110,6 +110,9 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   static defaultProps = { changeOnSelect: true }
 
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  // Bumped on every search and on blur, so a response for an older search or one
+  // that lands after the input lost focus is dropped.
+  private searchSeq = 0
 
   componentWillUnmount() {
     if (this.searchDebounceTimer) {
@@ -202,8 +205,13 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
   }
 
   onBlurCascade = () => {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer)
+    }
+    this.searchSeq++
     this.setState({
       focusCascade: false,
+      showSuggestions: false,
     })
 
     this.props.onBlur?.()
@@ -222,6 +230,7 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       if (this.searchDebounceTimer) {
         clearTimeout(this.searchDebounceTimer)
       }
+      const seq = ++this.searchSeq
       if (userInput.length < 2) {
         this.setState({ showSuggestions: false, filteredSuggestions: [], searchResults: [] })
         return
@@ -229,8 +238,8 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
       this.searchDebounceTimer = setTimeout(() => {
         this.props.onSearchAsync!(userInput)
           .then((results) => {
-            // Ignore stale responses: the input changed while this request was in flight.
-            if (this.state.activeLabel !== userInput) {
+            // Ignore stale responses: the input changed or lost focus while this request was in flight.
+            if (seq !== this.searchSeq || this.state.activeLabel !== userInput) {
               return
             }
             this.setState({
@@ -330,6 +339,8 @@ export class Cascader extends PureComponent<CascaderProps, CascaderState> {
         showSuggestions: false,
         activeLabel: activeLabel,
       })
+    } else if (e.keyCode === 27) {
+      this.setState({ showSuggestions: false })
     } else if (e.keyCode === 38) {
       if (activeSuggestion === 0) {
         return
