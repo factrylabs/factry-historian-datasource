@@ -173,6 +173,35 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 	return response
 }
 
+// selectAssetProperties returns the properties of the given assets that match
+// the filter by name or UUID. An empty filter matches all properties. The result
+// is sorted by asset path, property name and UUID, so a series limit keeps the
+// same series on every query.
+func selectAssetProperties(assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, filter []string) []schemas.AssetProperty {
+	selected := make([]schemas.AssetProperty, 0, len(assetProperties))
+	for _, assetProperty := range assetProperties {
+		if _, ok := assets[assetProperty.AssetUUID]; !ok {
+			continue
+		}
+
+		assetPropertyUUIDStr := assetProperty.UUID.String()
+		if len(filter) == 0 || slices.ContainsFunc(filter, func(s string) bool {
+			return s == assetProperty.Name || s == assetPropertyUUIDStr
+		}) {
+			selected = append(selected, assetProperty)
+		}
+	}
+
+	slices.SortFunc(selected, func(a, b schemas.AssetProperty) int {
+		return cmp.Or(
+			cmp.Compare(assets[a.AssetUUID].AssetPath, assets[b.AssetUUID].AssetPath),
+			cmp.Compare(a.Name, b.Name),
+			cmp.Compare(a.UUID.String(), b.UUID.String()),
+		)
+	})
+	return selected
+}
+
 // Return the first non-empty DisplayNameFromDS value found in one of the fields
 func findDisplayNameFromDS(frame *data.Frame) string {
 	for i := range frame.Fields {
@@ -212,33 +241,12 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 	measurementUUIDs := map[string]struct{}{}
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 
-	propertiesByAssetUUIDAndID := map[uuid.UUID]map[string]schemas.AssetProperty{}
-	for _, assetProperty := range assetProperties {
-		if _, ok := propertiesByAssetUUIDAndID[assetProperty.AssetUUID]; !ok {
-			propertiesByAssetUUIDAndID[assetProperty.AssetUUID] = map[string]schemas.AssetProperty{}
-		}
-		propertiesByAssetUUIDAndID[assetProperty.AssetUUID][assetProperty.Name] = assetProperty
-		propertiesByAssetUUIDAndID[assetProperty.AssetUUID][assetProperty.UUID.String()] = assetProperty
-	}
-
-	selectedPropertyUUIDs := map[uuid.UUID]struct{}{}
-
-assetLoop:
-	for assetUUID := range assets {
-		for propertyName, assetProperty := range propertiesByAssetUUIDAndID[assetUUID] {
-			if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, propertyName) {
-				// each property is registered under both its name and its UUID, only select it once
-				if _, ok := selectedPropertyUUIDs[assetProperty.UUID]; ok {
-					continue
-				}
-				selectedPropertyUUIDs[assetProperty.UUID] = struct{}{}
-				measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
-				measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
-				// a non-positive seriesLimit means unlimited
-				if seriesLimit > 0 && len(measurementUUIDs) >= seriesLimit {
-					break assetLoop
-				}
-			}
+	for _, assetProperty := range selectAssetProperties(assets, assetProperties, assetMeasurementQuery.AssetProperties) {
+		measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
+		measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
+		// a non-positive seriesLimit means unlimited
+		if seriesLimit > 0 && len(measurementUUIDs) >= seriesLimit {
+			break
 		}
 	}
 

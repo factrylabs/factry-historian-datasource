@@ -21,10 +21,8 @@ import (
 )
 
 // An asset measurement query without a property filter must not return every
-// series twice. Properties are registered under both name and UUID in
-// propertiesByAssetUUIDAndID and the selection loop iterates all map entries,
-// so without deduplication each property is appended twice to the property map
-// and setAssetFrameNames then duplicates the frame.
+// series twice. A property selected twice makes setAssetFrameNames duplicate
+// its frame.
 func TestAssetMeasurementQueryWithoutPropertyFilterDoesNotDuplicateSeries(t *testing.T) {
 	t.Parallel()
 
