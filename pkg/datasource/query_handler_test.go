@@ -21,10 +21,8 @@ import (
 )
 
 // An asset measurement query without a property filter must not return every
-// series twice. Properties are registered under both name and UUID in
-// propertiesByAssetUUIDAndID and the selection loop iterates all map entries,
-// so without deduplication each property is appended twice to the property map
-// and setAssetFrameNames then duplicates the frame.
+// series twice. A property selected twice makes setAssetFrameNames duplicate
+// its frame.
 func TestAssetMeasurementQueryWithoutPropertyFilterDoesNotDuplicateSeries(t *testing.T) {
 	t.Parallel()
 
@@ -522,4 +520,87 @@ func TestGetMeasurementsServesRepeatedSearchFromCache(t *testing.T) {
 	assert.Equal(t, first, second)
 	assert.Len(t, recorder.queriesFor("/api/measurements"), 1, "the repeated search must be served from the cache")
 	assert.Len(t, recorder.queriesFor("/api/timeseries-databases"), 1, "the database list must be served from the cache")
+}
+
+// seriesLimitFixture returns three assets with ten properties each. The
+// properties come in reverse (asset path, name) order, so neither API order nor
+// map order matches the order a series limit must keep. The expected UUIDs are
+// the measurements of the first limit properties by asset path and name.
+func seriesLimitFixture(limit int) ([]schemas.Asset, []schemas.AssetProperty, []string) {
+	names := []string{"a", "b", "c"}
+	assets := make([]schemas.Asset, 0, len(names))
+	properties := make([]schemas.AssetProperty, 0, len(names)*10)
+	for _, name := range names {
+		asset := schemas.Asset{
+			BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: name},
+			AssetPath: "plant\\" + name,
+		}
+		assets = append(assets, asset)
+		for i := range 10 {
+			properties = append(properties, schemas.AssetProperty{
+				BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: fmt.Sprintf("p-%02d", i)},
+				AssetUUID:       asset.UUID,
+				MeasurementUUID: uuid.New(),
+			})
+		}
+	}
+
+	expected := make([]string, 0, limit)
+	for _, property := range properties[:limit] {
+		expected = append(expected, property.MeasurementUUID.String())
+	}
+	slices.Reverse(properties)
+	return assets, properties, expected
+}
+
+func frameMeasurementUUIDs(frames data.Frames) []string {
+	measurementUUIDs := make([]string, 0, len(frames))
+	for _, frame := range frames {
+		measurementUUIDs = append(measurementUUIDs, getMeasurementUUIDFromFrame(frame))
+	}
+	return measurementUUIDs
+}
+
+// A series limit must keep the first series by asset path and property name.
+// Selecting while iterating maps returns a random subset on every refresh.
+func TestAssetMeasurementQuerySeriesLimitKeepsFirstSeriesByAssetPathAndName(t *testing.T) {
+	t.Parallel()
+
+	const seriesLimit = 12
+	assets, properties, expected := seriesLimitFixture(seriesLimit)
+	ds, _ := multiAssetQueryFixture(t, assets, properties, 0)
+
+	timeRange := backend.TimeRange{From: time.Unix(0, 0).UTC(), To: time.Unix(3600, 0).UTC()}
+	for range 10 {
+		frames, err := ds.handleAssetMeasurementQuery(context.Background(), schemas.AssetMeasurementQuery{
+			Assets: []string{"plant"},
+		}, timeRange, time.Minute, seriesLimit, &schemas.HistorianInfo{Version: "v8.1.0"})
+		require.NoError(t, err)
+		require.ElementsMatch(t, expected, frameMeasurementUUIDs(frames))
+	}
+}
+
+// The event variant gets the asset properties as a slice in API order, and the
+// API does not sort them. It must keep the same series as a plain asset query.
+func TestEventAssetMeasurementQuerySeriesLimitKeepsFirstSeriesByAssetPathAndName(t *testing.T) {
+	t.Parallel()
+
+	const seriesLimit = 12
+	assets, properties, expected := seriesLimitFixture(seriesLimit)
+	ds, _ := multiAssetQueryFixture(t, assets, properties, 0)
+	assetsByUUID := map[uuid.UUID]schemas.Asset{}
+	for _, asset := range assets {
+		assetsByUUID[asset.UUID] = asset
+	}
+
+	stopTime := time.Unix(3600, 0).UTC()
+	frames, err := ds.handleEventAssetMeasurementQuery(context.Background(), "simple", schemas.Event{
+		StartTime: time.Unix(0, 0).UTC(),
+		StopTime:  &stopTime,
+	}, schemas.AssetMeasurementQuery{
+		Options: schemas.MeasurementQueryOptions{Aggregation: &schemas.Aggregation{Name: "mean"}},
+	}, assetsByUUID, properties, backend.TimeRange{}, time.Minute, seriesLimit)
+
+	require.NoError(t, err)
+	require.ElementsMatch(t, expected, frameMeasurementUUIDs(frames))
 }
