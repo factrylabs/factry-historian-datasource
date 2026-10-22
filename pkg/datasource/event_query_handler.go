@@ -183,22 +183,16 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 	measurementUUIDs := map[string]struct{}{}
 	measurementIndexToPropertyMap := make([]schemas.AssetProperty, 0)
 
-	for _, assetProperty := range assetProperties {
-		if _, ok := assets[assetProperty.AssetUUID]; !ok {
-			continue
-		}
-
-		if len(assetMeasurementQuery.AssetProperties) == 0 || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.UUID.String()) || slices.Contains(assetMeasurementQuery.AssetProperties, assetProperty.Name) {
-			// a non-positive seriesLimit means unlimited
-			if seriesLimit > 0 && len(measurementUUIDs) >= seriesLimit {
-				if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
-					break
-				}
+	for _, assetProperty := range selectAssetProperties(assets, assetProperties, assetMeasurementQuery.AssetProperties) {
+		// a non-positive seriesLimit means unlimited
+		if seriesLimit > 0 && len(measurementUUIDs) >= seriesLimit {
+			if _, ok := measurementUUIDs[assetProperty.MeasurementUUID.String()]; !ok {
+				break
 			}
-
-			measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
-			measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 		}
+
+		measurementUUIDs[assetProperty.MeasurementUUID.String()] = struct{}{}
+		measurementIndexToPropertyMap = append(measurementIndexToPropertyMap, assetProperty)
 	}
 
 	if len(measurementUUIDs) == 0 {
