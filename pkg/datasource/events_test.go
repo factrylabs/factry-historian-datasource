@@ -488,6 +488,128 @@ func TestUnknownEventPropertyDatatypeDoesNotPanic(t *testing.T) {
 	})
 }
 
+// eventsWithDurationProperty returns an event type with a simple number
+// property named like the built-in Duration column, and two 60s events whose
+// Duration property holds 5.
+func eventsWithDurationProperty() (schemas.EventType, []schemas.EventTypeProperty, []schemas.Event) {
+	eventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "batch"}}
+	properties := []schemas.EventTypeProperty{
+		{
+			BaseModel:     schemas.BaseModel{UUID: uuid.New(), Name: DurationColumnName},
+			Datatype:      schemas.EventTypePropertyDatatypeNumber,
+			Type:          schemas.EventTypePropertyTypeSimple,
+			EventTypeUUID: eventType.UUID,
+		},
+		{
+			BaseModel:     schemas.BaseModel{UUID: uuid.New(), Name: "density"},
+			Datatype:      schemas.EventTypePropertyDatatypeNumber,
+			Type:          schemas.EventTypePropertyTypeSimple,
+			EventTypeUUID: eventType.UUID,
+		},
+	}
+
+	startTime := time.Unix(0, 0).UTC()
+	stopTime := startTime.Add(time.Minute)
+	events := make([]schemas.Event, 0, 2)
+	for range 2 {
+		events = append(events, schemas.Event{
+			UUID:          uuid.New(),
+			AssetUUID:     uuid.New(),
+			EventTypeUUID: eventType.UUID,
+			StartTime:     startTime,
+			StopTime:      &stopTime,
+			Properties: &schemas.EventProperties{
+				Properties: schemas.Attributes{DurationColumnName: 5.0, "density": 1.2},
+			},
+		})
+	}
+
+	return eventType, properties, events
+}
+
+// concreteFloats returns the values of a nullable float64 field and fails the
+// test on a missing field or a nil value.
+func concreteFloats(t *testing.T, frame *data.Frame, name string) []float64 {
+	t.Helper()
+	field, idx := frame.FieldByName(name)
+	require.NotEqual(t, -1, idx, "missing field %q in frame %q", name, frame.Name)
+	values := make([]float64, 0, field.Len())
+	for i := range field.Len() {
+		v, ok := field.At(i).(*float64)
+		require.True(t, ok && v != nil, "field %q row %d is not a float", name, i)
+		values = append(values, *v)
+	}
+	return values
+}
+
+// A property named like a built-in column must not write into that column when
+// it is not selected. Otherwise every event appends a second value to the
+// built-in column and Grafana rejects the frame with "frame has different field
+// lengths" (bug 38222).
+func TestEventTableUnselectedPropertyNamedLikeBuiltInColumn(t *testing.T) {
+	t.Parallel()
+
+	eventType, properties, events := eventsWithDurationProperty()
+	frames, err := EventQueryResultToDataFrame(false, false, nil, events, []schemas.EventType{eventType}, properties,
+		map[string]struct{}{"density": {}}, map[string]data.FieldType{}, map[uuid.UUID]data.Frames{})
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+
+	rowLen, err := frames[0].RowLen()
+	require.NoError(t, err)
+	assert.Equal(t, 2, rowLen)
+	assert.Equal(t, []float64{60, 60}, concreteFloats(t, frames[0], DurationColumnName))
+}
+
+// A selected property named like a built-in column gets its own column, and
+// the built-in column keeps the event duration.
+func TestEventTableSelectedPropertyNamedLikeBuiltInColumn(t *testing.T) {
+	t.Parallel()
+
+	eventType, properties, events := eventsWithDurationProperty()
+	frames, err := EventQueryResultToDataFrame(false, false, nil, events, []schemas.EventType{eventType}, properties,
+		map[string]struct{}{}, map[string]data.FieldType{}, map[uuid.UUID]data.Frames{})
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+
+	rowLen, err := frames[0].RowLen()
+	require.NoError(t, err)
+	assert.Equal(t, 2, rowLen)
+	assert.Equal(t, []float64{60, 60}, concreteFloats(t, frames[0], DurationColumnName))
+	assert.Equal(t, []float64{5, 5}, concreteFloats(t, frames[0], DurationColumnName+propertyColumnSuffix))
+}
+
+// The parent columns follow the same rule: a parent event property named like a
+// built-in column gets its own Parent_ column next to the built-in one.
+func TestEventTableParentPropertyNamedLikeBuiltInColumn(t *testing.T) {
+	t.Parallel()
+
+	parentEventType, properties, parentEvents := eventsWithDurationProperty()
+	childEventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "phase"}}
+	childStop := parentEvents[0].StartTime.Add(time.Minute)
+	child := schemas.Event{
+		UUID:          uuid.New(),
+		AssetUUID:     uuid.New(),
+		EventTypeUUID: childEventType.UUID,
+		StartTime:     parentEvents[0].StartTime,
+		StopTime:      &childStop,
+		ParentUUID:    &parentEvents[0].UUID,
+		Parent:        &parentEvents[0],
+	}
+
+	frames, err := EventQueryResultToDataFrame(true, false, nil, []schemas.Event{child},
+		[]schemas.EventType{childEventType, parentEventType}, properties,
+		map[string]struct{}{}, map[string]data.FieldType{}, map[uuid.UUID]data.Frames{})
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+
+	rowLen, err := frames[0].RowLen()
+	require.NoError(t, err)
+	assert.Equal(t, 1, rowLen)
+	assert.Equal(t, []float64{60}, concreteFloats(t, frames[0], parentEventPrefix+DurationColumnName))
+	assert.Equal(t, []float64{5}, concreteFloats(t, frames[0], parentEventPrefix+DurationColumnName+propertyColumnSuffix))
+}
+
 // Historian >= 8.2 validates query parameters against its OpenAPI spec and
 // rejects an empty value with 400 'empty value is not allowed'. A statuses
 // variable that resolves to "" reaches the event filter as [""], which the form
