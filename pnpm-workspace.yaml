@@ -57,6 +57,9 @@ allowBuilds:
   '@parcel/watcher': true
   '@swc/core': true
   protobufjs: true
+  # Its postinstall only downloads the native binding when pnpm did not
+  # install the matching optional @unrs/resolver-binding-* package.
+  unrs-resolver: false
 
 minimumReleaseAgeExclude:
   - browserslist@4.28.9
