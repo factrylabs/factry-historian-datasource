@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -12,12 +15,58 @@ import (
 )
 
 // handleEvents implements GET /api/events for the form-encoded
-// schemas.EventFilter the backend sends. Events are generated relative to the
-// requested [StartTime, StopTime] window so they always land inside the
-// dashboard's time range.
+// schemas.EventFilter the backend sends.
 func handleEvents(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
+	writeEvents(w, r.URL.Query())
+}
 
+// handleEventQuery implements POST /api/events/query (Historian 8.2+). The
+// JSON filter is converted to the GET query parameters so both routes share
+// one filter implementation.
+func handleEventQuery(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Filter schemas.EventFilter
+		Limit  int
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeEvents(w, eventFilterValues(body.Filter, body.Limit))
+}
+
+func eventFilterValues(filter schemas.EventFilter, limit int) url.Values {
+	q := url.Values{}
+	if filter.StartTime != nil {
+		q.Set("StartTime", filter.StartTime.Format(time.RFC3339Nano))
+	}
+	if filter.StopTime != nil {
+		q.Set("StopTime", filter.StopTime.Format(time.RFC3339Nano))
+	}
+	for _, id := range filter.AssetUUIDs {
+		q.Add("AssetUUIDs", id.String())
+	}
+	for _, id := range filter.EventTypeUUIDs {
+		q.Add("EventTypeUUIDs", id.String())
+	}
+	q["Status"] = filter.Status
+	q.Set("Limit", strconv.Itoa(limit))
+	q.Set("Ascending", strconv.FormatBool(filter.Ascending))
+	for i, propertyFilter := range filter.PropertyFilter {
+		prefix := fmt.Sprintf("PropertyFilter[%d]", i)
+		q.Set(prefix+".Property", propertyFilter.Property)
+		q.Set(prefix+".Operator", propertyFilter.Operator)
+		for _, value := range propertyFilter.Value {
+			q.Add(prefix+".Value", fmt.Sprintf("%v", value))
+		}
+	}
+	return q
+}
+
+// writeEvents writes the events matching the filter in q. Events are
+// generated relative to the requested [StartTime, StopTime] window so they
+// always land inside the dashboard's time range.
+func writeEvents(w http.ResponseWriter, q url.Values) {
 	end := time.Now().UTC()
 	if t, ok := paramTime(q, "StopTime"); ok {
 		end = t
