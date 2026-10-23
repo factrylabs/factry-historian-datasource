@@ -62,6 +62,7 @@ func newMux() *http.ServeMux {
 	mux.HandleFunc("GET /api/event-type-properties/{uuid}/values", handleEventPropertyValues)
 	mux.HandleFunc("GET /api/event-configurations", handleEventConfigurations)
 	mux.HandleFunc("GET /api/events", handleEvents)
+	mux.HandleFunc("POST /api/events/query", handleEventQuery)
 	mux.HandleFunc("POST /api/timeseries/query", handleTimeseriesQuery)
 	mux.HandleFunc("POST /api/timeseries/{uuid}/raw-query", handleRawQuery)
 	mux.HandleFunc("GET /api/timeseries/measurements/{uuid}/tags", handleTagKeys)
