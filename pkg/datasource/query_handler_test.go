@@ -154,6 +154,9 @@ func TestQueryDataAttributesHistorianErrorsToDownstream(t *testing.T) {
 			}
 
 			mux := http.NewServeMux()
+			mux.HandleFunc("GET /api/info", func(w http.ResponseWriter, _ *http.Request) {
+				writeJSON(w, schemas.HistorianInfo{Version: "v8.2.0"})
+			})
 			mux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, _ *http.Request) {
 				writeJSON(w, []schemas.Asset{{
 					BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "plant"},
@@ -185,10 +188,7 @@ func TestQueryDataAttributesHistorianErrorsToDownstream(t *testing.T) {
 
 			rawQuery, err := json.Marshal(testCase.query)
 			require.NoError(t, err)
-			queryJSON, err := json.Marshal(Query{
-				Query:         rawQuery,
-				HistorianInfo: &schemas.HistorianInfo{Version: "v8.2.0"},
-			})
+			queryJSON, err := json.Marshal(Query{Query: rawQuery})
 			require.NoError(t, err)
 
 			response, err := ds.QueryData(context.Background(), &backend.QueryDataRequest{
@@ -523,4 +523,52 @@ func TestGetMeasurementsServesRepeatedSearchFromCache(t *testing.T) {
 	assert.Equal(t, first, second)
 	assert.Len(t, recorder.queriesFor("/api/measurements"), 1, "the repeated search must be served from the cache")
 	assert.Len(t, recorder.queriesFor("/api/timeseries-databases"), 1, "the database list must be served from the cache")
+}
+
+// The frontend saves historianInfo in the query model, so a dashboard keeps
+// the version it was saved with. Endpoint selection must follow the live
+// historian, or a downgraded historian gets requests it does not support.
+func TestEventQueryUsesLiveHistorianVersionOverPersistedVersion(t *testing.T) {
+	t.Parallel()
+
+	assetUUID := uuid.New()
+	var getCalls, postCalls atomic.Int32
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/info", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, schemas.HistorianInfo{Version: "v8.1.0"})
+	})
+	mux.HandleFunc("GET /api/assets", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, []schemas.Asset{{BaseModel: schemas.BaseModel{UUID: assetUUID, Name: "plant"}, AssetPath: "plant"}})
+	})
+	mux.HandleFunc("GET /api/event-types", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, []schemas.EventType{{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "batch"}}})
+	})
+	mux.HandleFunc("GET /api/events", func(w http.ResponseWriter, _ *http.Request) {
+		getCalls.Add(1)
+		writeJSON(w, []schemas.Event{})
+	})
+	mux.HandleFunc("POST /api/events/query", func(w http.ResponseWriter, _ *http.Request) {
+		postCalls.Add(1)
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	ds := newFakeHistorianDataSource(t, mux)
+
+	rawQuery, err := json.Marshal(schemas.EventQuery{Assets: []string{"plant"}, EventTypes: []string{"batch"}, Type: string(schemas.EventTypePropertyTypeSimple)})
+	require.NoError(t, err)
+	queryJSON, err := json.Marshal(map[string]any{
+		"query":         json.RawMessage(rawQuery),
+		"historianInfo": schemas.HistorianInfo{Version: "v8.2.0"},
+	})
+	require.NoError(t, err)
+
+	response, err := ds.QueryData(context.Background(), &backend.QueryDataRequest{
+		Queries: []backend.DataQuery{{RefID: "A", QueryType: QueryTypeEvent, JSON: queryJSON}},
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, response.Responses["A"].Error)
+	assert.Equal(t, int32(1), getCalls.Load(), "a v8.1.0 historian takes GET /api/events")
+	assert.Zero(t, postCalls.Load(), "the persisted v8.2.0 must not route to POST /api/events/query")
 }
