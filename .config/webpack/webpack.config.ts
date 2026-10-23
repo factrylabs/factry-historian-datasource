@@ -6,7 +6,7 @@
  */
 
 import CopyWebpackPlugin from 'copy-webpack-plugin';
-import ESLintPlugin from 'eslint-webpack-plugin';
+import DiagnosticsPlugin from 'diagnostics-webpack-plugin';
 import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
 import LiveReloadPlugin from 'webpack-livereload-plugin';
 import path from 'path';
@@ -184,8 +184,9 @@ const config = async (env): Promise<Configuration> => {
         },
         typescript: { configFile: path.join(process.cwd(), 'tsconfig.json') },
       }),
-      new ESLintPlugin({
-        lintDirtyModulesOnly: Boolean(env.development), // don't lint on start, only lint changed files
+      new DiagnosticsPlugin({
+        lintOnStart: !env.development, // don't lint on start, only lint changed files
+        checks: [{ use: 'eslint', extensions: ['ts', 'tsx'] }],
       }),
       ...(env.development ? [new LiveReloadPlugin()] : []),
     ],
