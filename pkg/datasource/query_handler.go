@@ -36,9 +36,8 @@ const (
 
 // Query is a struct which holds the query
 type Query struct {
-	HistorianInfo *schemas.HistorianInfo `json:"historianInfo,omitempty"`
-	Query         json.RawMessage        `json:"query"`
-	SeriesLimit   int                    `json:"seriesLimit"`
+	Query       json.RawMessage `json:"query"`
+	SeriesLimit int             `json:"seriesLimit"`
 }
 
 // QueryData handles incoming backend queries
@@ -80,16 +79,13 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 			}
 		}
 
-		if query.HistorianInfo == nil {
-			info, err := ds.API.GetInfoCached(ctx)
-			if err != nil {
-				response.Error = err
-				return response
-			}
-			query.HistorianInfo = &info
+		historianInfo, err := ds.API.GetInfoCached(ctx)
+		if err != nil {
+			response.Error = err
+			return response
 		}
 
-		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
+		response.Frames, response.Error = ds.handleAssetMeasurementQuery(ctx, assetMeasurementQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, &historianInfo)
 	case QueryTypeQuery:
 		measurementQuery := schemas.MeasurementQuery{}
 		if err := json.Unmarshal(query.Query, &measurementQuery); err != nil {
@@ -133,16 +129,13 @@ func (ds *HistorianDataSource) queryData(ctx context.Context, backendQuery backe
 			}
 		}
 
-		if query.HistorianInfo == nil {
-			info, err := ds.API.GetInfoCached(ctx)
-			if err != nil {
-				response.Error = err
-				return response
-			}
-			query.HistorianInfo = &info
+		historianInfo, err := ds.API.GetInfoCached(ctx)
+		if err != nil {
+			response.Error = err
+			return response
 		}
 
-		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, query.HistorianInfo)
+		response.Frames, response.Error = ds.handleEventQuery(ctx, eventQuery, backendQuery.TimeRange, backendQuery.Interval, query.SeriesLimit, &historianInfo)
 	default:
 		response.Error = fmt.Errorf("unsupported query type %s", backendQuery.QueryType)
 		return response
