@@ -114,9 +114,15 @@ export const EventFilter = (props: Props): JSX.Element => {
   useEffect(() => {
     if (loading) {
       ;(async () => {
-        const resolved = resolveAssetLabel(props.datasource, props.query.Assets?.[0])
-        await Promise.all([fetchAll(), resolved.then(({ label }) => setInitialLabel(label))])
-        setLoading(false)
+        try {
+          const resolved = resolveAssetLabel(props.datasource, props.query.Assets?.[0])
+          await Promise.all([fetchAll(), resolved.then(({ label }) => setInitialLabel(label))])
+        } catch (error) {
+          notifyError('Failed to load assets or event types', error)
+        } finally {
+          // Render the editor even when loading fails, so the query can be fixed.
+          setLoading(false)
+        }
       })()
     }
   }, [loading, fetchAll, props.datasource, props.query.Assets])
@@ -478,13 +484,11 @@ export const EventFilter = (props: Props): JSX.Element => {
                 displayAllSelectedLevels
                 onSelect={onAssetChange}
                 onOpen={() => {
-                  if (lazyEnabled) {
-                    if (assetOptions.length === 0) {
-                      fetchRootAssets()
-                    }
+                  if (lazyEnabled && assetOptions.length > 0) {
                     return
                   }
-                  fetchAll()
+                  const load = lazyEnabled ? fetchRootAssets() : fetchAll()
+                  load.catch((error) => notifyError('Failed to load assets', error))
                 }}
                 separator="\\"
                 loadData={lazyEnabled ? handleLoadData : undefined}

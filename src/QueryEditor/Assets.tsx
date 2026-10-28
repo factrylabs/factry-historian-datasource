@@ -243,13 +243,11 @@ export const Assets = (props: Props): JSX.Element => {
   }
 
   const handleOpen = (): void => {
-    if (lazyEnabled) {
-      if (assetOptions.length === 0) {
-        fetchRootAssets()
-      }
+    if (lazyEnabled && assetOptions.length > 0) {
       return
     }
-    fetchAssetsAndProperties()
+    const load = lazyEnabled ? fetchRootAssets() : fetchAssetsAndProperties()
+    load.catch((error) => notifyError('Failed to load assets', error))
   }
 
   const handleOpenPropertiesMenu = async (): Promise<void> => {
