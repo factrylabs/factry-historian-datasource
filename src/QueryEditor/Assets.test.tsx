@@ -1,12 +1,13 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Assets } from './Assets'
 import { DataSource } from 'datasource'
 import { AssetMeasurementQuery } from 'types'
 
+const mockPublish = jest.fn()
 jest.mock('@grafana/runtime', () => ({
   getTemplateSrv: () => ({ getVariables: () => [] }),
-  getAppEvents: () => ({ publish: jest.fn() }),
+  getAppEvents: () => ({ publish: mockPublish }),
   config: { featureToggles: {} },
 }))
 
@@ -24,8 +25,8 @@ jest.mock('@grafana/ui', () => ({
 // on the label Assets passes down.
 jest.mock('components/Cascader/Cascader', () => ({
   __esModule: true,
-  default: ({ initialLabel }: { initialLabel: string }) => (
-    <input data-testid="assets" readOnly value={initialLabel} />
+  default: ({ initialLabel, onOpen }: { initialLabel: string; onOpen?: () => void }) => (
+    <input data-testid="assets" readOnly value={initialLabel} onFocus={onOpen} />
   ),
 }))
 
@@ -132,6 +133,24 @@ describe('Assets', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('assets')).toHaveValue('/Site(/')
+    })
+  })
+
+  it('reports a failed asset load when the asset picker opens', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    const datasource = {
+      ...createMockDatasource(),
+      historianInfo: { Version: 'v8.2.0' },
+      getAssets: jest.fn().mockRejectedValue(new Error('historian down')),
+    } as unknown as DataSource
+    renderComponent([], datasource)
+
+    const input = await screen.findByTestId('assets')
+    mockPublish.mockClear()
+    fireEvent.focus(input)
+
+    await waitFor(() => {
+      expect(mockPublish).toHaveBeenCalled()
     })
   })
 })

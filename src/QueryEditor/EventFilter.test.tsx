@@ -1,12 +1,14 @@
 import React from 'react'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EventFilter } from './EventFilter'
 import { QueryTag } from 'components/TagsSection/TagsSection'
 import { DataSource } from 'datasource'
 import { EventQuery, EventType, EventTypeProperty, PropertyDatatype, PropertyType } from 'types'
 
+const mockPublish = jest.fn()
 jest.mock('@grafana/runtime', () => ({
   getTemplateSrv: () => ({ getVariables: () => [] }),
+  getAppEvents: () => ({ publish: mockPublish }),
   config: { featureToggles: {} },
 }))
 
@@ -26,7 +28,9 @@ jest.mock('@grafana/ui', () => ({
 // on the label EventFilter passes down.
 jest.mock('components/Cascader/Cascader', () => ({
   __esModule: true,
-  default: ({ initialLabel }: { initialLabel: string }) => <input data-testid="assets" readOnly value={initialLabel} />,
+  default: ({ initialLabel, onOpen }: { initialLabel: string; onOpen?: () => void }) => (
+    <input data-testid="assets" readOnly value={initialLabel} onFocus={onOpen} />
+  ),
 }))
 
 // TagsSection test double: keeps a handle on the props EventFilter passes down
@@ -59,7 +63,7 @@ const createMockDatasource = (overrides: Partial<Record<keyof DataSource, unknow
     ...overrides,
   } as unknown as DataSource)
 
-const renderComponent = (assets: string[]) => {
+const renderComponent = (assets: string[], datasource: DataSource = createMockDatasource()) => {
   const query: EventQuery = {
     Assets: assets,
     EventTypes: [],
@@ -68,7 +72,7 @@ const renderComponent = (assets: string[]) => {
     PropertyFilter: [],
   } as unknown as EventQuery
 
-  return render(<EventFilter query={query} datasource={createMockDatasource()} onChangeQuery={jest.fn()} />)
+  return render(<EventFilter query={query} datasource={datasource} onChangeQuery={jest.fn()} />)
 }
 
 describe('EventFilter', () => {
@@ -185,5 +189,35 @@ describe('EventFilter', () => {
     // 'Batch number' exists on the parent only, so it is not an own key.
     expect(keys).not.toContain('parent:Phase step')
     expect(keys).not.toContain('Batch number')
+  })
+
+  it('still renders the editor when resolving the saved assets fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    const datasource = createMockDatasource({
+      historianInfo: { Version: 'v8.2.0' },
+      resolveAssets: jest.fn().mockRejectedValue(new Error('historian down')),
+    })
+    renderComponent(['/pump.*/'], datasource)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('assets')).toHaveValue('/pump.*/')
+    })
+  })
+
+  it('reports a failed asset load when the asset picker opens', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    const datasource = createMockDatasource({
+      historianInfo: { Version: 'v8.2.0' },
+      getAssets: jest.fn().mockRejectedValue(new Error('historian down')),
+    })
+    renderComponent([], datasource)
+
+    const input = await screen.findByTestId('assets')
+    mockPublish.mockClear()
+    fireEvent.focus(input)
+
+    await waitFor(() => {
+      expect(mockPublish).toHaveBeenCalled()
+    })
   })
 })
