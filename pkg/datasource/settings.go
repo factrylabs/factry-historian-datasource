@@ -31,6 +31,11 @@ type Settings struct {
 	// showing a measurement from a since-reconfigured asset.
 	ResolutionCacheTTL string `json:"resolutionCacheTTL,omitempty"`
 	InsecureSkipVerify bool   `json:"tlsSkipVerify,omitempty"`
+	// DisplayNameAssets and DisplayNameMeasurements are the default series
+	// display name templates of the Assets and Measurements tabs. Empty keeps
+	// the built-in name.
+	DisplayNameAssets       string `json:"displayNameAssets,omitempty"`
+	DisplayNameMeasurements string `json:"displayNameMeasurements,omitempty"`
 }
 
 func (settings *Settings) isValid() (err error) {
@@ -68,6 +73,8 @@ func LoadSettings(config backend.DataSourceInstanceSettings) (settings Settings,
 	if seconds, err := strconv.Atoi(settings.ResolutionCacheTTL); err != nil || seconds < 0 || int64(seconds) > math.MaxInt64/int64(time.Second) {
 		settings.ResolutionCacheTTL = defaultResolutionCacheTTL
 	}
+	settings.DisplayNameAssets = strings.TrimSpace(settings.DisplayNameAssets)
+	settings.DisplayNameMeasurements = strings.TrimSpace(settings.DisplayNameMeasurements)
 	settings.Token = config.DecryptedSecureJSONData["token"]
 	return settings, settings.isValid()
 }

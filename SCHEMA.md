@@ -157,7 +157,7 @@ condition that is not finished, and the query returns the table unfiltered.
 
 Returns (aggregated) timeseries data for one or more measurements with each measurement in a separate series.
 
-The name of the frame includes:
+The name of the frame is the datasource's `displayNameMeasurements` template with its label placeholders filled in. Without a template it includes:
 
 - name of the measurement
 - measurement tag/value pair used in 'group by'
@@ -168,7 +168,7 @@ The name of the frame includes:
 
 Returns (aggregated) timeseries data for one or more asset properties with each asset property corresponding to a measurement and in a separate series.
 
-The name of the frame includes:
+The name of the frame is the datasource's `displayNameAssets` template with its label placeholders filled in. Without a template it includes:
 
 - the asset path
 - the property name

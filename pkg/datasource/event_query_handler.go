@@ -231,7 +231,7 @@ func (ds *HistorianDataSource) handleEventAssetMeasurementQuery(ctx context.Cont
 		return nil, err
 	}
 
-	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)), nil
+	return sortByStatus(setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options, "")), nil
 }
 
 // selectedEventTypeProperties resolves the selected property names or UUIDs to the properties

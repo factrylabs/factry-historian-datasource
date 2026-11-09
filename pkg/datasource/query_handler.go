@@ -264,7 +264,7 @@ func (ds *HistorianDataSource) handleAssetMeasurementQuery(ctx context.Context, 
 		return nil, err
 	}
 
-	frames = setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options)
+	frames = setAssetFrameNames(frames, assets, measurementIndexToPropertyMap, measurementQuery.Options, ds.displayNameAssets)
 	if measurementQuery.Options.MetadataAsLabels {
 		setFieldLabels(frames)
 	}
@@ -339,7 +339,7 @@ func (ds *HistorianDataSource) handleMeasurementQuery(ctx context.Context, measu
 		return nil, err
 	}
 
-	setMeasurementFrameNames(frames, measurementQuery.Options)
+	setMeasurementFrameNames(frames, measurementQuery.Options, ds.displayNameMeasurements)
 	if measurementQuery.Options.MetadataAsLabels {
 		setFieldLabels(frames)
 	}
