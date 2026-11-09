@@ -55,6 +55,19 @@ Create a new instance of the data source from the Grafana Data Sources administr
 - Token: The API token to authenticate with the Factry Historian API
 - Organization: The UUID of the organization to query data from
 - Default tab: The default tab to show when opening the query editor
+- Display names: An optional default series display name for the Assets and the Measurements tab, see [Display names](#display-names)
+
+#### Display names
+
+By default a series of the Assets tab is named after its asset path and property, and a series of the Measurements tab after its measurement. Both append their tags (such as `status`) in braces. To use one naming convention across all dashboards, set a template per tab under Display names. It replaces the built-in name for every query of that tab, also in panels saved before the template was set.
+
+A template is text with `${__field.labels["<label>"]}` (or `${__field.labels.<label>}`) placeholders, for example `${__field.labels["AssetProperty"]}` to show only the property name. Labels:
+
+- Assets: `AssetPath`, `AssetName`, `AssetProperty`, `MeasurementName`, `DatabaseName`, `Description`
+- Measurements: `MeasurementName`, `DatabaseName`, `Description`
+- Both: `status` and any tag the query groups by. A label a series does not have renders empty.
+
+Leave a template empty to keep the built-in name. A Display name set on a panel still takes precedence. While a template is set, the query options "Display database name" and "Display description" have no effect: add `DatabaseName` or `Description` to the template instead.
 
 > A full step-by-step guide can be found in the ['Configuring the Factry Historian Datasource' How-To](https://docs.factry.io/how-tos/configuring-the-factry-historian-datasource-plugin-for-grafana).
 

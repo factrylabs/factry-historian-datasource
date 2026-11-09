@@ -44,6 +44,8 @@ export interface Props {
   hideTagFilter?: boolean
   hideAdvancedOptions?: boolean
   aggregationRequired?: boolean
+  /** Datasource default display name template; when set, the display name switches have no effect */
+  displayNameTemplate?: string
   templateVariables: Array<SelectableValue<string>>
   getTagKeyOptions?: () => Promise<string[]>
   getTagValueOptions?: (key: string) => Promise<string[]>
@@ -404,12 +406,30 @@ export const QueryOptions = (props: Props): JSX.Element => {
               </InlineFieldRow>
             )}
             <InlineFieldRow>
-              <InlineField label="Display database name" labelWidth={labelWidth}>
+              <InlineField
+                label="Display database name"
+                labelWidth={labelWidth}
+                disabled={!!props.displayNameTemplate}
+                tooltip={
+                  props.displayNameTemplate
+                    ? 'Has no effect: the datasource sets a default display name. Add ${__field.labels.DatabaseName} to it instead.'
+                    : undefined
+                }
+              >
                 <InlineSwitch value={props.state.DisplayDatabaseName} onChange={onChangeDisplayDatabaseName} />
               </InlineField>
             </InlineFieldRow>
             <InlineFieldRow>
-              <InlineField label="Display description" labelWidth={labelWidth}>
+              <InlineField
+                label="Display description"
+                labelWidth={labelWidth}
+                disabled={!!props.displayNameTemplate}
+                tooltip={
+                  props.displayNameTemplate
+                    ? 'Has no effect: the datasource sets a default display name. Add ${__field.labels.Description} to it instead.'
+                    : undefined
+                }
+              >
                 <InlineSwitch value={props.state.DisplayDescription} onChange={onChangeDisplayDescription} />
               </InlineField>
             </InlineFieldRow>

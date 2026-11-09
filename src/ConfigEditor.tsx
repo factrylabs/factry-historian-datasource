@@ -3,6 +3,10 @@ import { FieldSet, InlineField, InlineFieldRow, Input, SecretInput, Select } fro
 import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data'
 import { HistorianDataSourceOptions, HistorianSecureJsonData, TabIndex } from './types'
 
+const displayNameTooltip =
+  'Default series display name for queries of this tab. Use ${__field.labels["<label>"]} to insert a label. ' +
+  'Leave empty to keep the built-in name, which also lists tags such as status. A display name set on a panel still takes precedence.'
+
 interface Props extends DataSourcePluginOptionsEditorProps<HistorianDataSourceOptions> {}
 
 interface State {}
@@ -125,6 +129,38 @@ export class ConfigEditor extends PureComponent<Props, State> {
                 options={this.tabOptions}
                 value={jsonData.defaultTab ?? TabIndex.Assets}
                 onChange={this.onDefaultTabChange}
+              />
+            </InlineField>
+          </InlineFieldRow>
+        </FieldSet>
+        <FieldSet label="Display names">
+          <InlineFieldRow>
+            <InlineField
+              label="Assets"
+              labelWidth={20}
+              tooltip={`${displayNameTooltip} Labels: AssetPath, AssetName, AssetProperty, MeasurementName, DatabaseName, Description, status and any tag.`}
+            >
+              <Input
+                width={61}
+                name="displayNameAssets"
+                onChange={this.onSettingChange('displayNameAssets')}
+                value={jsonData.displayNameAssets || ''}
+                placeholder={'${__field.labels["AssetPath"]}\\\\${__field.labels["AssetProperty"]}'}
+              />
+            </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+            <InlineField
+              label="Measurements"
+              labelWidth={20}
+              tooltip={`${displayNameTooltip} Labels: MeasurementName, DatabaseName, Description, status and any tag.`}
+            >
+              <Input
+                width={61}
+                name="displayNameMeasurements"
+                onChange={this.onSettingChange('displayNameMeasurements')}
+                value={jsonData.displayNameMeasurements || ''}
+                placeholder={'${__field.labels["MeasurementName"]}'}
               />
             </InlineField>
           </InlineFieldRow>

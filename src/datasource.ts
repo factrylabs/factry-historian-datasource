@@ -62,6 +62,8 @@ function typedPropertyValue(value: string, datatype: string): Array<string | num
 
 export class DataSource extends DataSourceWithBackend<Query, HistorianDataSourceOptions> {
   defaultTab: TabIndex
+  displayNameAssets: string
+  displayNameMeasurements: string
   historianInfo: HistorianInfo | undefined
 
   // Caching infrastructure
@@ -75,6 +77,8 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
   ) {
     super(instanceSettings)
     this.defaultTab = instanceSettings.jsonData.defaultTab ?? TabIndex.Assets
+    this.displayNameAssets = instanceSettings.jsonData.displayNameAssets?.trim() ?? ''
+    this.displayNameMeasurements = instanceSettings.jsonData.displayNameMeasurements?.trim() ?? ''
     this.variables = new VariableSupport(this)
     this.annotations = {
       QueryEditor: AnnotationsQueryEditor,
