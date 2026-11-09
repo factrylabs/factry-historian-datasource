@@ -209,6 +209,7 @@ export const Measurements = (props: Props): JSX.Element => {
             getTagValueOptions={getTagValueOptions}
             onChange={onChangeMeasurementQueryOptions}
             onChangeSeriesLimit={props.onChangeSeriesLimit}
+            displayNameTemplate={props.datasource.displayNameMeasurements}
           />
         </>
       )}

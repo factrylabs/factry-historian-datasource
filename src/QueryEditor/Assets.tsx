@@ -316,6 +316,7 @@ export const Assets = (props: Props): JSX.Element => {
             getTagValueOptions={getTagValueOptions}
             onChange={handleChangeMeasurementQueryOptions}
             onChangeSeriesLimit={props.onChangeSeriesLimit}
+            displayNameTemplate={props.datasource.displayNameAssets}
           />
         </>
       )}

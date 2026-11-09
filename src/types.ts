@@ -44,6 +44,10 @@ export interface HistorianDataSourceOptions extends DataSourceJsonData {
   url: string
   organization: string
   defaultTab?: TabIndex
+  /** Default series display name template of the Assets tab, empty keeps the built-in name */
+  displayNameAssets?: string
+  /** Default series display name template of the Measurements tab, empty keeps the built-in name */
+  displayNameMeasurements?: string
 }
 
 /**
