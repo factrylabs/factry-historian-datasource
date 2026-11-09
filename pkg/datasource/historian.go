@@ -30,6 +30,10 @@ type HistorianDataSource struct {
 	API             *api.API
 	Decoder         *form.Decoder
 	resourceHandler backend.CallResourceHandler
+	// displayNameAssets and displayNameMeasurements are the datasource-wide
+	// display name templates, see Settings.
+	displayNameAssets       string
+	displayNameMeasurements string
 }
 
 // NewDataSource creates a new data source instance
@@ -40,7 +44,9 @@ func NewDataSource(_ context.Context, s backend.DataSourceInstanceSettings) (ins
 	}
 
 	historianDataSource := &HistorianDataSource{
-		Decoder: form.NewDecoder(),
+		Decoder:                 form.NewDecoder(),
+		displayNameAssets:       settings.DisplayNameAssets,
+		displayNameMeasurements: settings.DisplayNameMeasurements,
 	}
 	apiOptions := api.Options{
 		URL:                settings.URL,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -252,6 +253,21 @@ func getMeasurementFrameName(frame *data.Frame, includeDatabaseName, includeDesc
 	return getMetaValueFromFrame(frame, "MeasurementName") + getFrameSuffix(frame, includeDatabaseName, includeDescription)
 }
 
+// displayNameLabelPattern matches the Grafana label placeholders
+// ${__field.labels["key"]} and ${__field.labels.key}.
+var displayNameLabelPattern = regexp.MustCompile(`\$\{__field\.labels(?:\["([^"]*)"\]|\.([A-Za-z0-9_]+))\}`)
+
+// renderDisplayName fills the label placeholders of a display name template
+// with the frame's labels and metadata. A label the frame lacks renders empty,
+// other text is kept as is.
+func renderDisplayName(template string, frame *data.Frame) string {
+	labels := mergedLabelsFromMeta(frame)
+	return displayNameLabelPattern.ReplaceAllStringFunc(template, func(placeholder string) string {
+		match := displayNameLabelPattern.FindStringSubmatch(placeholder)
+		return labels[match[1]+match[2]]
+	})
+}
+
 // mergedLabelsFromMeta returns the per-frame label set: the optional Custom["Labels"] map
 // (groupby / tag values) merged with the well-known metadata fields listed in fieldLabelsFromMeta.
 // Returns nil when the frame has no metadata map.
@@ -351,8 +367,9 @@ func getAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUI
 	return asset.AssetPath
 }
 
-// setMeasurementFrameNames sets the name of each frame to the measurement name
-func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQueryOptions) {
+// setMeasurementFrameNames sets the name of each frame to the display name
+// template, or to the measurement name when the template is empty
+func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQueryOptions, displayNameTemplate string) {
 	for _, frame := range frames {
 		if frame.Meta == nil {
 			continue
@@ -362,7 +379,11 @@ func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQue
 			if field.Config == nil {
 				field.Config = &data.FieldConfig{}
 			}
-			field.Config.DisplayNameFromDS = getMeasurementFrameName(frame, options.DisplayDatabaseName, options.DisplayDescription)
+			if displayNameTemplate != "" {
+				field.Config.DisplayNameFromDS = renderDisplayName(displayNameTemplate, frame)
+			} else {
+				field.Config.DisplayNameFromDS = getMeasurementFrameName(frame, options.DisplayDatabaseName, options.DisplayDescription)
+			}
 		}
 	}
 }
@@ -412,8 +433,9 @@ func copyFrame(frame *data.Frame) (*data.Frame, error) {
 	return frameCopy, nil
 }
 
-// setAssetFrameNames sets the name of each frame to the asset path
-func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, options schemas.MeasurementQueryOptions) data.Frames {
+// setAssetFrameNames sets the name of each frame to the display name template,
+// or to the asset path and property name when the template is empty
+func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, assetProperties []schemas.AssetProperty, options schemas.MeasurementQueryOptions, displayNameTemplate string) data.Frames {
 	measurementUUIDToPropertyMap := make(map[uuid.UUID][]schemas.AssetProperty)
 	for _, property := range assetProperties {
 		measurementUUIDToPropertyMap[property.MeasurementUUID] = append(measurementUUIDToPropertyMap[property.MeasurementUUID], property)
@@ -457,7 +479,11 @@ func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, 
 					field.Config = &data.FieldConfig{}
 				}
 
-				field.Config.DisplayNameFromDS = assetPath + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
+				if displayNameTemplate != "" {
+					field.Config.DisplayNameFromDS = renderDisplayName(displayNameTemplate, frame)
+				} else {
+					field.Config.DisplayNameFromDS = assetPath + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
+				}
 			}
 		}
 	}
