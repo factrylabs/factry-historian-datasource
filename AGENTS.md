@@ -336,7 +336,7 @@ A 5-second TTL in-memory cache for `getResource` metadata requests, which saves 
 
 ### CI (`.github/workflows/ci.yml`)
 
-Runs on push to `main`, PRs to `main`, and weekly on `main` (Monday 06:17 UTC):
+Runs on push to `main`, PRs to `main`, weekly on `main` (Monday 06:17 UTC), and as a called workflow from `release.yml`:
 
 1. **Frontend checks:** typecheck → lint → test:ci → build
 2. **Go lint:** golangci-lint v2.10.1
@@ -354,6 +354,8 @@ Nightly does not block a push or PR run: it breaks on Grafana main before `@graf
 
 A failed scheduled run is mailed only to whoever last edited that workflow's `cron:` line, so edit the line to move the alerts to someone else. GitHub disables scheduled workflows in a public repository after 60 days without repository activity.
 
+`ci.yml` asks for `contents: read` at the top level. As a called workflow it can only request what the calling job grants, so keep any new permission in step with the `ci` job in `release.yml`.
+
 ### Release (`.github/workflows/release.yml`)
 
 Triggered by tags matching `v*`:
@@ -361,13 +363,15 @@ Triggered by tags matching `v*`:
 1. Build + sign + package plugin
 2. Upload to Factry Portal (uses `FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN` and `FACTRY_PORTAL_PRODUCT_UPDATES_URL` secrets)
 3. Create GitHub draft release
-4. Sync the changelog to Archbee (`archbee-sync` job)
+4. Run the full CI suite on the tagged commit (`ci` job, calls `ci.yml`), in parallel with the steps above
+5. Sync the changelog to Archbee (`archbee-sync` job), once both the release and the CI suite passed
 
 ### Archbee changelog sync
 
 The `archbee-sync` job publishes the released version to the docs site. It extracts the `## <tag>` section from `CHANGELOG.md` and inserts it above the newest version heading in `docs/factry_historian_datasource_for_grafana.md` on the `spaces/changelog` branch of `factrylabs/archbee`, then opens a PR. Everything already on that page (title, compatibility matrix, previous entries) is left untouched.
 
 - `CHANGELOG.md` is the source of truth and must stay in the same shape as the published page: a `## vX.Y.Z` heading, a `released: DD/MM/YYYY` line, then `###` subsections. The job fills in `released:` with the run date if the section does not have one.
+- The job appends a `### Compatibility` subsection with the minimum Grafana version from `src/plugin.json` and the released Grafana versions the release run's e2e jobs passed on. `scripts/tested-grafana-versions.sh <run-id>` reads those from the run, and fails when an e2e job on a released Grafana version did not pass. A `### Compatibility` subsection written in `CHANGELOG.md` is kept instead.
 - Archbee-specific markup (for example `:::hint{type="warning"}` blocks) belongs in the `CHANGELOG.md` section so it is carried over. It renders as literal text on GitHub.
 - Requires the `ARCHBEE_GITHUB_TOKEN` secret, with contents and pull request write access on `factrylabs/archbee`.
 - The job is idempotent: if the page already has a `## <tag>` heading it does nothing.

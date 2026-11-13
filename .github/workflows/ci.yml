@@ -11,8 +11,13 @@ on:
   # GitHub mails a failed scheduled run to whoever last edited this cron line.
   schedule:
     - cron: '17 6 * * 1'
+  # The release workflow runs the suite on the tagged commit.
+  workflow_call:
 
-permissions: read-all
+# A workflow called from release.yml can only request what that caller grants,
+# so keep this to what the jobs use. The build job adds its own block.
+permissions:
+  contents: read
 
 # The event is part of the group, so a scheduled run and a push to main do not
 # cancel each other.
