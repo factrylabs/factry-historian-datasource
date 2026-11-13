@@ -40,9 +40,20 @@ jobs:
             -F "signature=$(cat ${{ steps.build.outputs.archive-sha1sum }})" \
             --url "${{vars.FACTRY_PORTAL_PRODUCT_UPDATES_URL }}"
 
+  # The full CI suite on the tagged commit. A tag can sit on a commit no CI run
+  # covered, such as one on a fix branch, and archbee-sync reads the Grafana
+  # versions these e2e jobs passed on.
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      pull-requests: write
+    secrets: inherit
+
   archbee-sync:
     name: Sync changelog to Archbee
-    needs: release
+    needs: [release, ci]
     runs-on: ubuntu-latest
     env:
       ARCHBEE_REPO: factrylabs/archbee
@@ -56,7 +67,22 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Collect tested Grafana versions
+        id: grafana
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Assigned first: a failing command inside an echo argument would not stop the step.
+          tested=$(scripts/tested-grafana-versions.sh "${GITHUB_RUN_ID}")
+          requires=$(jq -r '.dependencies.grafanaDependency' src/plugin.json)
+          echo "tested=${tested}" >> "$GITHUB_OUTPUT"
+          echo "requires=${requires}" >> "$GITHUB_OUTPUT"
+
       - name: Extract changelog section
+        env:
+          GRAFANA_TESTED: ${{ steps.grafana.outputs.tested }}
+          GRAFANA_REQUIRES: ${{ steps.grafana.outputs.requires }}
         run: |
           set -euo pipefail
 
@@ -92,6 +118,24 @@ jobs:
               tail -n +2 changelog_section.md
             } > changelog_section_dated.md
             mv changelog_section_dated.md changelog_section.md
+          fi
+
+          # Each release on the Archbee page lists the Grafana versions it was
+          # tested with. A Compatibility section written by hand is kept as is.
+          if ! grep -qx '### Compatibility' changelog_section.md; then
+            minimum='^>=([0-9]+[.][0-9]+[.][0-9]+)$'
+            if [[ "${GRAFANA_REQUIRES}" =~ $minimum ]]; then
+              requires="${BASH_REMATCH[1]} or newer"
+            else
+              requires="\`${GRAFANA_REQUIRES}\`"
+            fi
+            {
+              echo ""
+              echo "### Compatibility"
+              echo ""
+              echo "- Requires Grafana ${requires}."
+              echo "- Tested with Grafana ${GRAFANA_TESTED}."
+            } >> changelog_section.md
           fi
 
           echo "Extracted changelog section:"
