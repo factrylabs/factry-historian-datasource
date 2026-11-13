@@ -1,5 +1,10 @@
 name: Latest Grafana API compatibility check
-on: [pull_request]
+on:
+  pull_request:
+  # Checks main against the latest Grafana packages while nobody opens a PR.
+  # GitHub mails a failed scheduled run to whoever last edited this cron line.
+  schedule:
+    - cron: '17 6 * * 1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

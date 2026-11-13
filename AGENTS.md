@@ -338,7 +338,7 @@ A 5-second TTL in-memory cache for `getResource` metadata requests, which saves 
 
 ### CI (`.github/workflows/ci.yml`)
 
-Runs on push to `main` and PRs to `main`:
+Runs on push to `main`, PRs to `main`, and weekly on `main` (Monday 06:17 UTC):
 
 1. **Frontend checks:** typecheck → lint → test:ci → build
 2. **Go lint:** golangci-lint v2.10.1
@@ -348,7 +348,11 @@ Runs on push to `main` and PRs to `main`:
 6. **Plugin validation:** `@grafana/plugin-validator`
 7. **Sign plugin** (if `GRAFANA_ACCESS_POLICY_TOKEN` is set)
 8. Package and archive
-9. **E2E:** Playwright against the mock Historian, once per Grafana version. `grafana/plugin-actions/e2e-version` resolves the version list at run time. The nightly entry does not block the pipeline. The backend is rebuilt with `-cover` to measure e2e coverage.
+9. **E2E:** Playwright against the mock Historian, once per Grafana version. `grafana/plugin-actions/e2e-version` resolves the version list at run time. The nightly entry never blocks, the weekly run included, so a failed Monday run means a released Grafana version broke. The backend is rebuilt with `-cover` to measure e2e coverage.
+
+`is-compatible.yml` runs `@grafana/levitate is-compatible` against the latest `@grafana/*` packages, on PRs and on the same weekly schedule.
+
+A failed scheduled run is mailed only to whoever last edited that workflow's `cron:` line, so edit the line to move the alerts to someone else. GitHub disables scheduled workflows in a public repository after 60 days without repository activity.
 
 ### Release (`.github/workflows/release.yml`)
 

@@ -7,11 +7,17 @@ on:
   pull_request:
     branches:
       - main
+  # Tests main against new Grafana releases and nightly while nobody pushes.
+  # GitHub mails a failed scheduled run to whoever last edited this cron line.
+  schedule:
+    - cron: '17 6 * * 1'
 
 permissions: read-all
 
+# The event is part of the group, so a scheduled run and a push to main do not
+# cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -92,8 +98,14 @@ jobs:
           # the key tied to the resolved dependency set, as v5 did.
           cache-dependency-path: go.sum
 
+      # only-new-issues needs a diff, and the action only fetches one for pull
+      # requests and branch pushes. A scheduled run or a tag push (the release
+      # calling this workflow) would lint the whole repo and fail on old issues.
       - name: golangci-lint
-        if: steps.check-for-backend.outputs.has-backend == 'true'
+        if: >-
+          steps.check-for-backend.outputs.has-backend == 'true' &&
+          (github.event_name == 'pull_request' ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main'))
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.12.2
@@ -213,7 +225,8 @@ jobs:
     # pipeline stops meaning anything. It still runs, so the breakage is
     # visible as an early warning; it just does not block. Every released
     # Grafana version in the matrix does block, and those are the ones the
-    # plugin claims to support.
+    # plugin claims to support. This holds for the weekly run too: a red
+    # Monday must mean a released version broke, not that nightly did.
     continue-on-error: ${{ matrix.GRAFANA_IMAGE.VERSION == 'nightly' }}
     steps:
       # Full checkout: docker-compose.e2e.yaml builds the mock Historian from
