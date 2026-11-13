@@ -7,11 +7,17 @@ on:
   pull_request:
     branches:
       - main
+  # Tests main against new Grafana releases and nightly while nobody pushes.
+  # GitHub mails a failed scheduled run to whoever last edited this cron line.
+  schedule:
+    - cron: '17 6 * * 1'
 
 permissions: read-all
 
+# The event is part of the group, so a scheduled run and a push to main do not
+# cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -213,8 +219,10 @@ jobs:
     # pipeline stops meaning anything. It still runs, so the breakage is
     # visible as an early warning; it just does not block. Every released
     # Grafana version in the matrix does block, and those are the ones the
-    # plugin claims to support.
-    continue-on-error: ${{ matrix.GRAFANA_IMAGE.VERSION == 'nightly' }}
+    # plugin claims to support. The weekly scheduled run is the exception:
+    # there nightly blocks too, because a failed run is the only warning that
+    # reaches anyone, and nobody's change is turned red by it.
+    continue-on-error: ${{ matrix.GRAFANA_IMAGE.VERSION == 'nightly' && github.event_name != 'schedule' }}
     steps:
       # Full checkout: docker-compose.e2e.yaml builds the mock Historian from
       # source (needs go.mod, pkg/, tests/), so a sparse checkout is not enough.

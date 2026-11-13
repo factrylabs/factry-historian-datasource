@@ -204,7 +204,7 @@ go test ./...        # Run tests without coverage
 
 ### E2E Tests
 
-Playwright tests exist but are currently commented out in CI. Infrastructure uses `pnpm run e2e` and tests against multiple Grafana versions.
+Playwright specs live in `tests/` and run against a mock Historian (`tests/mockhistorian/`). Run them locally with `pnpm run server:e2e` and then `pnpm run e2e`. CI runs them once per Grafana version in the e2e matrix (see CI below).
 
 ---
 
@@ -336,7 +336,7 @@ A 5-second TTL in-memory cache for `getResource` metadata requests, which saves 
 
 ### CI (`.github/workflows/ci.yml`)
 
-Runs on push to `main` and PRs to `main`:
+Runs on push to `main`, PRs to `main`, and weekly on `main` (Monday 06:17 UTC):
 
 1. **Frontend checks:** typecheck → lint → test:ci → build
 2. **Go lint:** golangci-lint v2.10.1
@@ -346,6 +346,13 @@ Runs on push to `main` and PRs to `main`:
 6. **Plugin validation:** `@grafana/plugin-validator`
 7. **Sign plugin** (if `GRAFANA_ACCESS_POLICY_TOKEN` is set)
 8. Package and archive
+9. **E2E:** the Playwright suite once per Grafana version that `grafana/plugin-actions/e2e-version` resolves from `grafanaDependency`, plus Grafana nightly
+
+Nightly does not block a push or PR run: it breaks on Grafana main before `@grafana/plugin-e2e` catches up. In the weekly scheduled run it does block, because that run exists to warn about the next Grafana.
+
+`is-compatible.yml` runs `@grafana/levitate is-compatible` against the latest `@grafana/*` packages, on PRs and on the same weekly schedule.
+
+A failed scheduled run is mailed only to whoever last edited that workflow's `cron:` line, so edit the line to move the alerts to someone else. GitHub disables scheduled workflows in a public repository after 60 days without repository activity.
 
 ### Release (`.github/workflows/release.yml`)
 
