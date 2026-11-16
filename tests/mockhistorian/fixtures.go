@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
@@ -33,6 +34,8 @@ var (
 	eventConfigurationUUID = uuid.MustParse("dddddddd-dddd-dddd-dddd-dddddddddddd")
 
 	collectorUUID = uuid.MustParse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee")
+
+	lookupTableUUID = uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 )
 
 var database = schemas.TimeseriesDatabase{
@@ -239,3 +242,36 @@ func measurementByUUID(id uuid.UUID) (schemas.Measurement, bool) {
 	}
 	return schemas.Measurement{}, false
 }
+
+var lookupTable = schemas.LookupTable{
+	BaseModel: schemas.BaseModel{UUID: lookupTableUUID, Name: "Line settings"},
+	Attributes: schemas.LookupTableAttributes{
+		Columns: []schemas.LookupTableColumn{
+			{Name: "line", Type: schemas.LookupTableColumnTypeString},
+			{Name: "setpoint", Type: schemas.LookupTableColumnTypeNumber},
+			{Name: "active", Type: schemas.LookupTableColumnTypeBoolean},
+		},
+		Description: "Mock lookup table for e2e tests",
+	},
+}
+
+// lookupTableRowCount is enough rows to page through at the editor's limits.
+const lookupTableRowCount = 250
+
+// lookupTableRows spreads the rows over lines L1 to L5. Setpoint is the row index, and every
+// tenth row has no setpoint, so IS NULL has something to match.
+var lookupTableRows = func() []schemas.LookupTableRow {
+	rows := make([]schemas.LookupTableRow, lookupTableRowCount)
+	for i := range rows {
+		var setpoint interface{} = float64(i)
+		if i%10 == 9 {
+			setpoint = nil
+		}
+		rows[i] = schemas.LookupTableRow{
+			UUID:  fmt.Sprintf("00000000-0000-0000-0000-%012d", i),
+			Index: i,
+			Cells: []interface{}{fmt.Sprintf("L%d", i%5+1), setpoint, i%2 == 0},
+		}
+	}
+	return rows
+}()

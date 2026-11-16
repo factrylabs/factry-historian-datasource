@@ -111,7 +111,7 @@ func writeJSON(w http.ResponseWriter, v any) {
 }
 
 func handleInfo(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, schemas.HistorianInfo{Version: "8.2.0", APIVersion: "1.0"})
+	writeJSON(w, schemas.HistorianInfo{Version: "8.3.0", APIVersion: "1.0"})
 }
 
 func handleCollectors(w http.ResponseWriter, _ *http.Request) {
