@@ -128,7 +128,10 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 
 	eventAssetPropertyFrames := make(map[uuid.UUID]data.Frames)
 	multipleAssetsSelected := len(assets) > 1
+	namePrefix := ""
 	if eventQuery.QueryAssetProperties && eventQuery.Options != nil {
+		// The query name option is only shown when asset properties are fetched.
+		namePrefix = queryNamePrefix(*eventQuery.Options)
 		assetMeasurementQueryAssets := assets
 		if len(eventQuery.OverrideAssets) > 0 {
 			assetMeasurementQueryAssets, err = ds.API.GetFilteredAssets(ctx, eventQuery.OverrideAssets, historianInfo)
@@ -176,9 +179,9 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		assetPropertyFieldTypes := getAssetPropertyFieldTypes(eventAssetPropertyFrames, multipleAssetsSelected)
 		return EventQueryResultToDataFrame(eventQuery.IncludeParentInfo, multipleAssetsSelected, assetsForFrames, events, allEventTypes, eventTypeProperties, selectedPropertiesSet, assetPropertyFieldTypes, eventAssetPropertyFrames)
 	case string(schemas.EventTypePropertyTypePeriodic):
-		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetsForFrames, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetsForFrames, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, false, namePrefix)
 	case string(schemas.EventTypePropertyTypePeriodicWithDimension):
-		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetsForFrames, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, true)
+		return EventQueryResultToTrendDataFrame(eventQuery.IncludeParentInfo, assetsForFrames, events, util.ByUUID(allEventTypes), eventTypePropertiesByEventType, selectedPropertiesSet, eventAssetPropertyFrames, true, namePrefix)
 	default:
 		return nil, fmt.Errorf("unsupported event query type %s", eventQuery.Type)
 	}

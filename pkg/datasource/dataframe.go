@@ -259,9 +259,15 @@ var displayNameLabelPattern = regexp.MustCompile(`\$\{__field\.labels(?:\["([^"]
 
 // renderDisplayName fills the label placeholders of a display name template
 // with the frame's labels and metadata. A label the frame lacks renders empty,
-// other text is kept as is.
-func renderDisplayName(template string, frame *data.Frame) string {
-	labels := mergedLabelsFromMeta(frame)
+// other text is kept as is. QueryName and Aggregation come from the query
+// options. They are not field labels, so alert rules and SQL expressions keep
+// their label sets. A frame label with the same key wins.
+func renderDisplayName(template string, frame *data.Frame, options schemas.MeasurementQueryOptions) string {
+	labels := map[string]string{"QueryName": options.QueryName}
+	if options.Aggregation != nil {
+		labels["Aggregation"] = string(options.Aggregation.Name)
+	}
+	maps.Copy(labels, mergedLabelsFromMeta(frame))
 	return displayNameLabelPattern.ReplaceAllStringFunc(template, func(placeholder string) string {
 		match := displayNameLabelPattern.FindStringSubmatch(placeholder)
 		return labels[match[1]+match[2]]
@@ -367,6 +373,15 @@ func getAssetPath(uuidToAssetMap map[uuid.UUID]schemas.Asset, assetUUID uuid.UUI
 	return asset.AssetPath
 }
 
+// queryNamePrefix returns the query name followed by a space, or nothing when
+// the query has no name, so the built-in names of existing panels stay the same.
+func queryNamePrefix(options schemas.MeasurementQueryOptions) string {
+	if options.QueryName == "" {
+		return ""
+	}
+	return options.QueryName + " "
+}
+
 // setMeasurementFrameNames sets the name of each frame to the display name
 // template, or to the measurement name when the template is empty
 func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQueryOptions, displayNameTemplate string) {
@@ -380,9 +395,9 @@ func setMeasurementFrameNames(frames data.Frames, options schemas.MeasurementQue
 				field.Config = &data.FieldConfig{}
 			}
 			if displayNameTemplate != "" {
-				field.Config.DisplayNameFromDS = renderDisplayName(displayNameTemplate, frame)
+				field.Config.DisplayNameFromDS = renderDisplayName(displayNameTemplate, frame, options)
 			} else {
-				field.Config.DisplayNameFromDS = getMeasurementFrameName(frame, options.DisplayDatabaseName, options.DisplayDescription)
+				field.Config.DisplayNameFromDS = queryNamePrefix(options) + getMeasurementFrameName(frame, options.DisplayDatabaseName, options.DisplayDescription)
 			}
 		}
 	}
@@ -480,9 +495,9 @@ func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, 
 				}
 
 				if displayNameTemplate != "" {
-					field.Config.DisplayNameFromDS = renderDisplayName(displayNameTemplate, frame)
+					field.Config.DisplayNameFromDS = renderDisplayName(displayNameTemplate, frame, options)
 				} else {
-					field.Config.DisplayNameFromDS = assetPath + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
+					field.Config.DisplayNameFromDS = queryNamePrefix(options) + assetPath + "\\\\" + property.Name + getFrameSuffix(frame, options.DisplayDatabaseName, options.DisplayDescription)
 				}
 			}
 		}
