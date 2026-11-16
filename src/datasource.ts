@@ -380,6 +380,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         Arguments: aggregationArguments,
       }
     }
+    if (options.QueryName) {
+      options.QueryName = this.templateSrv.replace(options.QueryName, scopedVars)
+    }
     options.Limit = this.templatedNumber(options.Limit, 0, scopedVars)
     return options
   }

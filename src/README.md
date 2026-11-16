@@ -59,15 +59,17 @@ Create a new instance of the data source from the Grafana Data Sources administr
 
 #### Display names
 
-By default a series of the Assets tab is named after its asset path and property, and a series of the Measurements tab after its measurement. Both append their tags (such as `status`) in braces. To use one naming convention across all dashboards, set a template per tab under Display names. It replaces the built-in name for every query of that tab, also in panels saved before the template was set.
+By default a series of the Assets tab is named after its asset path and property, and a series of the Measurements tab after its measurement. Both append their tags (such as `status`) in braces. A query with a Query name (under Advanced options) puts that name in front, so two queries on the same measurement with different aggregations, for example `Mean` and `Max`, give series that can be told apart. On the Events tab, the Query name of a periodic query with asset properties also goes in front of the event's periodic properties. Queries without a Query name keep their names. To use one naming convention across all dashboards, set a template per tab under Display names. It replaces the built-in name for every query of that tab, also in panels saved before the template was set.
 
 A template is text with `${__field.labels["<label>"]}` (or `${__field.labels.<label>}`) placeholders, for example `${__field.labels["AssetProperty"]}` to show only the property name. Labels:
 
 - Assets: `AssetPath`, `AssetName`, `AssetProperty`, `MeasurementName`, `DatabaseName`, `Description`
 - Measurements: `MeasurementName`, `DatabaseName`, `Description`
-- Both: `status` and any tag the query groups by. A label a series does not have renders empty.
+- Both: `QueryName`, `Aggregation` (the aggregation function, such as `mean`), `status` and any tag the query groups by. A label a series does not have renders empty.
 
-Leave a template empty to keep the built-in name. A Display name set on a panel still takes precedence. While a template is set, the query options "Display database name" and "Display description" have no effect: add `DatabaseName` or `Description` to the template instead.
+`QueryName` and `Aggregation` only exist in templates. They are not added to the series labels, so alert rules and SQL expressions see the same labels as before.
+
+Leave a template empty to keep the built-in name. A Display name set on a panel still takes precedence. While a template is set, the query options "Display database name" and "Display description" have no effect: add `DatabaseName` or `Description` to the template instead. The "Query name" only shows where the template uses `${__field.labels.QueryName}`.
 
 > A full step-by-step guide can be found in the ['Configuring the Factry Historian Datasource' How-To](https://docs.factry.io/how-tos/configuring-the-factry-historian-datasource-plugin-for-grafana).
 
