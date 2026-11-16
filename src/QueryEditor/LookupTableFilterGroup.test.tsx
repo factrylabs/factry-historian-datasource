@@ -370,4 +370,83 @@ describe('LookupTableFilterGroup', () => {
 
     expect(screen.queryByLabelText('remove group')).not.toBeInTheDocument()
   })
+
+  describe('grouping', () => {
+    // (line IN L1 AND setpoint IN 4) OR (line IN L2 AND setpoint IN 5), the ticket's example.
+    const twoGroups: LookupTableRowFilter = {
+      Condition: 'or',
+      ConditionGroups: [
+        {
+          Filter: {
+            Condition: 'and',
+            ConditionGroups: [
+              { Column: 'line', Operator: 'IN', Values: ['L1'] },
+              { Column: 'setpoint', Operator: 'IN', Values: ['4'] },
+            ],
+          },
+        },
+        {
+          Filter: {
+            Condition: 'and',
+            ConditionGroups: [
+              { Column: 'line', Operator: 'IN', Values: ['L2'] },
+              { Column: 'setpoint', Operator: 'IN', Values: ['5'] },
+            ],
+          },
+        },
+      ],
+    }
+
+    const precedes = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+
+    it('puts each nested group in parentheses', () => {
+      renderGroup(twoGroups)
+
+      expect(screen.getAllByText('(')).toHaveLength(2)
+      expect(screen.getAllByText(')')).toHaveLength(2)
+    })
+
+    it('puts no parentheses around the root group', () => {
+      renderGroup({
+        Condition: 'and',
+        ConditionGroups: [
+          { Column: 'line', Operator: 'IN', Values: ['L1'] },
+          { Column: 'setpoint', Operator: 'IN', Values: ['4'] },
+        ],
+      })
+
+      expect(screen.queryByText('(')).not.toBeInTheDocument()
+    })
+
+    // The saved filter is all the editor renders from, so a reopened panel shows the same
+    // grouping it was saved with.
+    it('shows the conditions of a group inside its parentheses and the join between the groups', () => {
+      renderGroup(twoGroups)
+
+      const [open1, open2] = screen.getAllByText('(')
+      const [close1, close2] = screen.getAllByText(')')
+      // Two conditions in each group, the first group's first.
+      const columns = screen.getAllByLabelText('column')
+      // In document order: the inner AND of the first group, the OR between the groups, and
+      // the inner AND of the second group.
+      const [and1, or, and2] = screen.getAllByLabelText('condition')
+
+      expect(precedes(open1, columns[0])).toBe(true)
+      expect(precedes(and1, close1)).toBe(true)
+      expect(precedes(close1, or)).toBe(true)
+      expect(precedes(or, open2)).toBe(true)
+      expect(precedes(open2, columns[2])).toBe(true)
+      expect(precedes(and2, close2)).toBe(true)
+      expect(precedes(columns[3], close2)).toBe(true)
+    })
+
+    it('sets the condition between the groups on the parent', () => {
+      const onChange = renderGroup(twoGroups)
+
+      fireEvent.change(screen.getAllByLabelText('condition')[1], { target: { value: 'and' } })
+
+      expect(onChange).toHaveBeenCalledWith({ ...twoGroups, Condition: 'and' })
+    })
+  })
 })
