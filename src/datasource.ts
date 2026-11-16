@@ -168,6 +168,9 @@ export class DataSource extends DataSourceWithBackend<Query, HistorianDataSource
         q.LookupTable = this.templateSrv.replace(q.LookupTable, scopedVars)
         q.Columns = q.Columns?.flatMap((e) => this.multiSelectReplace(e, scopedVars)).filter((e) => e !== '')
         q.Filter = this.applyTemplateVariablesToLookupTableFilter(q.Filter, scopedVars)
+        // The backend reads both as integers, so a fraction would fail the whole query.
+        q.Limit = Math.trunc(this.templatedNumber(q.Limit, 0, scopedVars))
+        q.Page = Math.trunc(this.templatedNumber(q.Page, 1, scopedVars))
         return q
       }
       case 'EventQuery':

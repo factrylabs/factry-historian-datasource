@@ -107,10 +107,16 @@ moment it is added, and this is what keeps a row being filled in from erroring o
 the panel. The cost is that an empty `Values` cannot be sent to mean "no rows": it reads as a
 condition that is not finished, and the query returns the table unfiltered.
 
+`Limit` is the most rows to return, and `0` or an absent one returns every row. `Page` picks
+which rows, counting from 1, and is only read under a limit. Both take a number or a variable
+resolving to one. A variable left unresolved, as in an alert rule, reads as 0. The query editor starts a new query on a limit of 1000.
+
 ```json
 {
   "LookupTable": "3b2d8b1e-6a1f-4c6e-9f2b-0a7d5a1c4e88",
   "Columns": ["line", "setpoint"],
+  "Limit": 100,
+  "Page": 2,
   "Filter": {
     "Condition": "and",
     "ConditionGroups": [
@@ -231,3 +237,13 @@ written before a column was added, both read as null.
 
 A column holding a value its type does not allow falls back to a string field for the whole
 column, rendering non-string values as the JSON they arrived as.
+
+`Meta.Custom` tells where the rows sit: `Rows` is how many rows the page holds, `TotalRows` is
+how many rows the filter matches over every page, and `Page` and `Limit` are the values the
+query ran with, after variables. `TotalRows` is left out when the Historian does not send an
+`X-Total-Count` header. When the limit cuts rows off, `Meta.Notices` holds an info notice such
+as `Rows 101 to 200 of 643 (page 2 of 7)`.
+
+```json
+{ "Rows": 100, "TotalRows": 643, "Page": 2, "Limit": 100 }
+```

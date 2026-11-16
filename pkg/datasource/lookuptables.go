@@ -25,6 +25,11 @@ func (ds *HistorianDataSource) handleLookupTableQuery(ctx context.Context, query
 		return nil, nil
 	}
 
+	// Clamped to 0, a negative limit would read every row.
+	if query.Limit < 0 || query.Page < 0 {
+		return nil, fmt.Errorf("lookup table limit and page must not be negative, got %d and %d", query.Limit, query.Page)
+	}
+
 	lookupTables, err := ds.API.GetLookupTablesCached(ctx, "")
 	if err != nil {
 		return nil, err
@@ -38,14 +43,61 @@ func (ds *HistorianDataSource) handleLookupTableQuery(ctx context.Context, query
 	}
 	lookupTable := lookupTables[index]
 
-	filter := coerceLookupTableFilter(lookupTable.Attributes.Columns, query.Filter)
+	limit := int(query.Limit)
+	page := 1
+	if limit > 0 {
+		page = max(int(query.Page), 1)
+	}
 
-	rows, err := ds.API.GetLookupTableRows(ctx, query.LookupTable, filter)
+	rows, total, err := ds.API.GetLookupTableRows(ctx, query.LookupTable, schemas.LookupTableRowQuery{
+		Filter: coerceLookupTableFilter(lookupTable.Attributes.Columns, query.Filter),
+		Limit:  limit,
+		Page:   page,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return data.Frames{lookupTableFrame(lookupTable, rows, query.Columns)}, nil
+	frame := lookupTableFrame(lookupTable, rows, query.Columns)
+	// The query editor reads these to show where the page sits, resolved past any variable.
+	custom := map[string]interface{}{
+		"Rows":  len(rows),
+		"Page":  page,
+		"Limit": limit,
+	}
+	// Without a total the paging is unknown, so the editor shows none rather than a wrong one.
+	if total >= 0 {
+		custom["TotalRows"] = total
+	}
+	frame.Meta.Custom = custom
+	if notice, ok := lookupTablePageNotice(len(rows), total, page, limit); ok {
+		frame.Meta.Notices = []data.Notice{notice}
+	}
+
+	return data.Frames{frame}, nil
+}
+
+// lookupTablePageNotice tells which part of the matching rows a page holds, so a panel cut
+// short by its limit does not pass for the whole table. A page holding every matching row
+// needs no notice, and neither does an unknown, negative total.
+func lookupTablePageNotice(rows, total, page, limit int) (data.Notice, bool) {
+	if limit == 0 || rows >= total {
+		return data.Notice{}, false
+	}
+
+	pages := (total + limit - 1) / limit
+	if rows == 0 {
+		return data.Notice{
+			Severity: data.NoticeSeverityInfo,
+			Text:     fmt.Sprintf("No rows on page %d, the last page is %d (%d rows)", page, pages, total),
+		}, true
+	}
+
+	first := (page-1)*limit + 1
+	return data.Notice{
+		Severity: data.NoticeSeverityInfo,
+		Text:     fmt.Sprintf("Rows %d to %d of %d (page %d of %d)", first, first+rows-1, total, page, pages),
+	}, true
 }
 
 // coerceLookupTableFilter types every filter value by the column it is compared against.

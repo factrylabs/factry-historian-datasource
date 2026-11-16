@@ -74,6 +74,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
     lookupTableQuery: {
       LookupTable: '',
       Columns: [] as string[],
+      Limit: 1000,
     },
   } as QueryEditorState
 
@@ -322,6 +323,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           <LookupTables
             query={this.props.query.query as LookupTableQuery}
             datasource={this.props.datasource}
+            result={this.props.data?.series.find((frame) => frame.refId === this.props.query.refId)}
             onChangeLookupTableQuery={this.onChangeLookupTableQuery}
           />
         ),

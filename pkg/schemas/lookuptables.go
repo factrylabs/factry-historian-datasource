@@ -1,5 +1,10 @@
 package schemas
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 // LookupTableColumnType is the type a lookup table column's cell values are validated
 // against by the historian.
 type LookupTableColumnType string
@@ -99,15 +104,46 @@ type LookupTableRowConditionGroup struct {
 // body because the filter is a tree, which cannot be expressed as query parameters.
 //
 // Limit is always written, and a zero one reads as no pagination at all. An absent one
-// would read as the first hundred rows instead.
+// would read as the first hundred rows instead. Page counts from 1 and is only read under
+// a limit.
 type LookupTableRowQuery struct {
 	Filter *LookupTableRowFilter `json:"Filter,omitempty"`
 	Limit  int                   `json:"Limit"`
+	Page   int                   `json:"Page,omitempty"`
 }
 
-// LookupTableQuery is used to query the rows of a lookup table
+// LookupTableQuery is used to query the rows of a lookup table. A Limit of zero returns
+// every row, and Page counts from 1, with zero reading as the first page.
 type LookupTableQuery struct {
 	LookupTable string
 	Filter      *LookupTableRowFilter
 	Columns     []string
+	Limit       QueryNumber
+	Page        QueryNumber
+}
+
+// QueryNumber is a whole number the query editor saves as a number or as a variable. A
+// query that skips the frontend, such as an alert rule, arrives with the variable unresolved,
+// and it reads as zero the way the frontend reads one that resolves to nothing. A fraction is
+// truncated, as the frontend does.
+type QueryNumber int
+
+// UnmarshalJSON reads a number, a string holding one, or anything else as zero.
+func (n *QueryNumber) UnmarshalJSON(b []byte) error {
+	var value interface{}
+	if err := json.Unmarshal(b, &value); err != nil {
+		return err
+	}
+
+	*n = 0
+	switch v := value.(type) {
+	case float64:
+		*n = QueryNumber(v)
+	case string:
+		if number, err := strconv.ParseFloat(v, 64); err == nil {
+			*n = QueryNumber(number)
+		}
+	}
+
+	return nil
 }

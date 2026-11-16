@@ -819,6 +819,28 @@ describe('DataSource.applyTemplateVariables lookup tables', () => {
     )
     expect((templated.query as LookupTableQuery).LookupTable).toBe('other-uuid')
   })
+
+  it('reads an absent limit as every row and an absent page as the first', () => {
+    const ds = makeDataSource(makeTemplateSrv({}))
+    const result = ds.applyTemplateVariables(makeLookupTableQuery(), {})
+    expect((result.query as LookupTableQuery).Limit).toBe(0)
+    expect((result.query as LookupTableQuery).Page).toBe(1)
+  })
+
+  it('resolves variables in the limit and the page to numbers', () => {
+    const ds = makeDataSource(makeTemplateSrv({ limit: '50', page: '3' }))
+    const result = ds.applyTemplateVariables(makeLookupTableQuery({ Limit: '$limit', Page: '$page' }), {})
+    expect((result.query as LookupTableQuery).Limit).toBe(50)
+    expect((result.query as LookupTableQuery).Page).toBe(3)
+  })
+
+  // The backend reads both as integers, and a fraction fails the whole query there.
+  it('drops the fraction of a limit and a page', () => {
+    const ds = makeDataSource(makeTemplateSrv({ limit: '50.7', page: '2.5' }))
+    const result = ds.applyTemplateVariables(makeLookupTableQuery({ Limit: '$limit', Page: '$page' }), {})
+    expect((result.query as LookupTableQuery).Limit).toBe(50)
+    expect((result.query as LookupTableQuery).Page).toBe(2)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -916,7 +938,10 @@ describe('DataSource.getLookupTableValues', () => {
 })
 
 describe('DataSource.resolveAssets', () => {
-  function makeResolvingDataSource(): { ds: DataSource; requests: Array<{ path: string; params?: Record<string, unknown> }> } {
+  function makeResolvingDataSource(): {
+    ds: DataSource
+    requests: Array<{ path: string; params?: Record<string, unknown> }>
+  } {
     const ds = makeDataSource(makeTemplateSrv({}))
     const requests: Array<{ path: string; params?: Record<string, unknown> }> = []
     ;(
