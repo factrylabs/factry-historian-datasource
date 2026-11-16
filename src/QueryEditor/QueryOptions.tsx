@@ -66,6 +66,11 @@ export const QueryOptions = (props: Props): JSX.Element => {
   const [periods, setPeriods] = useState(getPeriods())
   const [seriesLimit, setSeriesLimit] = useDebounce<number | string>(props.seriesLimit, 500, props.onChangeSeriesLimit)
   const [ordering, setOrdering] = useState(props.state.Desc ? 'descending' : 'ascending')
+  const [queryName, setQueryName] = useState(props.state.QueryName ?? '')
+
+  useEffect(() => {
+    setQueryName(props.state.QueryName ?? '')
+  }, [props.state.QueryName])
 
   useEffect(() => {
     if (props.state.Aggregation?.Period) {
@@ -197,6 +202,15 @@ export const QueryOptions = (props: Props): JSX.Element => {
 
   const onChangeDisplayDescription = (e: any): void => {
     props.onChange({ ...props.state, DisplayDescription: e.target.checked })
+  }
+
+  const onBlurQueryName = (): void => {
+    const trimmed = queryName.trim()
+    if (trimmed === (props.state.QueryName ?? '')) {
+      setQueryName(trimmed)
+      return
+    }
+    props.onChange({ ...props.state, QueryName: trimmed })
   }
 
   const onChangeMetadataAsLabels = (e: any): void => {
@@ -405,6 +419,25 @@ export const QueryOptions = (props: Props): JSX.Element => {
                 </InlineField>
               </InlineFieldRow>
             )}
+            <InlineFieldRow>
+              <InlineField
+                label="Query name"
+                labelWidth={labelWidth}
+                tooltip={
+                  props.displayNameTemplate
+                    ? 'The datasource sets a default display name. Add ${__field.labels.QueryName} to it to show this name.'
+                    : 'Prefixes the name of every series of this query, for example to tell aggregations apart'
+                }
+              >
+                <Input
+                  width={fieldWidth}
+                  value={queryName}
+                  onChange={(e) => setQueryName(e.currentTarget.value)}
+                  onBlur={onBlurQueryName}
+                  placeholder="Prefixes the series names"
+                />
+              </InlineField>
+            </InlineFieldRow>
             <InlineFieldRow>
               <InlineField
                 label="Display database name"

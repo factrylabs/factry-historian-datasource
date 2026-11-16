@@ -13,22 +13,24 @@ beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = jest.fn(() => ({ measureText: () => ({ width: 0 }) })) as any
 })
 
-const renderOptions = (displayNameTemplate?: string) => {
-  render(
+const renderOptions = (displayNameTemplate?: string, onChange = jest.fn(), state = {} as MeasurementQueryOptions) => {
+  const element = (options: MeasurementQueryOptions) => (
     <QueryOptions
-      state={{} as MeasurementQueryOptions}
+      state={options}
       seriesLimit={50}
       tags={[]}
       valueFilters={[]}
       appIsAlertingType={false}
       datatypes={[]}
       templateVariables={[]}
-      onChange={jest.fn()}
+      onChange={onChange}
       onChangeSeriesLimit={jest.fn()}
       displayNameTemplate={displayNameTemplate}
     />
   )
+  const { rerender } = render(element(state))
   fireEvent.click(screen.getByText('Advanced options'))
+  return (options: MeasurementQueryOptions) => rerender(element(options))
 }
 
 const switchFor = (label: string) => {
@@ -50,5 +52,43 @@ describe('QueryOptions display name switches', () => {
 
     expect(switchFor('Display database name')).toBeDisabled()
     expect(switchFor('Display description')).toBeDisabled()
+  })
+})
+
+describe('QueryOptions query name', () => {
+  it('sets the query name when the input loses focus', () => {
+    const onChange = jest.fn()
+    renderOptions(undefined, onChange)
+
+    const input = screen.getByPlaceholderText('Prefixes the series names')
+    fireEvent.change(input, { target: { value: 'Mean 5m' } })
+    fireEvent.blur(input)
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ QueryName: 'Mean 5m' }))
+  })
+
+  it('does not change the query when the name is left as it was', () => {
+    const onChange = jest.fn()
+    renderOptions(undefined, onChange, { QueryName: 'Mean' } as MeasurementQueryOptions)
+
+    const input = screen.getByPlaceholderText('Prefixes the series names')
+    fireEvent.change(input, { target: { value: ' Mean ' } })
+    fireEvent.blur(input)
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('shows a query name changed outside the input', () => {
+    const rerender = renderOptions(undefined, jest.fn(), { QueryName: 'Mean' } as MeasurementQueryOptions)
+
+    rerender({ QueryName: 'Max' } as MeasurementQueryOptions)
+
+    expect(screen.getByPlaceholderText('Prefixes the series names')).toHaveValue('Max')
+  })
+
+  it('stays enabled when the datasource sets a display name', () => {
+    renderOptions('${__field.labels.MeasurementName}')
+
+    expect(screen.getByPlaceholderText('Prefixes the series names')).not.toBeDisabled()
   })
 })

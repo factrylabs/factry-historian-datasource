@@ -138,7 +138,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             <InlineField
               label="Assets"
               labelWidth={20}
-              tooltip={`${displayNameTooltip} Labels: AssetPath, AssetName, AssetProperty, MeasurementName, DatabaseName, Description, status and any tag.`}
+              tooltip={`${displayNameTooltip} Labels: AssetPath, AssetName, AssetProperty, MeasurementName, DatabaseName, Description, QueryName, Aggregation, status and any tag.`}
             >
               <Input
                 width={61}
@@ -153,7 +153,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             <InlineField
               label="Measurements"
               labelWidth={20}
-              tooltip={`${displayNameTooltip} Labels: MeasurementName, DatabaseName, Description, status and any tag.`}
+              tooltip={`${displayNameTooltip} Labels: MeasurementName, DatabaseName, Description, QueryName, Aggregation, status and any tag.`}
             >
               <Input
                 width={61}

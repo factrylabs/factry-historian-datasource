@@ -115,6 +115,7 @@ export interface MeasurementQueryOptions {
   Datatypes?: string[]
   Desc?: boolean
   FrameFormat?: FrameFormat
+  QueryName?: string
 }
 
 export interface ValueFilter {

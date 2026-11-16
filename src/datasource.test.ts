@@ -243,6 +243,15 @@ describe('DataSource.applyTemplateVariables', () => {
     })
   })
 
+  describe('options.QueryName', () => {
+    it('interpolates a dashboard variable', () => {
+      const ds = makeDataSource(makeTemplateSrv({ agg: 'Mean' }))
+      const query = makeQuery({ query: makeMeasurementQuery({ QueryName: '$agg 5m' }) })
+      const result = ds.applyTemplateVariables(query, {}) as Query
+      expect((result.query as MeasurementQuery).Options.QueryName).toBe('Mean 5m')
+    })
+  })
+
   describe('eventQuery.Limit', () => {
     it('defaults to 500 when eventQuery.Limit is undefined', () => {
       const ds = makeDataSource(makeTemplateSrv({}))
