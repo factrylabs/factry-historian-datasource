@@ -206,6 +206,8 @@ go test ./...        # Run tests without coverage
 
 Playwright tests exist but are currently commented out in CI. Infrastructure uses `pnpm run e2e` and tests against multiple Grafana versions.
 
+The mock Historian (`tests/mockhistorian`) reports v8.3.0. Set `MOCK_HISTORIAN_VERSION` (for example `8.2.0`) in the shell that starts the mock and runs `pnpm run e2e` to cover the plugin's paths for an older Historian. See `tests/README.md`.
+
 ---
 
 ## Git Commit Conventions

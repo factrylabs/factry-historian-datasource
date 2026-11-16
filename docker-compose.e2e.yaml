@@ -7,6 +7,9 @@
 services:
   mockhistorian:
     container_name: 'factry-historian-mock'
+    # Set on the host to report an older Historian version, for example 8.2.0.
+    environment:
+      - MOCK_HISTORIAN_VERSION
     build:
       context: .
       dockerfile: tests/mockhistorian/Dockerfile
