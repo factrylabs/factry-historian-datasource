@@ -7,6 +7,7 @@ import (
 	"maps"
 	"net/url"
 	"slices"
+	"strconv"
 
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/util"
@@ -398,45 +399,56 @@ func (api *API) GetLookupTables(ctx context.Context, query string) ([]schemas.Lo
 // the table.
 //
 // It is a POST with the query in the body, which is where the historian takes a lookup table
-// filter: a tree of conditions has no shape a query parameter can carry. A limit of zero is
-// sent on purpose and reads as no pagination: a lookup table is reference data a panel shows
-// whole, and an absent limit reads as the first hundred rows.
-func (api *API) GetLookupTableRows(ctx context.Context, lookupTableUUID string, filter *schemas.LookupTableRowFilter) ([]schemas.LookupTableRow, error) {
+// filter: a tree of conditions has no shape a query parameter can carry. The limit is always
+// sent, and a zero one reads as no pagination, where an absent one reads as the first hundred
+// rows.
+//
+// It also returns how many rows the filter matches across every page, which the historian
+// counts before it paginates. A response without that count returns -1, an unknown total.
+func (api *API) GetLookupTableRows(ctx context.Context, lookupTableUUID string, query schemas.LookupTableRowQuery) ([]schemas.LookupTableRow, int, error) {
 	rows := []schemas.LookupTableRow{}
-
-	query := schemas.LookupTableRowQuery{}
 
 	// A filter with no condition groups narrows nothing, and the historian reads an absent
 	// one the same way, so it is left out of the body entirely.
-	if filter != nil && len(filter.ConditionGroups) > 0 {
-		query.Filter = filter
+	if query.Filter != nil && len(query.Filter.ConditionGroups) == 0 {
+		query.Filter = nil
+	}
+
+	// The historian reads an absent page as the first, and rejects a page of 0.
+	if query.Page <= 1 {
+		query.Page = 0
 	}
 
 	body, err := json.Marshal(query)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	path := "/api/lookup-tables/" + url.PathEscape(lookupTableUUID) + "/rows/query"
 
 	req, err := newHTTPRequest(ctx, "POST", path, bytes.NewReader(body))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	resp, err := api.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		return nil, handleHTTPError(resp)
+		return nil, 0, handleHTTPError(resp)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return rows, nil
+	total, err := strconv.Atoi(resp.Header.Get("X-Total-Count"))
+	if err != nil {
+		total = -1
+	}
+
+	return rows, total, nil
 }

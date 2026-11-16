@@ -193,7 +193,13 @@ func (ds *HistorianDataSource) handleQueryLookupTableRows(_ http.ResponseWriter,
 		filter = coerceLookupTableFilter(lookupTables[index].Attributes.Columns, filter)
 	}
 
-	return ds.API.GetLookupTableRows(req.Context(), lookupTableUUID, filter)
+	// A variable lists the values of every matching row, so it reads them all.
+	rows, _, err := ds.API.GetLookupTableRows(req.Context(), lookupTableUUID, schemas.LookupTableRowQuery{Filter: filter})
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
 }
 
 func (ds *HistorianDataSource) handleGetTagKeys(_ http.ResponseWriter, req *http.Request) (interface{}, error) {

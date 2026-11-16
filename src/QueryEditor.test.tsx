@@ -102,6 +102,21 @@ describe('QueryEditor', () => {
       await waitFor(() => expect(screen.getByText('Lookup tables')).toBeInTheDocument())
       expect(screen.getByTestId('lookup-tables-editor')).toBeInTheDocument()
     })
+
+    // A table can hold far more rows than a panel should load at once.
+    it('starts a new query with a row limit', async () => {
+      const onChange = jest.fn()
+      render(<QueryEditor {...defaultProps} datasource={on('v8.3.0')} onChange={onChange} />)
+      await waitFor(() => expect(screen.getByText('Lookup tables')).toBeInTheDocument())
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Lookup tables'))
+      })
+
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0]
+      expect(lastCall.queryType).toBe('LookupTableQuery')
+      expect(lastCall.query).toEqual({ LookupTable: '', Columns: [], Limit: 1000 })
+    })
   })
 
   it('calls datasource.getInfo on mount', async () => {

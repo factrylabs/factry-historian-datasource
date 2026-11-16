@@ -337,6 +337,18 @@ export interface LookupTableQuery {
   Filter?: LookupTableRowFilter
   /** The columns to return. Empty takes every column of the table. */
   Columns: string[]
+  /** The most rows to return. 0 or absent returns every row. */
+  Limit?: number | string
+  /** The page of rows to return, from 1. Only read under a limit. */
+  Page?: number | string
+}
+
+/** Where a lookup table query's rows sit among all the rows its filter matches. */
+export interface LookupTablePaging {
+  Rows: number
+  TotalRows: number
+  Page: number
+  Limit: number
 }
 
 export interface Collector {

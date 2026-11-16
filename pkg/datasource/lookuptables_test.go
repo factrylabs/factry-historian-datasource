@@ -601,3 +601,155 @@ func TestLookupTableQueryDropsAnEqualityWithoutValues(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"Limit":0}`, body)
 }
+
+// fakePagedLookupTableHistorian answers the rows call with the rows given and the total count
+// header the historian sends, and records the body the call arrived with. An empty total
+// leaves the header off.
+func fakePagedLookupTableHistorian(t *testing.T, rows []schemas.LookupTableRow, total string, body *string) *HistorianDataSource {
+	t.Helper()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/lookup-tables", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, []schemas.LookupTable{lookupTableFixture()})
+	})
+	mux.HandleFunc("POST /api/lookup-tables/{uuid}/rows/query", func(w http.ResponseWriter, req *http.Request) {
+		sent, err := io.ReadAll(req.Body)
+		assert.NoError(t, err)
+		*body = string(sent)
+		if total != "" {
+			w.Header().Set("X-Total-Count", total)
+		}
+		writeJSON(w, rows)
+	})
+
+	return newFakeHistorianDataSource(t, mux)
+}
+
+// The page only means something under a limit, and the first page is what the historian
+// reads an absent one as, so the body carries a page only when it moves past the first.
+func TestLookupTableQuerySendsTheLimitAndThePage(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		limit schemas.QueryNumber
+		page  schemas.QueryNumber
+		body  string
+	}{
+		"a later page":           {limit: 2, page: 3, body: `{"Limit":2,"Page":3}`},
+		"the first page":         {limit: 2, page: 1, body: `{"Limit":2}`},
+		"no page":                {limit: 2, page: 0, body: `{"Limit":2}`},
+		"a page without a limit": {limit: 0, page: 3, body: `{"Limit":0}`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			body := ""
+			ds := fakePagedLookupTableHistorian(t, lookupTableRows(), "", &body)
+
+			_, err := ds.handleLookupTableQuery(t.Context(), schemas.LookupTableQuery{
+				LookupTable: lookupTableUUID.String(),
+				Limit:       test.limit,
+				Page:        test.page,
+			})
+			require.NoError(t, err)
+			assert.JSONEq(t, test.body, body)
+		})
+	}
+}
+
+func TestLookupTableQueryRejectsANegativeLimitOrPage(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		limit schemas.QueryNumber
+		page  schemas.QueryNumber
+	}{
+		"a negative limit": {limit: -5, page: 1},
+		"a negative page":  {limit: 2, page: -1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			body := ""
+			ds := fakePagedLookupTableHistorian(t, lookupTableRows(), "", &body)
+
+			_, err := ds.handleLookupTableQuery(t.Context(), schemas.LookupTableQuery{
+				LookupTable: lookupTableUUID.String(),
+				Limit:       test.limit,
+				Page:        test.page,
+			})
+			require.ErrorContains(t, err, "must not be negative")
+			assert.Empty(t, body)
+		})
+	}
+}
+
+func TestLookupTableQueryCarriesWhereThePageSits(t *testing.T) {
+	t.Parallel()
+
+	body := ""
+	ds := fakePagedLookupTableHistorian(t, lookupTableRows(), "11", &body)
+
+	frames, err := ds.handleLookupTableQuery(t.Context(), schemas.LookupTableQuery{
+		LookupTable: lookupTableUUID.String(),
+		Limit:       3,
+		Page:        2,
+	})
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+	require.NotNil(t, frames[0].Meta)
+
+	assert.Equal(t, map[string]interface{}{"Rows": 3, "TotalRows": 11, "Page": 2, "Limit": 3}, frames[0].Meta.Custom)
+	assert.Equal(t, []data.Notice{{Severity: data.NoticeSeverityInfo, Text: "Rows 4 to 6 of 11 (page 2 of 4)"}}, frames[0].Meta.Notices)
+}
+
+// A historian that does not send the count leaves the total unknown, which shows no paging
+// rather than a wrong one.
+func TestLookupTableQueryWithoutATotalCountShowsNoPaging(t *testing.T) {
+	t.Parallel()
+
+	body := ""
+	ds := fakePagedLookupTableHistorian(t, lookupTableRows(), "", &body)
+
+	frames, err := ds.handleLookupTableQuery(t.Context(), schemas.LookupTableQuery{
+		LookupTable: lookupTableUUID.String(),
+		Limit:       3,
+	})
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+
+	assert.Equal(t, map[string]interface{}{"Rows": 3, "Page": 1, "Limit": 3}, frames[0].Meta.Custom)
+	assert.Empty(t, frames[0].Meta.Notices)
+}
+
+func TestLookupTablePageNotice(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		rows, total, page, limit int
+		text                     string
+	}{
+		"the first page":         {rows: 100, total: 643, page: 1, limit: 100, text: "Rows 1 to 100 of 643 (page 1 of 7)"},
+		"the last, partial page": {rows: 43, total: 643, page: 7, limit: 100, text: "Rows 601 to 643 of 643 (page 7 of 7)"},
+		"past the last page":     {rows: 0, total: 643, page: 9, limit: 100, text: "No rows on page 9, the last page is 7 (643 rows)"},
+		"every row on one page":  {rows: 40, total: 40, page: 1, limit: 100},
+		"no limit":               {rows: 643, total: 643, page: 1, limit: 0},
+		"nothing matches":        {rows: 0, total: 0, page: 1, limit: 100},
+		"exactly one full page":  {rows: 100, total: 100, page: 1, limit: 100},
+		"a total of whole pages": {rows: 100, total: 200, page: 2, limit: 100, text: "Rows 101 to 200 of 200 (page 2 of 2)"},
+		"an unknown total":       {rows: 100, total: -1, page: 2, limit: 100},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			notice, ok := lookupTablePageNotice(test.rows, test.total, test.page, test.limit)
+			if test.text == "" {
+				assert.False(t, ok)
+				return
+			}
+
+			require.True(t, ok)
+			assert.Equal(t, data.Notice{Severity: data.NoticeSeverityInfo, Text: test.text}, notice)
+		})
+	}
+}
