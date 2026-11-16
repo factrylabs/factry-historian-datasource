@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { QueryEditorProps } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
 import { Events } from 'QueryEditor/Events'
+import { isMatchModeEnabled } from 'QueryEditor/util'
 import { DataSource } from 'datasource'
 import { HistorianDataSourceOptions, Query, EventQuery, PropertyType } from 'types'
 
@@ -26,7 +27,10 @@ export class AnnotationsQueryEditor extends Component<Props> {
     try {
       await this.props.datasource.getInfo()
     } catch (_) {}
-    if (!query.query) {
+    if (query.query) {
+      // Render Events again, so it sees the historian version
+      this.forceUpdate()
+    } else {
       this.onChangeEventQuery({
         Type: PropertyType.Simple,
         Assets: [],
@@ -39,6 +43,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
         OverrideTimeRange: false,
         TimeRange: { from: '', to: '' },
         Ascending: true,
+        ...(isMatchModeEnabled(this.props.datasource.historianInfo?.Version) && { MatchMode: 'overlapping' }),
       })
     }
   }

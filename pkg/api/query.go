@@ -178,6 +178,10 @@ func newEventQueryPostRequest(ctx context.Context, filter schemas.EventFilter, h
 		Filter: fixPropertyFilterValues(filter),
 		Limit:  filter.Limit,
 	}
+	// Historians before 8.4 do not know MatchMode.
+	if !util.CheckMinimumVersion(historianInfo, "8.4.0", true) {
+		body.Filter.MatchMode = ""
+	}
 	if util.CheckMinimumVersion(historianInfo, "8.3.0", true) {
 		for _, property := range filter.Properties {
 			body.IncludedEventPropertyUUIDs = append(body.IncludedEventPropertyUUIDs, property.UUID)

@@ -7,7 +7,12 @@ import { Events } from 'QueryEditor/Events'
 import { RawQueryEditor } from 'QueryEditor/RawQueryEditor'
 import { LookupTables } from 'QueryEditor/LookupTables'
 import { Measurements } from 'QueryEditor/Measurements'
-import { defaultQueryOptions, isLookupTablesEnabled, migrateMeasurementQuery } from 'QueryEditor/util'
+import {
+  defaultQueryOptions,
+  isLookupTablesEnabled,
+  isMatchModeEnabled,
+  migrateMeasurementQuery,
+} from 'QueryEditor/util'
 import { DataSource } from './datasource'
 import {
   HistorianDataSourceOptions,
@@ -38,6 +43,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
   }
 
   mountFinished = false
+  eventQueryShown = false
   appIsAlertingType = this.props.app === CoreApp.CloudAlerting || this.props.app === CoreApp.UnifiedAlerting
   state = {
     tabIndex: this.props.datasource.defaultTab,
@@ -85,14 +91,12 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
   async componentDidMount(): Promise<void> {
     const { query } = this.props
-    const tabIndex = query.tabIndex ?? this.state.tabIndex
-    this.setTabIndex(tabIndex)
+    // The default event query depends on the historian version, so load it first.
     try {
       await this.props.datasource.getInfo()
     } catch (_) {}
     this.mountFinished = true
-    // force re-render
-    this.setState({ ...this.state })
+    this.setTabIndex(query.tabIndex ?? this.state.tabIndex)
   }
 
   setTabIndex(index: number): void {
@@ -121,7 +125,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
           case TabIndex.Events: {
             const query =
               this.props.query.queryType === 'EventQuery' ? (this.props.query.query as EventQuery) : undefined
-            this.onChangeEventQuery(query ?? this.state.eventQuery)
+            this.onChangeEventQuery(query ?? this.newEventQuery())
             break
           }
           case TabIndex.RawQuery: {
@@ -140,6 +144,18 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
         }
       }
     )
+  }
+
+  // Below 8.4 the mode is hidden and ignored. A stored mode would apply after a Historian
+  // upgrade and change what the panel returns, so it is only set when the historian has it.
+  // Once an event query was shown, the cached one comes back unchanged, so a saved query
+  // without a mode keeps the legacy filter after a tab switch.
+  newEventQuery(): EventQuery {
+    const eventQuery = this.state.eventQuery
+    if (this.eventQueryShown || !isMatchModeEnabled(this.props.datasource.historianInfo?.Version)) {
+      return eventQuery
+    }
+    return { ...eventQuery, MatchMode: 'overlapping' }
   }
 
   onChangeAssetMeasurementQuery(assetMeasurementQuery: AssetMeasurementQuery): void {
@@ -201,6 +217,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
 
     onChange(updatedQuery)
     this.onRunQuery(this.props)
+    this.eventQueryShown = true
     this.setState({
       ...this.state,
       eventQuery: eventQuery,

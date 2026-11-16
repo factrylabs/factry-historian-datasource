@@ -55,6 +55,9 @@ type EventFilter struct {
 	ExcludeManualEvents bool
 	Ascending           bool
 	PreloadProperties   bool
+	// How events match StartTime and StopTime. Empty keeps the historian's legacy closed-range filter,
+	// which is why it is omitted rather than sent as "". GET /api/events has no such parameter.
+	MatchMode string `json:",omitempty" form:"-"`
 	// Event type properties to return. Empty returns all properties.
 	Properties []EventTypeProperty `form:"-" json:"-"`
 }

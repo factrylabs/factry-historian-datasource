@@ -169,6 +169,117 @@ describe('QueryEditor', () => {
     expect(lastCall.tabIndex).toBe(TabIndex.Assets)
   })
 
+  describe('the event query match mode', () => {
+    // historianInfo is only known once getInfo resolves, as on a first panel load.
+    const loadsInfo = (version: string, defaultTab = TabIndex.Measurements) =>
+      ({
+        ...mockDatasource,
+        defaultTab,
+        historianInfo: undefined,
+        getInfo: jest.fn(async function (this: DataSource) {
+          this.historianInfo = { Version: version } as DataSource['historianInfo']
+        }),
+      } as unknown as DataSource)
+
+    const switchToEvents = async (query: Query, onChange: jest.Mock, datasource = loadsInfo('v8.4.0')) => {
+      render(<QueryEditor {...defaultProps} datasource={datasource} query={query} onChange={onChange} />)
+      await waitFor(() => {
+        expect(screen.getByText('Events')).toBeInTheDocument()
+      })
+      await act(async () => {
+        fireEvent.click(screen.getByText('Events'))
+      })
+      return onChange.mock.calls[onChange.mock.calls.length - 1][0]
+    }
+
+    it('defaults to overlapping for a new event query', async () => {
+      const last = await switchToEvents(makeQuery(), jest.fn())
+
+      expect(last.query.MatchMode).toBe('overlapping')
+    })
+
+    // The editor hides the mode below 8.4, so a stored mode would only apply after a Historian
+    // upgrade and change what the panel returns without anyone editing it.
+    it('is left unset for a new event query on a historian without match modes', async () => {
+      const last = await switchToEvents(makeQuery(), jest.fn(), loadsInfo('v8.3.0'))
+
+      expect(last.query.MatchMode).toBeUndefined()
+    })
+
+    it('defaults to overlapping for a new event query opened before the historian info loads', async () => {
+      const onChange = jest.fn()
+      const datasource = loadsInfo('v8.4.0', TabIndex.Events)
+      render(
+        <QueryEditor
+          {...defaultProps}
+          datasource={datasource}
+          query={makeQuery({ tabIndex: undefined, queryType: undefined })}
+          onChange={onChange}
+        />
+      )
+      await waitFor(() => expect(datasource.getInfo).toHaveBeenCalled())
+      await act(async () => {})
+
+      expect(onChange.mock.calls[onChange.mock.calls.length - 1][0].queryType).toBe('EventQuery')
+      expect(onChange.mock.calls[onChange.mock.calls.length - 1][0].query.MatchMode).toBe('overlapping')
+    })
+
+    // No mode keeps the historian's legacy filter, so saved panels return the same events.
+    it('is left unset for a saved event query', async () => {
+      const saved = makeQuery({
+        queryType: 'EventQuery',
+        tabIndex: TabIndex.Events,
+        query: { Type: 'simple', Assets: [], PropertyFilter: [] } as any,
+      })
+      const onChange = jest.fn()
+      render(<QueryEditor {...defaultProps} query={saved} onChange={onChange} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('events-editor')).toBeInTheDocument()
+      })
+
+      expect(onChange).toHaveBeenCalled()
+      expect(onChange.mock.calls[onChange.mock.calls.length - 1][0].query.MatchMode).toBeUndefined()
+    })
+
+    it('is left unset for a saved event query after switching to another tab and back', async () => {
+      const saved = makeQuery({
+        queryType: 'EventQuery',
+        tabIndex: TabIndex.Events,
+        query: { Type: 'simple', Assets: [], PropertyFilter: [] } as any,
+      })
+      const onChange = jest.fn()
+      const datasource = loadsInfo('v8.4.0')
+      // Grafana passes every onChange back in as the new query prop.
+      const Panel = () => {
+        const [query, setQuery] = React.useState(saved)
+        return (
+          <QueryEditor
+            {...defaultProps}
+            datasource={datasource}
+            query={query}
+            onChange={(q: Query) => {
+              onChange(q)
+              setQuery(q)
+            }}
+          />
+        )
+      }
+      render(<Panel />)
+      await waitFor(() => expect(screen.getByTestId('events-editor')).toBeInTheDocument())
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('radio', { name: 'Assets' }))
+      })
+      await act(async () => {
+        fireEvent.click(screen.getByRole('radio', { name: 'Events' }))
+      })
+
+      const last = onChange.mock.calls[onChange.mock.calls.length - 1][0]
+      expect(last.queryType).toBe('EventQuery')
+      expect(last.query.MatchMode).toBeUndefined()
+    })
+  })
+
   it('does not show sub-editor content before mount finishes', () => {
     // Before componentDidMount resolves, mountFinished is false
     render(<QueryEditor {...defaultProps} />)
