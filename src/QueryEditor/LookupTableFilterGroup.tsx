@@ -1,15 +1,7 @@
 import React from 'react'
-import { css } from '@emotion/css'
+import { css, cx } from '@emotion/css'
 import { GrafanaTheme2, SelectableValue } from '@grafana/data'
-import {
-  Button,
-  IconButton,
-  InlineField,
-  InlineFieldRow,
-  MultiSelect,
-  Select,
-  useStyles2,
-} from '@grafana/ui'
+import { Button, IconButton, InlineField, InlineFieldRow, MultiSelect, Select, useStyles2 } from '@grafana/ui'
 import {
   labelWidth,
   LookupTableRowCondition,
@@ -170,37 +162,56 @@ export const LookupTableFilterGroup = (props: Props): JSX.Element => {
         )}
       </InlineFieldRow>
       <div className={props.label ? styles.aligned : styles.children}>
-        {groups.map((group, index) => (
-          <div key={index} className={styles.item}>
-            {/*
-              The condition joining this item to the one above it. A group holds one condition
-              for everything in it, so every box in a group carries the same value and picking
-              in any of them sets it, and a nested group is what combines AND with OR. The
-              first item is joined to nothing, and its gutter stays empty.
-            */}
-            <div className={styles.condition}>
-              {index > 0 && (
-                <Select
-                  aria-label="condition"
-                  width={conditionWidth}
-                  options={conditions}
-                  value={props.filter.Condition}
-                  onChange={(event) => props.onChange({ ...props.filter, Condition: event.value ?? 'and' })}
-                />
-              )}
-            </div>
-            <div className={styles.body}>
-              {group.Filter ? (
-                <div className={styles.nested}>
-                  <LookupTableFilterGroup
-                    filter={group.Filter}
-                    columns={props.columns}
-                    templateVariables={props.templateVariables}
-                    onChange={(filter) => replaceGroup(index, { Filter: filter })}
-                    onRemove={() => replaceGroup(index, undefined)}
-                  />
+        {groups.map((group, index) => {
+          // The condition joining this item to the one above it. A group holds one condition
+          // for everything in it, so every box in a group carries the same value and picking
+          // in any of them sets it, and a nested group is what combines AND with OR. The first
+          // item is joined to nothing, and its gutter stays empty.
+          const condition = index > 0 && (
+            <Select
+              aria-label="condition"
+              width={conditionWidth}
+              options={conditions}
+              value={props.filter.Condition}
+              onChange={(event) => props.onChange({ ...props.filter, Condition: event.value ?? 'and' })}
+            />
+          )
+
+          // A nested group reads as a bracketed term: the condition joining it sits on a line
+          // of its own above it, and its parentheses sit in the gutter around what it holds.
+          if (group.Filter) {
+            return (
+              <React.Fragment key={index}>
+                {condition && (
+                  <div className={styles.item}>
+                    <div className={styles.condition}>{condition}</div>
+                  </div>
+                )}
+                <div className={styles.item}>
+                  <div className={cx(styles.condition, styles.parenthesis)}>(</div>
+                  <div className={styles.body}>
+                    <div className={styles.nested}>
+                      <LookupTableFilterGroup
+                        filter={group.Filter}
+                        columns={props.columns}
+                        templateVariables={props.templateVariables}
+                        onChange={(filter) => replaceGroup(index, { Filter: filter })}
+                        onRemove={() => replaceGroup(index, undefined)}
+                      />
+                    </div>
+                  </div>
                 </div>
-              ) : (
+                <div className={styles.item}>
+                  <div className={cx(styles.condition, styles.parenthesis)}>)</div>
+                </div>
+              </React.Fragment>
+            )
+          }
+
+          return (
+            <div key={index} className={styles.item}>
+              <div className={styles.condition}>{condition}</div>
+              <div className={styles.body}>
                 <InlineFieldRow>
                   <InlineField>
                     <Select
@@ -242,7 +253,9 @@ export const LookupTableFilterGroup = (props: Props): JSX.Element => {
                           placeholder="enter values"
                           options={props.templateVariables}
                           allowCustomValue
-                          onChange={(events) => replaceGroup(index, { ...group, Values: events.map((e) => e.value ?? '') })}
+                          onChange={(events) =>
+                            replaceGroup(index, { ...group, Values: events.map((e) => e.value ?? '') })
+                          }
                         />
                       </InlineField>
                     )}
@@ -254,10 +267,10 @@ export const LookupTableFilterGroup = (props: Props): JSX.Element => {
                     />
                   </InlineField>
                 </InlineFieldRow>
-              )}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </>
   )
@@ -303,6 +316,16 @@ function getStyles(theme: GrafanaTheme2) {
     nested: css({
       paddingLeft: theme.spacing(1),
       borderLeft: `1px solid ${theme.colors.border.weak}`,
+    }),
+    // A parenthesis sits on the line of the controls beside it, where the condition box would.
+    parenthesis: css({
+      display: 'flex',
+      alignItems: 'center',
+      height: theme.spacing(theme.components.height.md),
+      paddingLeft: theme.spacing(1),
+      fontFamily: theme.typography.fontFamilyMonospace,
+      fontSize: theme.typography.h4.fontSize,
+      color: theme.colors.text.secondary,
     }),
   }
 }
