@@ -204,7 +204,7 @@ go test ./...        # Run tests without coverage
 
 ### E2E Tests
 
-Playwright tests exist but are currently commented out in CI. Infrastructure uses `pnpm run e2e` and tests against multiple Grafana versions.
+Playwright specs live in `tests/*.spec.ts` and run against Grafana plus a Go mock of the Historian API (`tests/mockhistorian`), started with `pnpm server:e2e`. CI runs them once per Grafana version, in the `playwright-tests` job. `tests/README.md` has the local steps and the fixture dataset.
 
 The mock Historian (`tests/mockhistorian`) reports v8.3.0. Set `MOCK_HISTORIAN_VERSION` (for example `8.2.0`) in the shell that starts the mock and runs `pnpm run e2e` to cover the plugin's paths for an older Historian. See `tests/README.md`.
 
@@ -348,6 +348,7 @@ Runs on push to `main` and PRs to `main`:
 6. **Plugin validation:** `@grafana/plugin-validator`
 7. **Sign plugin** (if `GRAFANA_ACCESS_POLICY_TOKEN` is set)
 8. Package and archive
+9. **E2E:** Playwright against the mock Historian, once per Grafana version. `grafana/plugin-actions/e2e-version` resolves the version list at run time. The nightly entry does not block the pipeline. The backend is rebuilt with `-cover` to measure e2e coverage.
 
 ### Release (`.github/workflows/release.yml`)
 
