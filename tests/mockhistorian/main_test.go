@@ -409,3 +409,17 @@ func TestEventQueryKeepsIncludedProperties(t *testing.T) {
 		assert.Len(t, event.Properties.Properties, 3)
 	}
 }
+
+// Not parallel: t.Setenv changes the process environment.
+func TestInfoReportsTheConfiguredVersion(t *testing.T) {
+	var info schemas.HistorianInfo
+
+	rec := doRequest(t, http.MethodGet, "/api/info", "")
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &info))
+	assert.Equal(t, "8.3.0", info.Version)
+
+	t.Setenv("MOCK_HISTORIAN_VERSION", "8.2.0")
+	rec = doRequest(t, http.MethodGet, "/api/info", "")
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &info))
+	assert.Equal(t, "8.2.0", info.Version)
+}

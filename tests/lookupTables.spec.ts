@@ -1,10 +1,16 @@
 import { test, expect } from './fixtures'
 import { inlineFieldInput } from './utils'
+import { isFeatureEnabled } from '../src/util/semver'
 
 // The mock's "Line settings" table has 250 rows. The provisioned dashboard filters it to
 // (line = L1 AND setpoint >= 100) OR (line = L2 AND active = true), 55 rows, and reads
 // page $page (2) of 20 rows: setpoints 135 to 196.
 test.describe('lookup table query', () => {
+  test.skip(
+    !isFeatureEnabled(process.env.MOCK_HISTORIAN_VERSION || '8.3.0', '8.3.0'),
+    'lookup tables need Historian v8.3.0'
+  )
+
   test('provisioned dashboard renders the page a variable picks', async ({
     readProvisionedDashboard,
     gotoDashboardPage,

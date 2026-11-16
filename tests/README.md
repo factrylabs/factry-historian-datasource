@@ -8,7 +8,7 @@ mock Factry Historian API.
 | Path | Purpose |
 | --- | --- |
 | `mockhistorian/` | Go mock of the Historian REST API. Reuses `pkg/schemas` and `pkg/proto` so JSON shapes and the protobuf/Arrow query responses stay byte-faithful to what the backend decodes. Covered by its own unit tests, plus integration tests (`datasource_integration_test.go`) that drive the real plugin backend against the mock with the same query payloads as the provisioned dashboards. |
-| `provisioning/` | Grafana provisioning used only for e2e: one datasource pointing at the mock, plus one dashboard per query type (measurements, assets, events, raw). |
+| `provisioning/` | Grafana provisioning used only for e2e: one datasource pointing at the mock, plus one dashboard per query type (measurements, assets, events, raw, lookup tables). |
 | `*.spec.ts` | The Playwright specs. They import `test`/`expect` from `./fixtures` (not `@grafana/plugin-e2e`) so coverage collection hooks into every test. |
 | `fixtures.ts`, `utils.ts`, `coverage/` | Shared fixtures, selector helpers and coverage plumbing. |
 
@@ -21,6 +21,11 @@ The mock serves a small deterministic plant:
 - Asset tree `Site \\ Line 1 \\ Motor`, Motor has properties `Speed` and `Temperature`
 - Event type `Batch` (simple properties `code`, `good`, `yield`) configured on Motor
 - Three batch events (`batch-41`..`batch-43`, the last one still open), generated relative to the queried time range so they always fall inside the dashboard window
+- Lookup table `Line settings` with 250 rows (columns `line`, `setpoint`, `active`), filtered and paged like the Historian does, with `X-Total-Count`
+
+The mock reports Historian v8.3.0. To run the suite against the paths the plugin takes for an
+older Historian, set `MOCK_HISTORIAN_VERSION` (for example `8.2.0`) in the shell that starts
+the mock and runs the suite. Specs for features the version does not have skip themselves.
 
 ## Running locally
 

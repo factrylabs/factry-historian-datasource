@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -110,8 +111,17 @@ func writeJSON(w http.ResponseWriter, v any) {
 	}
 }
 
+// historianVersion is the version the mock reports. MOCK_HISTORIAN_VERSION overrides it, to
+// run the suite against the paths the plugin takes for an older Historian.
+func historianVersion() string {
+	if version := os.Getenv("MOCK_HISTORIAN_VERSION"); version != "" {
+		return version
+	}
+	return "8.3.0"
+}
+
 func handleInfo(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, schemas.HistorianInfo{Version: "8.3.0", APIVersion: "1.0"})
+	writeJSON(w, schemas.HistorianInfo{Version: historianVersion(), APIVersion: "1.0"})
 }
 
 func handleCollectors(w http.ResponseWriter, _ *http.Request) {
