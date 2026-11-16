@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -383,4 +385,27 @@ func doRequest(t *testing.T, method, target, body string) *httptest.ResponseReco
 	rec := httptest.NewRecorder()
 	newMux().ServeHTTP(rec, req)
 	return rec
+}
+
+// Historian v8.3.0 returns only the properties a query asks for.
+func TestEventQueryKeepsIncludedProperties(t *testing.T) {
+	t.Parallel()
+
+	query := func(body string) []schemas.Event {
+		rec := doRequest(t, http.MethodPost, "/api/events/query", body)
+		require.Equal(t, http.StatusOK, rec.Code)
+		var got []schemas.Event
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+		require.NotEmpty(t, got)
+		return got
+	}
+
+	for _, event := range query(`{"Filter":{},"IncludedEventPropertyUUIDs":["` + codePropertyUUID.String() + `"]}`) {
+		assert.Equal(t, []string{"code"}, slices.Collect(maps.Keys(event.Properties.Properties)))
+	}
+
+	// The fixtures are left whole for the next query.
+	for _, event := range query(`{"Filter":{}}`) {
+		assert.Len(t, event.Properties.Properties, 3)
+	}
 }

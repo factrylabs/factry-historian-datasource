@@ -1,12 +1,13 @@
 // Command mockhistorian is a fake Factry Historian REST API used by the
 // Playwright e2e suite. It serves the endpoints the datasource backend calls
-// (health check, metadata, timeseries, events), returning deterministic
+// (health check, metadata, timeseries, events, lookup tables), returning deterministic
 // fixtures. Timeseries data is returned as protobuf-wrapped Arrow frames,
 // matching the real API contract that pkg/api/query.go decodes; JSON payloads
 // reuse pkg/schemas so field names stay in lockstep with the code under test.
 //
 // Fixtures live in fixtures.go, the JSON metadata handlers in handlers.go, the
-// Arrow/protobuf handlers in timeseries.go and the event handlers in events.go.
+// Arrow/protobuf handlers in timeseries.go, the event handlers in events.go and the
+// lookup table handlers in lookuptables.go.
 package main
 
 import (
@@ -67,6 +68,8 @@ func newMux() *http.ServeMux {
 	mux.HandleFunc("POST /api/timeseries/{uuid}/raw-query", handleRawQuery)
 	mux.HandleFunc("GET /api/timeseries/measurements/{uuid}/tags", handleTagKeys)
 	mux.HandleFunc("GET /api/timeseries/measurements/{uuid}/tags/{tagKey}", handleTagValues)
+	mux.HandleFunc("GET /api/lookup-tables", handleLookupTables)
+	mux.HandleFunc("POST /api/lookup-tables/{uuid}/rows/query", handleLookupTableRows)
 	mux.HandleFunc("/", handleFallback)
 	return mux
 }

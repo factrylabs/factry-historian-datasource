@@ -25,14 +25,19 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 // one filter implementation.
 func handleEventQuery(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Filter schemas.EventFilter
-		Limit  int
+		Filter                     schemas.EventFilter
+		IncludedEventPropertyUUIDs []uuid.UUID
+		Limit                      int
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	writeEvents(w, eventFilterValues(body.Filter, body.Limit))
+	q := eventFilterValues(body.Filter, body.Limit)
+	for _, id := range body.IncludedEventPropertyUUIDs {
+		q.Add("IncludedEventPropertyUUIDs", id.String())
+	}
+	writeEvents(w, q)
 }
 
 func eventFilterValues(filter schemas.EventFilter, limit int) url.Values {
@@ -84,6 +89,7 @@ func writeEvents(w http.ResponseWriter, q url.Values) {
 	statuses := param(q, "Status")
 	limit := paramInt(q, "Limit")
 	ascending := paramBool(q, "Ascending")
+	included := param(q, "IncludedEventPropertyUUIDs")
 
 	result := []schemas.Event{}
 	events := eventsInRange(start, end)
@@ -99,6 +105,9 @@ func writeEvents(w http.ResponseWriter, q url.Values) {
 		}
 		if !matchesPropertyFilters(q, &events[i]) {
 			continue
+		}
+		if len(included) > 0 {
+			keepIncludedProperties(&events[i], included)
 		}
 		result = append(result, events[i])
 	}
@@ -217,4 +226,16 @@ func handleEventPropertyValues(w http.ResponseWriter, r *http.Request) {
 		values = append(values, value)
 	}
 	writeJSON(w, values)
+}
+
+// keepIncludedProperties drops the properties not asked for, which historian v8.3.0 does
+// server side. The fixtures share their property maps, so it builds a new one.
+func keepIncludedProperties(event *schemas.Event, included []string) {
+	kept := schemas.Attributes{}
+	for _, property := range eventTypeProperties {
+		if value, ok := event.Properties.Properties[property.Name]; ok && containsUUID(included, property.UUID) {
+			kept[property.Name] = value
+		}
+	}
+	event.Properties.Properties = kept
 }
