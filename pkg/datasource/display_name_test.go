@@ -153,3 +153,86 @@ func TestLoadSettingsDisplayNameTemplates(t *testing.T) {
 	assert.Empty(t, settings.DisplayNameAssets, "a blank template keeps the built-in name")
 	assert.Equal(t, "${__field.labels.MeasurementName}", settings.DisplayNameMeasurements)
 }
+
+func TestSetMeasurementFrameNames_QueryNamePrefixesBuiltInName(t *testing.T) {
+	t.Parallel()
+
+	frame := makeMeasurementFrame(t, map[string]interface{}{"status": "Good"})
+
+	setMeasurementFrameNames(data.Frames{frame}, schemas.MeasurementQueryOptions{QueryName: "Mean 5m"}, "")
+
+	assert.Equal(t, "Mean 5m temperature {status: Good}", displayNameOf(t, frame))
+}
+
+func TestSetMeasurementFrameNames_TemplateReplacesQueryNameAndAggregation(t *testing.T) {
+	t.Parallel()
+
+	frame := makeMeasurementFrame(t, map[string]interface{}{"status": "Good"})
+	options := schemas.MeasurementQueryOptions{
+		QueryName:   "Hourly",
+		Aggregation: &schemas.Aggregation{Name: schemas.Mean, Period: "1h"},
+	}
+
+	setMeasurementFrameNames(data.Frames{frame}, options, `${__field.labels.MeasurementName} ${__field.labels.Aggregation} (${__field.labels.QueryName})`)
+
+	assert.Equal(t, "temperature mean (Hourly)", displayNameOf(t, frame))
+}
+
+func TestSetMeasurementFrameNames_TemplateWithoutQueryNameOrAggregationRendersEmpty(t *testing.T) {
+	t.Parallel()
+
+	frame := makeMeasurementFrame(t, map[string]interface{}{"status": "Good"})
+
+	setMeasurementFrameNames(data.Frames{frame}, schemas.MeasurementQueryOptions{}, `${__field.labels.MeasurementName}[${__field.labels.Aggregation}${__field.labels.QueryName}]`)
+
+	assert.Equal(t, "temperature[]", displayNameOf(t, frame))
+}
+
+func TestSetMeasurementFrameNames_TemplateKeepsTagsNamedQueryNameAndAggregation(t *testing.T) {
+	t.Parallel()
+
+	frame := makeMeasurementFrame(t, map[string]interface{}{"QueryName": "tag query", "Aggregation": "tag aggregation"})
+	options := schemas.MeasurementQueryOptions{Aggregation: &schemas.Aggregation{Name: schemas.Mean, Period: "1h"}}
+
+	setMeasurementFrameNames(data.Frames{frame}, options, `${__field.labels.QueryName} ${__field.labels.Aggregation}`)
+
+	assert.Equal(t, "tag query tag aggregation", displayNameOf(t, frame))
+}
+
+func TestSetAssetFrameNames_QueryNamePrefixesBuiltInName(t *testing.T) {
+	t.Parallel()
+
+	frames, assets, properties := makeAssetQueryInput(t)
+
+	frames = setAssetFrameNames(frames, assets, properties, schemas.MeasurementQueryOptions{QueryName: "Max"}, "")
+
+	require.Len(t, frames, 1)
+	assert.Equal(t, `Max Plant\Line 1\\Speed {status: Good}`, displayNameOf(t, frames[0]))
+}
+
+func TestSetAssetFrameNames_TemplateReplacesAggregation(t *testing.T) {
+	t.Parallel()
+
+	frames, assets, properties := makeAssetQueryInput(t)
+	options := schemas.MeasurementQueryOptions{Aggregation: &schemas.Aggregation{Name: schemas.Max, Period: "5m"}}
+
+	frames = setAssetFrameNames(frames, assets, properties, options, `${__field.labels.AssetProperty} ${__field.labels.Aggregation}`)
+
+	require.Len(t, frames, 1)
+	assert.Equal(t, "Speed max", displayNameOf(t, frames[0]))
+}
+
+func TestSetFieldLabels_LeavesOutQueryNameAndAggregation(t *testing.T) {
+	t.Parallel()
+
+	frame := makeMeasurementFrame(t, map[string]interface{}{"status": "Good"})
+	options := schemas.MeasurementQueryOptions{QueryName: "Hourly", Aggregation: &schemas.Aggregation{Name: schemas.Mean}}
+
+	setMeasurementFrameNames(data.Frames{frame}, options, "")
+	setFieldLabels(data.Frames{frame})
+
+	field, _ := frame.FieldByName(valueFieldName)
+	require.NotNil(t, field)
+	assert.NotContains(t, field.Labels, "QueryName")
+	assert.NotContains(t, field.Labels, "Aggregation")
+}

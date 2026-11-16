@@ -169,6 +169,7 @@ type fakeHistorianData struct {
 	events          []schemas.Event
 	// eventTypeProperties is filtered by the EventTypeUUIDs of the request.
 	eventTypeProperties []schemas.EventTypeProperty
+	assetProperties     []schemas.AssetProperty
 	// onEventsRequest, when set, is called with every /api/events and
 	// /api/events/query request so a test can assert on the query the
 	// datasource built.
@@ -244,6 +245,20 @@ func newFakeHistorianServer(t *testing.T, fixture fakeHistorianData) *httptest.S
 			}
 		}
 		writeJSON(w, matched)
+	})
+
+	mux.HandleFunc("/api/asset-properties", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, fixture.assetProperties)
+	})
+
+	mux.HandleFunc("POST /api/timeseries/query", func(w http.ResponseWriter, r *http.Request) {
+		query := schemas.Query{}
+		assert.NoError(t, json.NewDecoder(r.Body).Decode(&query))
+		frames := make(data.Frames, 0, len(query.MeasurementUUIDs))
+		for _, measurementUUID := range query.MeasurementUUIDs {
+			frames = append(frames, measurementFrame(measurementUUID, 1))
+		}
+		writeArrowResponse(t, w, frames)
 	})
 
 	return httptest.NewServer(mux)
@@ -424,7 +439,7 @@ func TestTrendFrameParentStopTimeLabel(t *testing.T) {
 	}
 
 	frames, err := EventQueryResultToTrendDataFrame(true, nil, []schemas.Event{event}, eventTypes,
-		properties, map[string]struct{}{}, map[uuid.UUID]data.Frames{}, false)
+		properties, map[string]struct{}{}, map[uuid.UUID]data.Frames{}, false, "")
 	require.NoError(t, err)
 	require.Len(t, frames, 1)
 
@@ -437,6 +452,103 @@ func TestTrendFrameParentStopTimeLabel(t *testing.T) {
 	require.NotNil(t, propertyField, "expected a periodic property column")
 	assert.Equal(t, stopTime.Format(time.RFC3339), propertyField.Labels[parentEventPrefix+StopTimeColumnName],
 		"Parent_StopTime label must carry the parent's stop time")
+}
+
+func TestHandleEventQueryPrefixesPeriodicSeriesWithQueryName(t *testing.T) {
+	t.Parallel()
+
+	asset := schemas.Asset{
+		BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "machine"},
+		AssetPath: `\\site\\machine`,
+	}
+	eventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Batch"}}
+	startTime := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	stopTime := startTime.Add(time.Hour)
+	event := schemas.Event{
+		UUID:          uuid.New(),
+		AssetUUID:     asset.UUID,
+		EventTypeUUID: eventType.UUID,
+		StartTime:     startTime,
+		StopTime:      &stopTime,
+		Properties: &schemas.EventProperties{
+			Properties: schemas.Attributes{
+				"profile": map[string]interface{}{
+					"t": []interface{}{0.0},
+					"v": []interface{}{1.0},
+				},
+			},
+		},
+	}
+	periodicName := "profile (" + event.UUID.String() + ")"
+	assetPropertyName := asset.AssetPath + "\\\\speed"
+
+	tests := []struct {
+		name                 string
+		queryAssetProperties bool
+		want                 []string
+		notWant              []string
+	}{
+		{name: "with asset properties", queryAssetProperties: true, want: []string{"Hourly " + periodicName, "Hourly " + assetPropertyName}},
+		{name: "without asset properties", queryAssetProperties: false, want: []string{periodicName}, notWant: []string{"Hourly " + periodicName}},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := newFakeHistorianServer(t, fakeHistorianData{
+				assetsByPath:    map[string]schemas.Asset{asset.AssetPath: asset},
+				assetsByUUID:    map[string]schemas.Asset{asset.UUID.String(): asset},
+				eventTypesByKey: map[string]schemas.EventType{eventType.Name: eventType},
+				allEventTypes:   []schemas.EventType{eventType},
+				events:          []schemas.Event{event},
+				eventTypeProperties: []schemas.EventTypeProperty{{
+					BaseModel:     schemas.BaseModel{UUID: uuid.New(), Name: "profile"},
+					Datatype:      schemas.EventTypePropertyDatatypeNumber,
+					Type:          schemas.EventTypePropertyTypePeriodic,
+					EventTypeUUID: eventType.UUID,
+				}},
+				assetProperties: []schemas.AssetProperty{{
+					BaseModel:       schemas.BaseModel{UUID: uuid.New(), Name: "speed"},
+					AssetUUID:       asset.UUID,
+					MeasurementUUID: uuid.New(),
+				}},
+			})
+			t.Cleanup(server.Close)
+
+			apiClient, err := api.NewAPIWithToken(server.URL, "test-token", "test-org")
+			require.NoError(t, err)
+			ds := &HistorianDataSource{API: apiClient}
+
+			frames, err := ds.handleEventQuery(context.Background(), schemas.EventQuery{
+				Type:                 string(schemas.EventTypePropertyTypePeriodic),
+				Assets:               []string{asset.AssetPath},
+				EventTypes:           []string{eventType.Name},
+				QueryAssetProperties: tt.queryAssetProperties,
+				Options: &schemas.MeasurementQueryOptions{
+					QueryName:   "Hourly",
+					Aggregation: &schemas.Aggregation{Name: "mean", Period: "1h"},
+				},
+			}, backend.TimeRange{From: startTime, To: stopTime}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.1.0"})
+			require.NoError(t, err)
+
+			names := []string{}
+			for _, frame := range frames {
+				for _, field := range frame.Fields {
+					name := field.Name
+					if field.Config != nil && field.Config.DisplayNameFromDS != "" {
+						name = field.Config.DisplayNameFromDS
+					}
+					names = append(names, name)
+				}
+			}
+			assert.Subset(t, names, tt.want)
+			for _, name := range tt.notWant {
+				assert.NotContains(t, names, name)
+			}
+		})
+	}
 }
 
 // The per-event asset-property fill loop must break after a successful append.

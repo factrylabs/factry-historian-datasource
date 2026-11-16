@@ -147,7 +147,8 @@ condition that is not finished, and the query returns the table unfiltered.
   "FillInitialEmptyValues": false,
   "UseEngineeringSpecs": true,
   "DisplayDatabaseName": false,
-  "DisplayDescription": false
+  "DisplayDescription": false,
+  "QueryName": "Mean" // optional, prefixes the series names
 }
 ```
 
@@ -159,6 +160,7 @@ Returns (aggregated) timeseries data for one or more measurements with each meas
 
 The name of the frame is the datasource's `displayNameMeasurements` template with its label placeholders filled in. Without a template it includes:
 
+- the query name, when set
 - name of the measurement
 - measurement tag/value pair used in 'group by'
 - optionally the description
@@ -170,6 +172,7 @@ Returns (aggregated) timeseries data for one or more asset properties with each 
 
 The name of the frame is the datasource's `displayNameAssets` template with its label placeholders filled in. Without a template it includes:
 
+- the query name, when set
 - the asset path
 - the property name
 - measurement tag/value pair used in 'group by'

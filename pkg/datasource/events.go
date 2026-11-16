@@ -95,7 +95,7 @@ type eventFrameColumn struct {
 }
 
 // EventQueryResultToTrendDataFrame converts a event query result to data frames
-func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.Asset, events []schemas.Event, eventTypes map[uuid.UUID]schemas.EventType, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, selectedProperties map[string]struct{}, eventAssetPropertyFrames map[uuid.UUID]data.Frames, byDimension bool) (data.Frames, error) {
+func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.Asset, events []schemas.Event, eventTypes map[uuid.UUID]schemas.EventType, eventTypePropertiesForEventType map[uuid.UUID][]schemas.EventTypeProperty, selectedProperties map[string]struct{}, eventAssetPropertyFrames map[uuid.UUID]data.Frames, byDimension bool, namePrefix string) (data.Frames, error) {
 	uuidToAssetMap := make(map[uuid.UUID]schemas.Asset)
 	for _, asset := range assets {
 		uuidToAssetMap[asset.UUID] = asset
@@ -177,6 +177,7 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 			labels[PropertyColumnName] = periodicEventTypeProperties[j].Name
 
 			name := fmt.Sprintf("%s (%s)", periodicEventTypeProperties[j].Name, events[i].UUID)
+			name = namePrefix + name
 
 			// Add parent event details as labels if `includeParentInfo` is true
 			if includeParentInfo && events[i].Parent != nil {

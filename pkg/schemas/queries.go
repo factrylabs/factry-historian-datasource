@@ -29,6 +29,7 @@ type MeasurementQueryOptions struct {
 	Datatypes              []string
 	Desc                   bool
 	FrameFormat            FrameFormat
+	QueryName              string
 }
 
 // ValueFilter is used to filter the values returned by the historian
