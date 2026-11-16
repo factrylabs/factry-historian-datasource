@@ -801,3 +801,38 @@ func TestHandleEventQueryLimitsFetchedPropertiesForSimpleQueries(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleEventQueryPassesMatchModeToHistorian(t *testing.T) {
+	t.Parallel()
+
+	asset := schemas.Asset{
+		BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "machine"},
+		AssetPath: `\\site\\machine`,
+	}
+	eventType := schemas.EventType{BaseModel: schemas.BaseModel{UUID: uuid.New(), Name: "Batch"}}
+
+	var gotBody struct{ Filter map[string]interface{} }
+	server := newFakeHistorianServer(t, fakeHistorianData{
+		assetsByPath:    map[string]schemas.Asset{asset.AssetPath: asset},
+		assetsByUUID:    map[string]schemas.Asset{asset.UUID.String(): asset},
+		eventTypesByKey: map[string]schemas.EventType{eventType.Name: eventType},
+		allEventTypes:   []schemas.EventType{eventType},
+		onEventsRequest: func(r *http.Request) { _ = json.NewDecoder(r.Body).Decode(&gotBody) },
+	})
+	t.Cleanup(server.Close)
+
+	apiClient, err := api.NewAPIWithToken(server.URL, "test-token", "test-org")
+	require.NoError(t, err)
+	ds := &HistorianDataSource{API: apiClient}
+
+	startTime := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	_, err = ds.handleEventQuery(context.Background(), schemas.EventQuery{
+		Type:       string(schemas.EventTypePropertyTypeSimple),
+		Assets:     []string{asset.AssetPath},
+		EventTypes: []string{eventType.Name},
+		MatchMode:  "overlapping",
+	}, backend.TimeRange{From: startTime, To: startTime.Add(time.Hour)}, time.Minute, 1000, &schemas.HistorianInfo{Version: "v8.4.0"})
+	require.NoError(t, err)
+
+	assert.Equal(t, "overlapping", gotBody.Filter["MatchMode"])
+}

@@ -7,6 +7,7 @@ import {
   getAggregationsForDatatypes,
   isLazyLoadingEnabled,
   isLookupTablesEnabled,
+  isMatchModeEnabled,
   matchedAssets,
   migrateMeasurementQuery,
   parentEventTypeUUIDs,
@@ -816,5 +817,26 @@ describe('updateTreeChildren', () => {
     const result = updateTreeChildren(options, 'root-1', [])
     expect(result).not.toBe(options)
     expect(result[0]).not.toBe(options[0])
+  })
+})
+
+describe('isMatchModeEnabled', () => {
+  it('is disabled for unknown version (info not loaded)', () => {
+    expect(isMatchModeEnabled('')).toBe(false)
+    expect(isMatchModeEnabled(undefined)).toBe(false)
+  })
+
+  it('is disabled before v8.4.0', () => {
+    expect(isMatchModeEnabled('v8.3.0')).toBe(false)
+  })
+
+  // Pre-releases count, like on the backend, which sends MatchMode to them.
+  it('is enabled from v8.4.0, pre-releases included', () => {
+    expect(isMatchModeEnabled('v8.4.0-rc.0')).toBe(true)
+    expect(isMatchModeEnabled('v8.4.0')).toBe(true)
+  })
+
+  it('is enabled for non-semver debug builds', () => {
+    expect(isMatchModeEnabled('debug')).toBe(true)
   })
 })

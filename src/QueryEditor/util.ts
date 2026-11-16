@@ -43,6 +43,16 @@ export function isLookupTablesEnabled(version: string | undefined): boolean {
   return isFeatureEnabled(version, LOOKUP_TABLES_MIN_VERSION)
 }
 
+// The MatchMode of POST /events/query was added in historian v8.4.0.
+export const MATCH_MODE_MIN_VERSION = '8.4.0'
+
+export function isMatchModeEnabled(version: string | undefined): boolean {
+  if (!version) {
+    return false
+  }
+  return isFeatureEnabled(version, MATCH_MODE_MIN_VERSION, true)
+}
+
 export function isLazyLoadingEnabled(version: string): boolean {
   // Unknown version (info not loaded or unreachable): take the eager fallback,
   // it works on every historian. Non-semver debug builds still count as newest.

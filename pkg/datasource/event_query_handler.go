@@ -60,6 +60,7 @@ func (ds *HistorianDataSource) handleEventQuery(ctx context.Context, eventQuery 
 		PropertyFilter:    eventQuery.PropertyFilter,
 		Status:            util.DropEmpty(eventQuery.Statuses),
 		Ascending:         eventQuery.Ascending,
+		MatchMode:         eventQuery.MatchMode,
 	}
 
 	// Periodic queries label each series with every simple property, so only simple queries

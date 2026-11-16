@@ -26,7 +26,10 @@ export class AnnotationsQueryEditor extends Component<Props> {
     try {
       await this.props.datasource.getInfo()
     } catch (_) {}
-    if (!query.query) {
+    if (query.query) {
+      // Render Events again, so it sees the historian version
+      this.forceUpdate()
+    } else {
       this.onChangeEventQuery({
         Type: PropertyType.Simple,
         Assets: [],
@@ -39,6 +42,7 @@ export class AnnotationsQueryEditor extends Component<Props> {
         OverrideTimeRange: false,
         TimeRange: { from: '', to: '' },
         Ascending: true,
+        MatchMode: 'overlapping',
       })
     }
   }

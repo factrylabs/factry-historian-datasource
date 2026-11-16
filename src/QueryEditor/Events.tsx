@@ -2,12 +2,31 @@ import React, { ChangeEvent, FormEvent, useState } from 'react'
 import { FieldSet, InlineField, InlineFieldRow, InlineSwitch, Input, RadioButtonGroup } from '@grafana/ui'
 import { DateTime } from '@grafana/data'
 import { getTemplateSrv } from '@grafana/runtime'
-import { defaultQueryOptions, tagsToQueryTags, useDebounce } from './util'
+import { defaultQueryOptions, isMatchModeEnabled, tagsToQueryTags, useDebounce } from './util'
 import { EventAssetProperties } from './EventAssetProperties'
 import { DataSource } from 'datasource'
-import { AssetMeasurementQuery, EventQuery, labelWidth, PropertyType, TimeRange } from 'types'
+import { AssetMeasurementQuery, EventMatchMode, EventQuery, labelWidth, PropertyType, TimeRange } from 'types'
 import { EventFilter } from './EventFilter'
 import { DateRangePicker } from 'components/util/DateRangePicker'
+
+const matchModeOptions: Array<{ label: string; value: EventMatchMode; description: string }> = [
+  {
+    label: 'Contained',
+    value: 'contained',
+    description: 'Events that start and stop in the time range, and running events that started in it',
+  },
+  { label: 'Starts in range', value: 'starts_in_range', description: 'Events that start in the time range' },
+  {
+    label: 'Ends in range',
+    value: 'ends_in_range',
+    description: 'Events that stop in the time range. Running events never match',
+  },
+  {
+    label: 'Overlapping',
+    value: 'overlapping',
+    description: 'Events active at any time in the time range, running events included',
+  },
+]
 
 export interface Props {
   query: EventQuery
@@ -95,6 +114,10 @@ export const Events = (props: Props): JSX.Element => {
     props.onChangeEventQuery(updatedQuery)
   }
 
+  const onChangeMatchMode = (value: EventMatchMode): void => {
+    props.onChangeEventQuery({ ...props.query, MatchMode: value })
+  }
+
   const onChangeOrder = (value: string): void => {
     setOrdering(value)
 
@@ -141,6 +164,17 @@ export const Events = (props: Props): JSX.Element => {
             onChange={onChangeTimeRange}
             datasource={props.datasource}
           />
+        )}
+        {isMatchModeEnabled(props.datasource.historianInfo?.Version) && (
+          <InlineFieldRow>
+            <InlineField label="Match mode" tooltip="Which events match the time range" labelWidth={labelWidth}>
+              <RadioButtonGroup
+                options={matchModeOptions}
+                onChange={onChangeMatchMode}
+                value={props.query.MatchMode ?? 'contained'}
+              />
+            </InlineField>
+          </InlineFieldRow>
         )}
         <InlineFieldRow>
           <InlineField

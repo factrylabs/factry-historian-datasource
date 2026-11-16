@@ -278,3 +278,82 @@ func TestEventQueryKeepsAllPropertiesWithoutASelection(t *testing.T) {
 	require.Len(t, events, 1)
 	assert.Equal(t, schemas.Attributes{"batch": "B1", "recipe": "R1"}, events[0].Properties.Properties)
 }
+
+func TestEventQuerySendsMatchModeFromHistorian84(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		version string
+		want    interface{}
+	}{
+		{version: "v8.3.0", want: nil},
+		{version: "v8.4.0-rc.0", want: "overlapping"},
+		{version: "v8.4.0", want: "overlapping"},
+	}
+
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.version, func(t *testing.T) {
+			t.Parallel()
+
+			var gotBody map[string]interface{}
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewDecoder(r.Body).Decode(&gotBody)
+				_, _ = w.Write([]byte(`[]`))
+			}))
+			t.Cleanup(srv.Close)
+
+			client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+			require.NoError(t, err)
+
+			_, err = client.EventQuery(context.Background(), schemas.EventFilter{MatchMode: "overlapping"}, &schemas.HistorianInfo{Version: tt.version})
+			require.NoError(t, err)
+
+			filter, ok := gotBody["Filter"].(map[string]interface{})
+			require.True(t, ok)
+			assert.Equal(t, tt.want, filter["MatchMode"])
+		})
+	}
+}
+
+// The historian rejects an empty MatchMode, and no mode keeps its legacy closed-range filter.
+func TestEventQueryOmitsEmptyMatchMode(t *testing.T) {
+	t.Parallel()
+
+	var gotBody map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+	require.NoError(t, err)
+
+	_, err = client.EventQuery(context.Background(), schemas.EventFilter{}, &schemas.HistorianInfo{Version: "v8.4.0"})
+	require.NoError(t, err)
+
+	filter, ok := gotBody["Filter"].(map[string]interface{})
+	require.True(t, ok)
+	assert.NotContains(t, filter, "MatchMode")
+}
+
+// GET /api/events has no MatchMode parameter.
+func TestEventQueryNeverSendsMatchModeOnGetPath(t *testing.T) {
+	t.Parallel()
+
+	var gotQuery url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.Query()
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := api.NewAPIWithToken(srv.URL, "tok", "org")
+	require.NoError(t, err)
+
+	_, err = client.EventQuery(context.Background(), schemas.EventFilter{MatchMode: "overlapping"}, &schemas.HistorianInfo{Version: "v8.1.0"})
+	require.NoError(t, err)
+
+	assert.NotContains(t, gotQuery, "MatchMode")
+}

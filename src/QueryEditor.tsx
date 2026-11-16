@@ -62,6 +62,7 @@ export class QueryEditor extends Component<Props, QueryEditorState> {
       QueryAssetProperties: false,
       OverrideAssets: [] as string[],
       Limit: 1000,
+      MatchMode: 'overlapping',
       OverrideTimeRange: false,
       TimeRange: {
         from: dateTime(this.props.range?.from).toISOString(),
