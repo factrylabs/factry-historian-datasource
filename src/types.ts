@@ -154,7 +154,11 @@ export interface EventQuery {
   OverrideTimeRange: boolean
   TimeRange: TimeRange
   Ascending: boolean
+  /** How events match the time range. Unset keeps the historian's legacy filter, which matches Contained. */
+  MatchMode?: EventMatchMode
 }
+
+export type EventMatchMode = 'contained' | 'starts_in_range' | 'ends_in_range' | 'overlapping'
 
 export interface TimeRange {
   from?: string | null

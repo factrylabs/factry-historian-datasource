@@ -61,6 +61,7 @@
       "Condition": "" // AND | OR
     }
   ],
+  "MatchMode": "overlapping", // contained | starts_in_range | ends_in_range | overlapping, absent keeps the historian's legacy filter (contained). Historian v8.4.0+
   "QueryAssetProperties": false,
   "AssetProperties": [],
   // measurement query options

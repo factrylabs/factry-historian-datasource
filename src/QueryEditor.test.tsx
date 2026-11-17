@@ -184,6 +184,42 @@ describe('QueryEditor', () => {
     expect(lastCall.tabIndex).toBe(TabIndex.Assets)
   })
 
+  describe('the event query match mode', () => {
+    const switchToEvents = async (query: Query, onChange: jest.Mock) => {
+      render(<QueryEditor {...defaultProps} query={query} onChange={onChange} />)
+      await waitFor(() => {
+        expect(screen.getByText('Events')).toBeInTheDocument()
+      })
+      await act(async () => {
+        fireEvent.click(screen.getByText('Events'))
+      })
+      return onChange.mock.calls[onChange.mock.calls.length - 1][0]
+    }
+
+    it('defaults to overlapping for a new event query', async () => {
+      const last = await switchToEvents(makeQuery(), jest.fn())
+
+      expect(last.query.MatchMode).toBe('overlapping')
+    })
+
+    // No mode keeps the historian's legacy filter, so saved panels return the same events.
+    it('is left unset for a saved event query', async () => {
+      const saved = makeQuery({
+        queryType: 'EventQuery',
+        tabIndex: TabIndex.Events,
+        query: { Type: 'simple', Assets: [], PropertyFilter: [] } as any,
+      })
+      const onChange = jest.fn()
+      render(<QueryEditor {...defaultProps} query={saved} onChange={onChange} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('events-editor')).toBeInTheDocument()
+      })
+
+      expect(onChange).toHaveBeenCalled()
+      expect(onChange.mock.calls[onChange.mock.calls.length - 1][0].query.MatchMode).toBeUndefined()
+    })
+  })
+
   it('does not show sub-editor content before mount finishes', () => {
     // Before componentDidMount resolves, mountFinished is false
     render(<QueryEditor {...defaultProps} />)
