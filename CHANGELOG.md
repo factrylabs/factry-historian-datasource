@@ -3,14 +3,14 @@
 > ⚠️ **Minimum supported Factry Historian version: v7.3.0.**
 > Versions of this plugin from v4.0.0 onwards no longer ship compatibility code for Historian instances older than v7.3.0. Earlier Historian versions are not supported, so upgrade your Historian before updating this plugin.
 
-## Unreleased
+## v4.1.0
 
 ### Features
 
-- **Lookup tables can be queried from the query editor.** A new tab lists the lookup tables of the Historian and reads one as a table panel: pick the table, optionally narrow it to some of its columns, and filter its rows. A filter is a tree: conditions combined with AND or OR, groups nested inside groups, so "line A or B, and a setpoint above 20" is one query. Conditions use the operators the rest of the plugin filters with: `=` and `!=` against a single value, `IN` and `NOT IN` against a set of them, `>`, `>=`, `<` and `<=` on a number column, and `IS NULL` / `IS NOT NULL` to read whether a cell is filled in at all. A condition takes several values and a dashboard variable expands into them, so a multi-select variable narrows the table in one request, except under the orderings, which compare against a single value and read the first one a variable resolves to. A row limit keeps large tables from loading whole: a new query returns at most 1000 rows, and an empty limit or 0 returns every row. A page field and previous/next buttons move through the rest, and the editor shows which rows the panel holds, for example "Rows 101 to 200 of 643 (page 2 of 7)". The panel header shows the same when rows are cut off. The limit and the page take dashboard variables. The previous/next buttons are only in the query editor. To let dashboard viewers browse the rows, turn on pagination in the table panel's options, which pages through the rows the limit loaded, or set the page to a dashboard variable such as `$page`. Requires Historian v8.3.0 or newer, and the tab is hidden on older Historians.
+- **Lookup tables in the query editor.** A new tab reads a lookup table into a table panel. Pick the table and its columns, and filter the rows with conditions combined by AND and OR, nested in groups. Filter values take dashboard variables. A query returns at most 1000 rows by default: move through the rest with the page field or a `$page` variable, or set the limit to 0 to read every row. Requires Historian v8.3.0 or newer.
+- **Lookup table values variable.** Lists the values of one lookup table column, optionally showing another column as the label. A row filter lets one variable depend on another, for example only the machines on `$line`. Requires Historian v8.3.0 or newer.
 - **Default display name per tab.** The datasource settings take an optional display name template for the Assets tab and one for the Measurements tab, for example `${__field.labels["AssetProperty"]}` to show only the property name instead of the full asset path. It applies to every query of that tab, also in existing panels, so one naming convention covers all dashboards. A Display name set on a panel still takes precedence, and an empty template keeps the current names.
 - **Queries can be named to tell their series apart.** A Query name under Advanced options is put in front of the name of every series the query returns, so two queries on the same measurement with different aggregations no longer give series with the same name. Display name templates can use it as `${__field.labels.QueryName}`, and the aggregation function as `${__field.labels.Aggregation}`. Queries without a name keep their current series names.
-- **Lookup table columns can drive a dashboard variable.** A new "Lookup table values" variable type lists the values of one column. A second column can supply the text shown in the dropdown, so a variable can display a readable name while interpolating the key a query filters on.
 
 ### Bug fixes
 
@@ -20,9 +20,14 @@
 - Fixed `IN` and `NOT IN` event property filters on a number or boolean property sending their values as strings, so filtering on a multi-value variable did not apply.
 - Fixed the search suggestions of the asset picker staying open after clicking outside it. They now also close on Escape.
 - Fixed event queries failing with "frame has different field lengths" when the event type has a property named like a built-in column, such as `Duration` or `StartTime`. Such a property now shows as its own column with a ` (property)` suffix.
+- Fixed a series limit returning a different set of series on every refresh. A query that hits the limit now keeps the first series, sorted by asset path and property name.
+- Fixed the asset properties dropdown offering nothing to pick when the asset path is a regex spanning several tree levels, or a variable holding an asset path, while the query itself returned data. The editor now resolves assets the same way the query does.
+- Fixed the event filter staying on its loading view, and the asset pickers opening empty, when Historian failed to load the assets.
+- Fixed event queries in saved panels failing after Historian was downgraded below v8.2. The plugin now uses the version Historian reports, not the one saved with the panel.
 
 ### Changes
 
+- **Event queries use the event query endpoint of Historian v8.2 and later.** Event queries are sent as one `POST /api/events/query` request. A simple event query that selects some properties now returns only those. On Historian v8.3.0 and later, Historian leaves out the other properties itself, which makes responses for event types with many properties smaller. Periodic event queries still read every property.
 - **All resource lookups are now served from the backend resolution cache.** Measurements, collectors, event types, event type properties and event configurations join the assets, asset properties and databases cached in v4.0.0, under the same `resolutionCacheTTL` setting. Live data is never cached: tag keys and values, event property values, and the measurement and event queries themselves always reach Historian.
 
 ## v4.0.1
