@@ -392,6 +392,15 @@ git push origin main --tags
   - `./provisioning/` → Grafana provisioning
 - **Environment:** unsigned plugins allowed, development logging, SQL expressions feature flag
 
+### Provisioning and the demo Historian
+
+`provisioning/` points Grafana at the public demo Historian (`grafana.demo.factry.dev:8000`) with a read-only token. Plugin reviewers test against it, so keep it working.
+
+- `datasources/datasources.yml`: "Factry Historian", plus "Factry Historian (display names)" with a display name template for the Feature tour dashboard. Grafana expands `$VAR` and `${VAR}` in provisioning files, so a literal `$` is written `$$`.
+- `dashboards/examples/`: the example dashboards (folder "Examples"). They name demo objects by UUID (assets, measurements, event types, lookup tables), so a rebuilt demo means updating them.
+- `alerting/rules.yaml`: an example alert rule. It refers to the datasource by the uid Grafana derives from its name (`P7D5EEA62BBEAE2D7`). Do not add a `uid` to that datasource: Grafana then stops at startup on any install that already has it.
+- Asset paths on the demo, as everywhere in Historian, separate levels with two backslashes (`MyFactory\\ProductionLine1`).
+
 The dev Docker image (`.config/Dockerfile`) includes:
 - Go 1.23.2 for in-container compilation
 - Delve debugger
