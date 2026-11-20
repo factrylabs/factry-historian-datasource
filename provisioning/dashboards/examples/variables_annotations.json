@@ -643,8 +643,8 @@
     ]
   },
   "time": {
-    "from": "2024-04-26T06:10:31.442Z",
-    "to": "2024-04-30T01:16:23.653Z"
+    "from": "now-24h",
+    "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
