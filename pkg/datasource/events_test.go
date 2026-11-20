@@ -368,6 +368,20 @@ func TestGetAssetPropertyFieldTypes_UsesNamedValueField(t *testing.T) {
 		"declared type must come from the named value field, not positional Fields[1]")
 }
 
+// The historian can return an asset property frame without metadata. It must
+// be skipped, not dereferenced.
+func TestGetAssetPropertyFieldTypes_SkipsFrameWithoutMeta(t *testing.T) {
+	t.Parallel()
+
+	withoutMeta := data.NewFrame("", data.NewField(valueFieldName, nil, []*float64{}))
+	withMeta := data.NewFrame("", data.NewField(valueFieldName, nil, []*float64{}))
+	withMeta.Meta = &data.FrameMeta{Custom: map[string]interface{}{"AssetProperty": "Pressure"}}
+
+	got := getAssetPropertyFieldTypes(map[uuid.UUID]data.Frames{uuid.New(): {withoutMeta, withMeta}}, false)
+
+	assert.Equal(t, map[string]data.FieldType{"Pressure": data.FieldTypeNullableFloat64}, got)
+}
+
 // dataFrameForEventType dereferences events[i].Parent guarded only by
 // ParentUUID != nil. An event whose parent is not embedded in the response
 // must not panic the query.
