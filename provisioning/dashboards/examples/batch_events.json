@@ -128,7 +128,7 @@
           "tabIndex": 2
         }
       ],
-      "title": "Batch Events",
+      "title": "Batch events",
       "transformations": [
         {
           "id": "filterFieldsByName",
@@ -149,7 +149,8 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "description": "Event query (Events tab, simple type): every Batch event on the production lines whose asset path matches the regex /MyFactory.*ProductionLine.*/, one row per event with its start, stop, duration and properties."
     },
     {
       "datasource": {
@@ -251,8 +252,9 @@
           "tabIndex": 2
         }
       ],
-      "title": "Trends panel",
-      "type": "trend"
+      "title": "Batch temperature per batch",
+      "type": "trend",
+      "description": "Event query (Events tab, periodic type): the Temperature property of each Batch event as a series, aligned on batch start in a trend panel, so batches can be compared with each other."
     }
   ],
   "refresh": "5s",

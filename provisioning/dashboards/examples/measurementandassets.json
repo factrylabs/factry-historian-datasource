@@ -172,8 +172,9 @@
           "tabIndex": 0
         }
       ],
-      "title": "Regex AssetProperties",
-      "type": "timeseries"
+      "title": "Temperature of every asset (regex)",
+      "type": "timeseries",
+      "description": "Asset query: the regex /.*/ matches every asset, and the Temperature asset property is read from each of them. Aggregated with mean per $__interval, good points only."
     },
     {
       "datasource": {
@@ -287,8 +288,9 @@
           "tabIndex": 1
         }
       ],
-      "title": "MeasurementQuery",
-      "type": "timeseries"
+      "title": "Measurement query",
+      "type": "timeseries",
+      "description": "Measurements tab: one measurement picked from the database, aggregated with mean per $__interval."
     },
     {
       "datasource": {
@@ -406,8 +408,9 @@
           "tabIndex": 1
         }
       ],
-      "title": "MeasurementQuery With engineering specs",
-      "type": "timeseries"
+      "title": "Measurement with engineering specs",
+      "type": "timeseries",
+      "description": "Same measurement as above with \"Use engineering specs\" on: the unit and the minimum/maximum configured on the measurement in Historian are applied to the panel."
     },
     {
       "datasource": {
@@ -493,8 +496,9 @@
           "tabIndex": 1
         }
       ],
-      "title": "LastValue with fill",
-      "type": "stat"
+      "title": "Last value with fill",
+      "type": "stat",
+      "description": "Includes the last known point before the time range and fills the initial empty values, so the stat shows a value even when nothing was written inside the range."
     },
     {
       "datasource": {
@@ -610,8 +614,9 @@
           "tabIndex": 0
         }
       ],
-      "title": "AssetPropertyQuery",
-      "type": "timeseries"
+      "title": "Asset property query",
+      "type": "timeseries",
+      "description": "Assets tab: the Temperature property of one asset, picked from the asset tree."
     },
     {
       "datasource": {
@@ -732,8 +737,9 @@
           "tabIndex": 1
         }
       ],
-      "title": "Measurement Regex With LIMIT",
-      "type": "timeseries"
+      "title": "Measurements matching a regex, limited",
+      "type": "timeseries",
+      "description": "Measurements tab with the regex .*RAND.*: every matching measurement becomes a series, counted per $__interval. The series limit caps how many measurements are returned."
     }
   ],
   "preload": false,

@@ -236,8 +236,9 @@
           "tabIndex": 0
         }
       ],
-      "title": "Panel Title",
-      "type": "timeseries"
+      "title": "Asset properties of $Line",
+      "type": "timeseries",
+      "description": "Assets tab driven by variables: $Site and $Line are asset variables (a line is a child of the site), $Properties lists the asset properties of $Line. Events of $EventTypes are drawn as annotations."
     },
     {
       "datasource": {
@@ -357,8 +358,9 @@
           "tabIndex": 2
         }
       ],
-      "title": "Panel Title",
-      "type": "trend"
+      "title": "Periodic event properties on $Line",
+      "type": "trend",
+      "description": "Events tab, periodic type: the periodic properties picked in $PeriodicProperties for events of $EventTypes on $Line, together with the Price asset property, in a trend panel."
     },
     {
       "datasource": {
@@ -430,7 +432,7 @@
           "tabIndex": 2
         }
       ],
-      "title": "Panel Title",
+      "title": "Events of $EventTypes on $Line",
       "transformations": [
         {
           "id": "organize",
@@ -462,7 +464,8 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "description": "Events tab, simple type: events of the types in $EventTypes on $Line, with the simple properties picked in $SimpleProperties as columns."
     }
   ],
   "refresh": "",
