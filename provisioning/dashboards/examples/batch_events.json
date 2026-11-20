@@ -257,7 +257,7 @@
       "description": "Event query (Events tab, periodic type): the Temperature property of each Batch event as a series, aligned on batch start in a trend panel, so batches can be compared with each other."
     }
   ],
-  "refresh": "5s",
+  "refresh": "1m",
   "schemaVersion": 39,
   "tags": [],
   "templating": {
