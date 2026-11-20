@@ -483,7 +483,10 @@ func setAssetFrameNames(frames data.Frames, assets map[uuid.UUID]schemas.Asset, 
 
 			assetPath := getAssetPath(assets, property.AssetUUID)
 			asstName := getAssetName(assets, property.AssetUUID)
-			custom := frame.Meta.Custom.(map[string]interface{})
+			custom, ok := frame.Meta.Custom.(map[string]interface{})
+			if !ok {
+				continue
+			}
 			custom["AssetProperty"] = property.Name
 			custom["AssetPropertyUUID"] = property.UUID
 			custom["AssetUUID"] = property.AssetUUID

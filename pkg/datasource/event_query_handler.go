@@ -285,6 +285,10 @@ func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Fram
 }
 
 func getAssetPropertyFieldName(frame *data.Frame, includeAssetPath bool) (string, bool) {
+	if frame == nil || frame.Meta == nil {
+		return "", false
+	}
+
 	custom, ok := frame.Meta.Custom.(map[string]interface{})
 	if !ok {
 		return "", false
