@@ -35,17 +35,7 @@ The Factry Historian datasource plugin for [Grafana](https://grafana.com) allows
 
 If you don't have a licensed version of Factry Historian, you can try it for yourself with a trial. Go to <https://github.com/factrylabs/historian> to download your copy and run it locally.
 
-### 2. Install the Factry Historian datasource plugin
-
-Install the datasource in Grafana by navigating to `Home > Administration > Plugins and data > Plugins` and searching for "Factry" there.
-
-Alternatively, you can install it using the grafana-cli or by cloning the repository directly into the Grafana plugins directory.
-
-```bash
-grafana-cli plugins install factry-historian-datasource
-```
-
-### 3. Configure the datasource
+### 2. Configure the datasource
 
 Create a new instance of the data source from the Grafana Data Sources administration page and configure the necessary settings.
 
