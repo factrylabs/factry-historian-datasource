@@ -1,0 +1,850 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_FACTRY_HISTORIAN",
+      "label": "Factry Historian",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "factry-historian-datasource",
+      "pluginName": "Factry Historian Datasource"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "factry-historian-datasource",
+          "uid": "${DS_FACTRY_HISTORIAN}"
+        },
+        "enable": true,
+        "iconColor": "orange",
+        "name": "Production orders (both lines)",
+        "mappings": {
+          "id": {
+            "source": "field",
+            "value": "EventUUID"
+          },
+          "timeEnd": {
+            "source": "field",
+            "value": "StopTime"
+          },
+          "title": {
+            "source": "field",
+            "value": "ProductCode"
+          }
+        },
+        "target": {
+          "refId": "Anno",
+          "queryType": "EventQuery",
+          "query": {
+            "Type": "simple",
+            "Assets": ["c0638bec-753b-11ed-87ee-0242ac170006", "c5e241c6-753b-11ed-87ee-0242ac170006"],
+            "EventTypes": ["9747d148-e4bb-11f1-b9f9-0af75e649571"],
+            "Statuses": [],
+            "Properties": ["ProductCode"],
+            "PropertyFilter": [],
+            "QueryAssetProperties": false,
+            "OverrideAssets": [],
+            "OverrideTimeRange": false,
+            "Ascending": false
+          }
+        }
+      }
+    ]
+  },
+  "description": "Query options, data types, raw queries, property filters and variables on demo data",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "About this dashboard",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "A tour of query options that the other example dashboards do not show. Each panel's description (the *i* next to its title) names the tab and the options it uses. The demo lines produce one order per two hours, with a 15 minute changeover in between."
+      }
+    },
+    {
+      "id": 2,
+      "type": "state-timeline",
+      "title": "Line state: running and product (boolean and string data)",
+      "description": "Assets tab, raw values: the Running (boolean) and Product code (string) asset properties of $line. Non-numeric data works in state timelines and tables.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "AssetMeasurementQuery",
+          "tabIndex": 0,
+          "seriesLimit": 50,
+          "query": {
+            "Assets": ["$line"],
+            "AssetProperties": ["Running", "Product code"],
+            "Options": {
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "${__field.labels.AssetName} ${__field.labels.AssetProperty}",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "true": {
+                  "text": "Running",
+                  "color": "green",
+                  "index": 0
+                },
+                "false": {
+                  "text": "Changeover",
+                  "color": "orange",
+                  "index": 1
+                },
+                "": {
+                  "text": "Changeover",
+                  "color": "orange",
+                  "index": 2
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "rowHeight": 0.8
+      }
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Product changes on ProductionLine1 (changes only, newest first)",
+      "description": "Measurements tab on a string measurement with \"Changes only\" (a point only when the value changes) and descending order. An empty value is the changeover between two orders.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "MeasurementQuery",
+          "tabIndex": 1,
+          "seriesLimit": 50,
+          "query": {
+            "Databases": ["568a43d2-1169-11ec-9be3-59e8def62e23"],
+            "IsRegex": false,
+            "Regex": "",
+            "Measurements": ["95641c38-e4bb-11f1-b9f9-0af75e649571"],
+            "Options": {
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": true,
+              "ChangesOnly": true,
+              "Desc": true,
+              "FrameFormat": "table"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__metric_name__": true,
+              "__display_name__": true,
+              "DatabaseName": true,
+              "DatabaseUUID": true,
+              "Description": true,
+              "MeasurementUUID": true,
+              "status": true,
+              "MeasurementName": true
+            },
+            "renameByName": {
+              "__value__": "Product code"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Low output readings (value filter)",
+      "description": "Measurements tab with value filters: only the points with an output rate above 0 and below 18 units per minute, newest first, at most 50.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 10,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "MeasurementQuery",
+          "tabIndex": 1,
+          "seriesLimit": 50,
+          "query": {
+            "Databases": ["568a43d2-1169-11ec-9be3-59e8def62e23"],
+            "IsRegex": false,
+            "Regex": "",
+            "Measurements": ["958c0680-e4bb-11f1-b9f9-0af75e649571", "961426fa-e4bb-11f1-8048-0af75e649571"],
+            "Options": {
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": true,
+              "ValueFilters": [
+                {
+                  "Value": 0,
+                  "Operator": ">",
+                  "Condition": ""
+                },
+                {
+                  "Value": 18,
+                  "Operator": "<",
+                  "Condition": "AND"
+                }
+              ],
+              "Desc": true,
+              "Limit": 50,
+              "FrameFormat": "table"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__metric_name__": true,
+              "__display_name__": true,
+              "DatabaseName": true,
+              "DatabaseUUID": true,
+              "Description": true,
+              "MeasurementUUID": true,
+              "status": true
+            },
+            "renameByName": {
+              "__value__": "Output rate",
+              "MeasurementName": "Measurement"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Raw query",
+      "description": "Raw query tab: a query in the database's own language, here InfluxQL on the historian database.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "RawQuery",
+          "tabIndex": 3,
+          "seriesLimit": 50,
+          "query": {
+            "TimeseriesDatabase": "568a43d2-1169-11ec-9be3-59e8def62e23",
+            "Query": "SELECT mean(\"value\") FROM \"DEMO_PL1_OUTPUT_RATE\" WHERE $timeFilter GROUP BY time(15m) fill(none)"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Mean versus time-weighted average",
+      "description": "Measurements tab, the same measurement twice per 1h: mean of the points and time-weighted average (twa), which weights each value by how long it held. Each query has a Query name so the series are told apart.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "MeasurementQuery",
+          "tabIndex": 1,
+          "seriesLimit": 50,
+          "query": {
+            "Databases": ["568a43d2-1169-11ec-9be3-59e8def62e23"],
+            "IsRegex": false,
+            "Regex": "",
+            "Measurements": ["07bde780-06f4-11ef-9d90-0242ac130002"],
+            "Options": {
+              "Aggregation": {
+                "Name": "mean",
+                "Period": "1h"
+              },
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": false,
+              "QueryName": "mean"
+            }
+          }
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "MeasurementQuery",
+          "tabIndex": 1,
+          "seriesLimit": 50,
+          "query": {
+            "Databases": ["568a43d2-1169-11ec-9be3-59e8def62e23"],
+            "IsRegex": false,
+            "Regex": "",
+            "Measurements": ["07bde780-06f4-11ef-9d90-0242ac130002"],
+            "Options": {
+              "Aggregation": {
+                "Name": "twa",
+                "Period": "1h"
+              },
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": false,
+              "QueryName": "twa"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Measurements from variables: $measurement",
+      "description": "Measurements tab driven by variables: $database is a Database variable and $measurement a Measurement variable that lists the number measurements of that database whose name contains DEMO_.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "MeasurementQuery",
+          "tabIndex": 1,
+          "seriesLimit": 50,
+          "query": {
+            "Databases": ["$database"],
+            "IsRegex": false,
+            "Regex": "",
+            "Measurements": ["$measurement"],
+            "Options": {
+              "Aggregation": {
+                "Name": "mean",
+                "Period": "$__interval"
+              },
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Orders out of spec or below 3000 units",
+      "description": "Events tab with property filters: WithinSpec = false OR ProducedQuantity < 3000, and ProductCode in the $productCode variable (a Property values variable on the ProductCode of Production order events).",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "EventQuery",
+          "tabIndex": 2,
+          "seriesLimit": 50,
+          "query": {
+            "Type": "simple",
+            "Assets": ["$line"],
+            "EventTypes": ["9747d148-e4bb-11f1-b9f9-0af75e649571"],
+            "Statuses": [],
+            "Properties": ["ProductCode", "ProductName", "ProducedQuantity", "AvgTemperature", "WithinSpec"],
+            "PropertyFilter": [
+              {
+                "Property": "WithinSpec",
+                "Datatype": "boolean",
+                "Operator": "=",
+                "Value": [false],
+                "Condition": "",
+                "Parent": false
+              },
+              {
+                "Property": "ProducedQuantity",
+                "Datatype": "number",
+                "Operator": "<",
+                "Value": [3000],
+                "Condition": "OR",
+                "Parent": false
+              },
+              {
+                "Property": "ProductCode",
+                "Datatype": "string",
+                "Operator": "IN",
+                "Value": ["$productCode"],
+                "Condition": "AND",
+                "Parent": false
+              }
+            ],
+            "QueryAssetProperties": false,
+            "OverrideAssets": [],
+            "OverrideTimeRange": false,
+            "Ascending": false
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {},
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "EventUUID": true,
+              "ParentEventUUID": true,
+              "AssetUUID": true,
+              "EventTypeUUID": true,
+              "EventConfigurationUUID": true,
+              "AssetPath": true,
+              "EventType": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "trend",
+      "title": "Temperature per order (periodic property)",
+      "description": "Events tab, periodic type: the Temperature property of each Production order, sampled every 5 minutes, aligned on the order start in a trend panel.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "EventQuery",
+          "tabIndex": 2,
+          "seriesLimit": 50,
+          "query": {
+            "Type": "periodic",
+            "Assets": ["$line"],
+            "EventTypes": ["9747d148-e4bb-11f1-b9f9-0af75e649571"],
+            "Statuses": [],
+            "Properties": ["Temperature"],
+            "PropertyFilter": [],
+            "QueryAssetProperties": false,
+            "OverrideAssets": [],
+            "OverrideTimeRange": false,
+            "Ascending": false
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Output rate with a display name template",
+      "description": "Uses the \"Factry Historian (display names)\" datasource, which sets a display name template for the Assets tab in its settings: ${__field.labels.AssetName} ${__field.labels.AssetProperty}. Every Assets query of that datasource is named this way, without a Display name on the panel.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "factry-historian-display-names"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 36,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "factry-historian-display-names"
+          },
+          "queryType": "AssetMeasurementQuery",
+          "tabIndex": 0,
+          "seriesLimit": 50,
+          "query": {
+            "Assets": ["c0638bec-753b-11ed-87ee-0242ac170006", "c5e241c6-753b-11ed-87ee-0242ac170006"],
+            "AssetProperties": ["Output rate"],
+            "Options": {
+              "Aggregation": {
+                "Name": "mean",
+                "Period": "$__interval"
+              },
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": true
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": ["factry", "examples"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "includeAll": false,
+        "name": "DS_FACTRY_HISTORIAN",
+        "label": "Datasource",
+        "options": [],
+        "query": "factry-historian-datasource",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "factry-historian-datasource",
+          "uid": "${DS_FACTRY_HISTORIAN}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "line",
+        "label": "Line",
+        "options": [],
+        "query": {
+          "type": "AssetQuery",
+          "filter": {
+            "ParentUUIDs": ["890ed7ba-2db9-11ed-a3bd-0242ac170006"],
+            "UseAssetPath": false,
+            "Keyword": "ProductionLine"
+          }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "historian",
+          "value": "568a43d2-1169-11ec-9be3-59e8def62e23"
+        },
+        "datasource": {
+          "type": "factry-historian-datasource",
+          "uid": "${DS_FACTRY_HISTORIAN}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "database",
+        "label": "Database",
+        "options": [],
+        "query": {
+          "type": "DatabaseQuery",
+          "filter": {}
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "factry-historian-datasource",
+          "uid": "${DS_FACTRY_HISTORIAN}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": true,
+        "name": "measurement",
+        "label": "Measurement",
+        "options": [],
+        "query": {
+          "type": "MeasurementQuery",
+          "filter": {
+            "DatabaseUUIDs": ["$database"],
+            "Keyword": "DEMO_",
+            "Datatypes": ["number"]
+          }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "factry-historian-datasource",
+          "uid": "${DS_FACTRY_HISTORIAN}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "productCode",
+        "label": "Product code (from events)",
+        "options": [],
+        "query": {
+          "type": "PropertyValuesQuery",
+          "filter": {
+            "EventFilter": {
+              "Type": "simple",
+              "Assets": ["$line"],
+              "EventTypes": ["9747d148-e4bb-11f1-b9f9-0af75e649571"],
+              "Properties": ["ProductCode"],
+              "PropertyFilter": [],
+              "QueryAssetProperties": false,
+              "OverrideAssets": [],
+              "OverrideTimeRange": false,
+              "Ascending": false,
+              "Statuses": []
+            }
+          }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Feature tour",
+  "uid": "factry-feature-tour",
+  "version": 1
+}

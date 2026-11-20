@@ -11,5 +11,22 @@ datasources:
     jsonData:
       url: "https://grafana.demo.factry.dev:8000"
       organization: "02b2a43c-cfa1-11ed-9299-0242ac170006"
-    secureJsonData:
+    secureJsonData: &demoToken
       token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3MTQ0ODEyMDYsImp0aSI6ImdyYWZhbmEtc2lnbmluZyIsInVzZXIiOnsidXVpZCI6ImE1YzJlNjI0LTA2ZWYtMTFlZi1iNTY0LTAyNDJhYzEzMDAwMiJ9fQ.q2O9AkJvPl0fr8VSUCn5sL64KnXNJmeIPKYPqVsLVOA"
+
+  # Same demo Historian, with a display name template for the Assets tab. The
+  # "Feature tour" dashboard uses it to show the template without renaming the
+  # series of the other example dashboards. "$$" keeps Grafana from reading
+  # the template as an environment variable.
+  - name: "Factry Historian (display names)"
+    uid: "factry-historian-display-names"
+    type: "factry-historian-datasource"
+    access: proxy
+    orgId: 1
+    version: 1
+    editable: true
+    jsonData:
+      url: "https://grafana.demo.factry.dev:8000"
+      organization: "02b2a43c-cfa1-11ed-9299-0242ac170006"
+      displayNameAssets: "$${__field.labels.AssetName} $${__field.labels.AssetProperty}"
+    secureJsonData: *demoToken
