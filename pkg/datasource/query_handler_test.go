@@ -440,6 +440,24 @@ func TestCheckHealthAlwaysReachesTheHistorian(t *testing.T) {
 	assert.Len(t, recorder.queriesFor("/api/timeseries-databases"), 3, "the health check must not be cached")
 }
 
+// The health check result is shown in the browser, so it must not carry the
+// historian's response body. The status still tells the user what to fix.
+func TestCheckHealthLeavesTheResponseBodyOut(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/timeseries-databases", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "internal detail: token a1b2c3 rejected by auth backend", http.StatusUnauthorized)
+	})
+	ds := newFakeHistorianDataSourceWithTTL(t, mux, time.Minute)
+
+	result, err := ds.CheckHealth(context.Background(), &backend.CheckHealthRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, backend.HealthStatusError, result.Status)
+	assert.NotContains(t, result.Message, "internal detail")
+	assert.Contains(t, result.Message, "401 Unauthorized")
+}
+
 // A measurement query filtered on a database name that resolves to nothing must
 // return no measurements. Dropping the filter instead would search every
 // database, and with the resolution cache a just-created database stays
