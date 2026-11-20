@@ -1,0 +1,73 @@
+apiVersion: 1
+
+# Example alert rule on the demo Historian. Alert rules run the datasource's
+# backend query path without a browser, so this also shows the plugin works for
+# alerting. The demo lines stop for a 15 minute changeover every two hours, so
+# the rule fires and resolves regularly, once per line.
+groups:
+  - orgId: 1
+    name: Production lines
+    folder: Examples
+    interval: 1m
+    rules:
+      - uid: factry-line-not-producing
+        title: Line not producing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            # Grafana derives this uid from the name of the provisioned "Factry Historian"
+            # datasource, which sets none. Setting one there breaks existing installs.
+            datasourceUid: P7D5EEA62BBEAE2D7
+            model:
+              refId: A
+              queryType: AssetMeasurementQuery
+              tabIndex: 0
+              seriesLimit: 50
+              query:
+                Assets:
+                  - c0638bec-753b-11ed-87ee-0242ac170006
+                  - c5e241c6-753b-11ed-87ee-0242ac170006
+                AssetProperties:
+                  - Output rate
+                Options:
+                  Aggregation:
+                    Name: mean
+                    Period: 5m
+                  GroupBy:
+                    - status
+                  Tags:
+                    status: Good
+                  MetadataAsLabels: true
+                  IncludeLastKnownPoint: false
+                  FillInitialEmptyValues: false
+                  UseEngineeringSpecs: false
+                  DisplayDatabaseName: false
+                  DisplayDescription: false
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              expression: A
+              reducer: last
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params:
+                      - 5
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          summary: 'Output rate below 5 units per minute for 2 minutes'
+          description: 'Mean output rate over the last 5 minutes is {{ $values.B.Value }} units per minute.'
+        isPaused: false
