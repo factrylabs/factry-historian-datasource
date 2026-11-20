@@ -1,0 +1,687 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_FACTRY_HISTORIAN",
+      "label": "Factry Historian",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "factry-historian-datasource",
+      "pluginName": "Factry Historian Datasource"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Lookup table queries and variables on demo data (Historian v8.3.0 or newer)",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "About this dashboard",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Lookup tables hold reference data in Historian, such as settings per line or a product catalogue. The **Lookup tables** tab reads one as a table: pick the columns, filter the rows with conditions grouped by AND and OR, and page through large tables. A **Lookup table values** variable lists one column, here the lines and the products of the selected line.\n\nRequires Historian v8.3.0 or newer. The tables on this dashboard are demo data: *Line settings* (one row per line) and *Products* (1200 products)."
+      }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Line settings",
+      "description": "Lookup table query: every row and column of the Line settings table. The temperature limits in it are drawn on the trend below.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "LookupTableQuery",
+          "tabIndex": 4,
+          "seriesLimit": 50,
+          "query": {
+            "LookupTable": "93355fe4-e4bb-11f1-b9f9-0af75e649571",
+            "Columns": []
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 3,
+      "type": "barchart",
+      "title": "Products per family on $line",
+      "description": "Lookup table query on Products, filtered on the asset column with the $line variable. A Grafana Group by transformation counts the products per family.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "LookupTableQuery",
+          "tabIndex": 4,
+          "seriesLimit": 50,
+          "query": {
+            "LookupTable": "9383ec9a-e4bb-11f1-b9f9-0af75e649571",
+            "Columns": ["family", "code"],
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "asset",
+                  "Operator": "=",
+                  "Values": ["$line"]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false
+        }
+      },
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "family": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "code": {
+                "aggregations": ["count"],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Temperature on $line with the line's limits",
+      "description": "Two queries: the Product temperature asset property of $line, and the Line settings row of $line (columns temp_min and temp_max). The Config from query results transformation turns the two lookup values into thresholds, drawn as dashed lines.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "AssetMeasurementQuery",
+          "tabIndex": 0,
+          "seriesLimit": 50,
+          "query": {
+            "Assets": ["$line"],
+            "AssetProperties": ["Product temperature"],
+            "Options": {
+              "Aggregation": {
+                "Name": "mean",
+                "Period": "$__interval"
+              },
+              "DisplayDatabaseName": false,
+              "DisplayDescription": false,
+              "FillInitialEmptyValues": false,
+              "GroupBy": ["status"],
+              "IncludeLastKnownPoint": false,
+              "MetadataAsLabels": true,
+              "Tags": {
+                "status": "Good"
+              },
+              "UseEngineeringSpecs": true
+            }
+          }
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "LookupTableQuery",
+          "tabIndex": 4,
+          "seriesLimit": 50,
+          "query": {
+            "LookupTable": "93355fe4-e4bb-11f1-b9f9-0af75e649571",
+            "Columns": ["temp_min", "temp_max"],
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "asset",
+                  "Operator": "=",
+                  "Values": ["$line"]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "displayName": "${__field.labels.AssetName} ${__field.labels.AssetProperty}",
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "transformations": [
+        {
+          "id": "configFromData",
+          "options": {
+            "configRefId": "B",
+            "mappings": [
+              {
+                "fieldName": "temp_min",
+                "handlerKey": "threshold1"
+              },
+              {
+                "fieldName": "temp_max",
+                "handlerKey": "threshold1"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Products on $line (page $page, 25 rows per page)",
+      "description": "Lookup table query with a row limit of 25 and the page taken from the $page variable. The panel header shows which rows are loaded, for example \"Rows 26 to 50 of 300\".",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "LookupTableQuery",
+          "tabIndex": 4,
+          "seriesLimit": 50,
+          "query": {
+            "LookupTable": "9383ec9a-e4bb-11f1-b9f9-0af75e649571",
+            "Columns": [
+              "code",
+              "name",
+              "family",
+              "pack",
+              "target_temp",
+              "min_temp",
+              "max_temp",
+              "target_rate",
+              "active"
+            ],
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "asset",
+                  "Operator": "=",
+                  "Values": ["$line"]
+                }
+              ]
+            },
+            "Limit": 25,
+            "Page": "$page"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Active cola or lemonade, or a target above 52 °C",
+      "description": "A filter with a nested group: active = true AND (family IN (Cola, Lemonade) OR target_temp > 52).",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "LookupTableQuery",
+          "tabIndex": 4,
+          "seriesLimit": 50,
+          "query": {
+            "LookupTable": "9383ec9a-e4bb-11f1-b9f9-0af75e649571",
+            "Columns": ["code", "name", "family", "line", "target_temp", "active"],
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "active",
+                  "Operator": "=",
+                  "Values": ["true"]
+                },
+                {
+                  "Filter": {
+                    "Condition": "or",
+                    "ConditionGroups": [
+                      {
+                        "Column": "family",
+                        "Operator": "IN",
+                        "Values": ["Cola", "Lemonade"]
+                      },
+                      {
+                        "Column": "target_temp",
+                        "Operator": ">",
+                        "Values": ["52"]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Production orders on $line, joined with the product limits",
+      "description": "Two queries: Production order events on $line (their ProductName and ProductFamily are calculated in Historian from the Products lookup table), and the Products rows of $line. The Join by field transformation adds each product's temperature limits and target rate to its orders.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "EventQuery",
+          "tabIndex": 2,
+          "seriesLimit": 50,
+          "query": {
+            "Type": "simple",
+            "Assets": ["$line"],
+            "EventTypes": ["9747d148-e4bb-11f1-b9f9-0af75e649571"],
+            "Statuses": [],
+            "Properties": [
+              "ProductCode",
+              "ProductName",
+              "ProductFamily",
+              "ProducedQuantity",
+              "AvgTemperature",
+              "WithinSpec"
+            ],
+            "PropertyFilter": [],
+            "QueryAssetProperties": false,
+            "OverrideAssets": [],
+            "OverrideTimeRange": false,
+            "Ascending": false
+          }
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "LookupTableQuery",
+          "tabIndex": 4,
+          "seriesLimit": 50,
+          "query": {
+            "LookupTable": "9383ec9a-e4bb-11f1-b9f9-0af75e649571",
+            "Columns": ["code", "min_temp", "max_temp", "target_rate"],
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "asset",
+                  "Operator": "=",
+                  "Values": ["$line"]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "${__field.name}"
+        },
+        "overrides": []
+      },
+      "options": {},
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "code": "ProductCode"
+            }
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "ProductCode",
+            "mode": "inner"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "EventUUID": true,
+              "ParentEventUUID": true,
+              "AssetUUID": true,
+              "EventTypeUUID": true,
+              "EventConfigurationUUID": true,
+              "AssetPath": true,
+              "EventType": true,
+              "Asset": true
+            },
+            "indexByName": {
+              "StartTime": 0,
+              "StopTime": 1,
+              "Duration": 2,
+              "ProductCode": 3,
+              "ProductName": 4,
+              "ProductFamily": 5,
+              "ProducedQuantity": 6,
+              "target_rate": 7,
+              "AvgTemperature": 8,
+              "min_temp": 9,
+              "max_temp": 10,
+              "WithinSpec": 11
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Product $product",
+      "description": "The row of the product picked in $product. That variable is a Lookup table values variable on the Products table filtered on $line, so it depends on the Line variable.",
+      "datasource": {
+        "type": "factry-historian-datasource",
+        "uid": "${DS_FACTRY_HISTORIAN}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "factry-historian-datasource",
+            "uid": "${DS_FACTRY_HISTORIAN}"
+          },
+          "queryType": "LookupTableQuery",
+          "tabIndex": 4,
+          "seriesLimit": 50,
+          "query": {
+            "LookupTable": "9383ec9a-e4bb-11f1-b9f9-0af75e649571",
+            "Columns": [],
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "code",
+                  "Operator": "=",
+                  "Values": ["$product"]
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": ["factry", "examples"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "includeAll": false,
+        "name": "DS_FACTRY_HISTORIAN",
+        "label": "Datasource",
+        "options": [],
+        "query": "factry-historian-datasource",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "text": "ProductionLine1",
+          "value": "MyFactory\\\\ProductionLine1"
+        },
+        "datasource": {
+          "type": "factry-historian-datasource",
+          "uid": "${DS_FACTRY_HISTORIAN}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "line",
+        "label": "Line",
+        "options": [],
+        "query": {
+          "type": "LookupTableValuesQuery",
+          "filter": {
+            "LookupTable": "93355fe4-e4bb-11f1-b9f9-0af75e649571",
+            "ValueColumn": "asset",
+            "TextColumn": "line",
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "active",
+                  "Operator": "=",
+                  "Values": ["true"]
+                }
+              ]
+            }
+          }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "factry-historian-datasource",
+          "uid": "${DS_FACTRY_HISTORIAN}"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "product",
+        "label": "Product",
+        "options": [],
+        "query": {
+          "type": "LookupTableValuesQuery",
+          "filter": {
+            "LookupTable": "9383ec9a-e4bb-11f1-b9f9-0af75e649571",
+            "ValueColumn": "code",
+            "TextColumn": "name",
+            "Filter": {
+              "Condition": "and",
+              "ConditionGroups": [
+                {
+                  "Column": "asset",
+                  "Operator": "=",
+                  "Values": ["$line"]
+                },
+                {
+                  "Column": "active",
+                  "Operator": "=",
+                  "Values": ["true"]
+                }
+              ]
+            }
+          }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "1",
+          "value": "1"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "page",
+        "label": "Page",
+        "options": [],
+        "query": "1,2,3,4,5,6,7,8,9,10,11,12",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Lookup tables",
+  "uid": "factry-lookup-tables",
+  "version": 1
+}
