@@ -569,6 +569,91 @@ func TestHandleEventQueryPrefixesPeriodicSeriesWithQueryName(t *testing.T) {
 // When one asset property yields multiple frames (e.g. GroupBy status produces
 // a Good and a Bad frame), the column must not get two values for one event row
 // and misalign the table.
+// Asset property columns are only built as nullable float64, string or bool.
+// A value field of another type, a value field without config, or a frame
+// without a time field must be skipped without a panic, and must not drop the
+// frames after it.
+func TestTrendFrameSkipsUnusableAssetPropertyFrames(t *testing.T) {
+	t.Parallel()
+
+	eventTypeUUID := uuid.New()
+	event := schemas.Event{
+		UUID:          uuid.New(),
+		AssetUUID:     uuid.New(),
+		EventTypeUUID: eventTypeUUID,
+		StartTime:     time.Unix(0, 0).UTC(),
+	}
+	eventTypes := map[uuid.UUID]schemas.EventType{
+		eventTypeUUID: {BaseModel: schemas.BaseModel{UUID: eventTypeUUID, Name: "batch"}},
+	}
+
+	assetPropertyFrame := func(property string, fields ...*data.Field) *data.Frame {
+		frame := data.NewFrame("", fields...)
+		frame.Meta = &data.FrameMeta{Custom: map[string]interface{}{"AssetProperty": property}}
+		return frame
+	}
+	count, temperature := int64(3), 21.5
+	at := []time.Time{time.Unix(10, 0).UTC()}
+
+	frames, err := EventQueryResultToTrendDataFrame(false, nil, []schemas.Event{event}, eventTypes,
+		map[uuid.UUID][]schemas.EventTypeProperty{}, map[string]struct{}{},
+		map[uuid.UUID]data.Frames{event.UUID: {
+			assetPropertyFrame("no time", data.NewField(valueFieldName, nil, []*float64{&temperature})),
+			assetPropertyFrame("count",
+				data.NewField("time", nil, at),
+				data.NewField(valueFieldName, nil, []*int64{&count})),
+			assetPropertyFrame("temperature",
+				data.NewField("time", nil, at),
+				data.NewField(valueFieldName, nil, []*float64{&temperature})),
+		}}, false, "")
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+
+	properties := []string{}
+	for _, field := range frames[0].Fields {
+		if field.Name != "Offset" {
+			properties = append(properties, field.Labels[PropertyColumnName])
+		}
+	}
+	assert.Equal(t, []string{"temperature"}, properties)
+}
+
+// A simple event query must leave out an asset property whose values are of a
+// type it cannot build a column for, instead of adding a nil field.
+func TestEventTableSkipsAssetPropertyOfUnsupportedType(t *testing.T) {
+	t.Parallel()
+
+	eventTypeUUID := uuid.New()
+	eventUUID := uuid.New()
+	events := []schemas.Event{{
+		UUID:          eventUUID,
+		AssetUUID:     uuid.New(),
+		EventTypeUUID: eventTypeUUID,
+		StartTime:     time.Unix(0, 0).UTC(),
+	}}
+	eventTypes := []schemas.EventType{{BaseModel: schemas.BaseModel{UUID: eventTypeUUID, Name: "batch"}}}
+
+	count := int64(3)
+	frame := data.NewFrame("",
+		data.NewField("time", nil, []time.Time{time.Unix(10, 0).UTC()}),
+		data.NewField(valueFieldName, nil, []*int64{&count}),
+	)
+	frame.Meta = &data.FrameMeta{Custom: map[string]interface{}{"AssetProperty": "count"}}
+	assetPropertyFrames := map[uuid.UUID]data.Frames{eventUUID: {frame}}
+
+	fieldTypes := getAssetPropertyFieldTypes(assetPropertyFrames, false)
+	assert.Empty(t, fieldTypes)
+
+	frames, err := EventQueryResultToDataFrame(false, false, nil, events, eventTypes, nil,
+		map[string]struct{}{}, map[string]data.FieldType{"count": data.FieldTypeNullableInt64}, assetPropertyFrames)
+	require.NoError(t, err)
+	require.Len(t, frames, 1)
+	for _, field := range frames[0].Fields {
+		require.NotNil(t, field)
+		assert.NotEqual(t, "count", field.Name)
+	}
+}
+
 func TestEventTableColumnsStayAlignedWithMultipleFramesPerProperty(t *testing.T) {
 	t.Parallel()
 

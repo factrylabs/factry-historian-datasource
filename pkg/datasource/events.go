@@ -253,11 +253,11 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 
 			timeField, found := assetPropertyFrame.FieldByName("time")
 			if found == -1 {
-				break
+				continue
 			}
 			valueField, found := assetPropertyFrame.FieldByName("value")
-			if found == -1 {
-				break
+			if found == -1 || !isAssetPropertyValueType(valueField.Type()) {
+				continue
 			}
 
 			propertyName := getMetaValueFromFrame(assetPropertyFrame, "AssetProperty")
@@ -269,16 +269,20 @@ func EventQueryResultToTrendDataFrame(includeParentInfo bool, assets []schemas.A
 				Name:      valueField.Name,
 				EventUUID: events[i].UUID,
 			}
+			displayName, unit := name, ""
+			if valueField.Config != nil {
+				displayName, unit = valueField.Config.DisplayNameFromDS, valueField.Config.Unit
+			}
 			switch valueField.Type() {
 			case data.FieldTypeNullableFloat64:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*float64{})
+				identifier.Field = data.NewField(displayName, labels, []*float64{})
 			case data.FieldTypeNullableString:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*string{})
+				identifier.Field = data.NewField(displayName, labels, []*string{})
 			case data.FieldTypeNullableBool:
-				identifier.Field = data.NewField(valueField.Config.DisplayNameFromDS, labels, []*bool{})
+				identifier.Field = data.NewField(displayName, labels, []*bool{})
 			}
 			identifier.Field.Config = &data.FieldConfig{
-				Unit: valueField.Config.Unit,
+				Unit: unit,
 			}
 
 			// Separate asset properties when using dimension-based queries
@@ -502,6 +506,14 @@ func appendAssetPropertyValue(dst *data.Field, value interface{}) {
 	}
 }
 
+// isAssetPropertyValueType reports whether an asset property column can be
+// built for a value field of this type.
+func isAssetPropertyValueType(fieldType data.FieldType) bool {
+	return fieldType == data.FieldTypeNullableFloat64 ||
+		fieldType == data.FieldTypeNullableString ||
+		fieldType == data.FieldTypeNullableBool
+}
+
 // formatPointer formats a non-string pointer value to a *string, returning nil
 // for nil pointers.
 func formatPointer[T any](v *T) *string {
@@ -578,6 +590,8 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 			fieldByColumn[assetProperty] = data.NewField(assetProperty, nil, []*bool{})
 		case data.FieldTypeNullableString:
 			fieldByColumn[assetProperty] = data.NewField(assetProperty, nil, []*string{})
+		default:
+			continue
 		}
 		fields = append(fields, fieldByColumn[assetProperty])
 	}
@@ -646,7 +660,10 @@ func dataFrameForEventType(includeParentInfo bool, multipleAssetsSelected bool, 
 		assetPropertyFrames := eventAssetPropertyFrames[events[i].UUID]
 		for assetProperty := range assetPropertyFieldTypes {
 			found := false
-			field := fieldByColumn[assetProperty]
+			field, ok := fieldByColumn[assetProperty]
+			if !ok {
+				continue
+			}
 			for _, assetPropertyFrame := range assetPropertyFrames {
 				// custom := assetPropertyFrame.Meta.Custom.(map[string]interface{})
 				// assetPath := custom["AssetPath"].(string)
