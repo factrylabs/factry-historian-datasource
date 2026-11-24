@@ -3,6 +3,7 @@ package datasource
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,9 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/factrylabs/factry-historian-datasource.git/pkg/api"
 	"github.com/factrylabs/factry-historian-datasource.git/pkg/schemas"
 	"github.com/google/uuid"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
+	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -456,6 +459,79 @@ func TestCheckHealthLeavesTheResponseBodyOut(t *testing.T) {
 	assert.Equal(t, backend.HealthStatusError, result.Status)
 	assert.NotContains(t, result.Message, "internal detail")
 	assert.Contains(t, result.Message, "401 Unauthorized")
+}
+
+type recordingLogger struct {
+	mu      sync.Mutex
+	entries []logEntry
+}
+
+type logEntry struct {
+	level string
+	args  []any
+}
+
+func (l *recordingLogger) record(level string, args []any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.entries = append(l.entries, logEntry{level: level, args: args})
+}
+
+func (l *recordingLogger) Debug(_ string, args ...any)            { l.record("debug", args) }
+func (l *recordingLogger) Info(_ string, args ...any)             { l.record("info", args) }
+func (l *recordingLogger) Warn(_ string, args ...any)             { l.record("warn", args) }
+func (l *recordingLogger) Error(_ string, args ...any)            { l.record("error", args) }
+func (l *recordingLogger) With(...any) log.Logger                 { return l }
+func (*recordingLogger) Level() log.Level                         { return log.Debug }
+func (l *recordingLogger) FromContext(context.Context) log.Logger { return l }
+func (l *recordingLogger) at(level string) (args []string) {
+	for _, entry := range l.entries {
+		if entry.level == level {
+			args = append(args, fmt.Sprint(entry.args...))
+		}
+	}
+	return args
+}
+
+// A historian that rejects the health check is a configuration problem, not a
+// plugin error: it is logged at debug level only, with the response body. A
+// plugin error is logged at error level, without the body.
+func TestLogHealthCheckFailureLevels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		err       error
+		wantError bool
+		wantBody  bool
+	}{
+		{"historian rejects the request", backend.DownstreamError(&api.HTTPError{StatusCode: http.StatusUnauthorized, Body: "secret detail"}), false, true},
+		{"historian cannot serve the request", backend.PluginError(&api.HTTPError{StatusCode: http.StatusNotImplemented, Body: "secret detail"}), true, true},
+		{"response cannot be decoded", errors.New("invalid character"), true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			logger := &recordingLogger{}
+			logHealthCheckFailure(logger, tt.err)
+
+			if tt.wantError {
+				require.Len(t, logger.at("error"), 1)
+			} else {
+				assert.Empty(t, logger.at("error"))
+			}
+			for _, args := range logger.at("error") {
+				assert.NotContains(t, args, "secret detail")
+			}
+			if tt.wantBody {
+				require.Len(t, logger.at("debug"), 1)
+				assert.Contains(t, logger.at("debug")[0], "secret detail")
+			} else {
+				assert.Empty(t, logger.at("debug"))
+			}
+		})
+	}
 }
 
 // A measurement query filtered on a database name that resolves to nothing must
