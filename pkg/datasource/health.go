@@ -22,7 +22,7 @@ const (
 func (ds *HistorianDataSource) CheckHealth(ctx context.Context, _ *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	databases, err := ds.API.GetTimeseriesDatabases(ctx, "")
 	if err != nil {
-		log.DefaultLogger.FromContext(ctx).Error("Health check failed", "error", err)
+		logHealthCheckFailure(log.DefaultLogger.FromContext(ctx), err)
 		return &backend.CheckHealthResult{
 			Status:  backend.HealthStatusError,
 			Message: healthCheckErrorMessage(err),
@@ -45,4 +45,23 @@ func healthCheckErrorMessage(err error) string {
 	}
 
 	return "Could not connect to Factry Historian. Check the URL."
+}
+
+// logHealthCheckFailure logs a failed health check. A historian that rejects
+// the request or cannot be reached is a configuration problem, not a plugin
+// error, so only the debug log gets it. The response body only ever goes to
+// the debug log.
+func logHealthCheckFailure(logger log.Logger, err error) {
+	httpErr, isHTTPErr := errors.AsType[*api.HTTPError](err)
+	switch {
+	case isHTTPErr && backend.IsDownstreamError(err):
+		logger.Debug("Health check failed", "status", httpErr.StatusCode, "body", httpErr.Body)
+	case isHTTPErr:
+		logger.Error("Health check failed", "status", httpErr.StatusCode)
+		logger.Debug("Health check failed", "status", httpErr.StatusCode, "body", httpErr.Body)
+	case backend.IsDownstreamHTTPError(err):
+		logger.Debug("Health check failed", "error", err)
+	default:
+		logger.Error("Health check failed", "error", err)
+	}
 }
