@@ -266,7 +266,7 @@ func getAssetPropertyFieldTypes(eventAssetPropertyFrames map[uuid.UUID]data.Fram
 			}
 
 			valueField, idx := frame.FieldByName(valueFieldName)
-			if idx == -1 {
+			if idx == -1 || !isAssetPropertyValueType(valueField.Type()) {
 				continue
 			}
 
