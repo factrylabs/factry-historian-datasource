@@ -38,7 +38,7 @@ else
 endif
 
 set_frontend_version: ## Sets the version in the frontend
-	@pnpm version --no-git-tag-version --allow-same-version $(shell make version)
+	@pnpm version --no-git-tag-version --no-git-checks --allow-same-version $(shell make version)
 
 version_major_bump:
 	@sed 's/^patch = $(patch)$$/patch = 0/' Makefile > tmp && mv tmp Makefile
