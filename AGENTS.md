@@ -407,6 +407,8 @@ make version_patch_bump set_frontend_version   # a minor is already bumped on ma
 git commit -am "chore: release vX.Y.Z"           # PR into release/vX.Y
 ```
 
+CI reports an unbumped version only as a warning, so check by hand that `Makefile` and `package.json` say vX.Y.Z. A missed bump fails the release workflow before the upload; fix it in a PR and move the tag.
+
 "Rebase and merge" gives the release commit a new SHA, so tag the merged commit, never a local one:
 
 ```bash

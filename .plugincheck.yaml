@@ -13,3 +13,9 @@ analyzers:
     rules:
       valid-go-manifest:
         severity: warning
+  # A release line keeps the published version until its release PR bumps it.
+  # The release workflow still fails a version that is not above grafana.com's.
+  version:
+    rules:
+      wrong-plugin-version:
+        severity: warning
