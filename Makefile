@@ -9,12 +9,9 @@ PROTO_DIR= pkg/proto
 PROTO_FILES = $(PROTO_DIR)/*.proto
 
 .DEFAULT_GOAL := help
-.PHONY: outdated help version all ver set_frontend_version version_major_bump version_minor_bump version_patch_bump version_bump_major version_bump_minor version_bump_patch tag_version build_all build_web build_web_dev gen_proto package run_server run_debug clean validate
+.PHONY: outdated help version all ver set_frontend_version version_major_bump version_minor_bump version_patch_bump build_all build_web build_web_dev gen_proto package run_server run_debug clean validate
 
 all: migrate_all
-version_bump_major: version_major_bump set_frontend_version tag_version  ## Bumps the current major version
-version_bump_minor: version_minor_bump set_frontend_version tag_version ## Bumps the current minor version
-version_bump_patch: version_patch_bump set_frontend_version tag_version ## Bumps the current patch version
 
 outdated: ## Checks the dependecies of this project to see if they're all up to date
 	export GO111MODULE=off; go install github.com/psampaz/go-mod-outdated
@@ -40,28 +37,17 @@ endif
 set_frontend_version: ## Sets the version in the frontend
 	@pnpm version --no-git-tag-version --no-git-checks --allow-same-version $(shell make version)
 
-version_major_bump:
+version_major_bump: ## Bumps the major version in the Makefile
 	@sed 's/^patch = $(patch)$$/patch = 0/' Makefile > tmp && mv tmp Makefile
 	@sed 's/^minor = $(minor)$$/minor = 0/' Makefile > tmp && mv tmp Makefile
 	@sed 's/^major = $(major)$$/major = $(shell expr $(major) + 1)/' Makefile > tmp && mv tmp Makefile
 
-version_minor_bump:
+version_minor_bump: ## Bumps the minor version in the Makefile
 	@sed 's/^patch = $(patch)$$/patch = 0/' Makefile > tmp && mv tmp Makefile
 	@sed 's/^minor = $(minor)$$/minor = $(shell expr $(minor) + 1)/' Makefile > tmp && mv tmp Makefile
 
-version_patch_bump:
+version_patch_bump: ## Bumps the patch version in the Makefile
 	@sed 's/^patch = $(patch)$$/patch = $(shell expr $(patch) + 1)/' Makefile > tmp && mv tmp Makefile
-
-tag_version:
-ifdef message
-	@git add Makefile package.json pnpm-lock.yaml
-	@git commit -m "$(message)"
-	@git tag -a $(shell make version) -m "$(message)"
-else
-	@git add Makefile package.json pnpm-lock.yaml
-	@git commit -m "Updated to $(shell make version)"
-	@git tag -a $(shell make version) -m "Updated to $(shell make version)"
-endif
 
 build_all: build_web ## Build current project for all targets
 	mage buildAll
