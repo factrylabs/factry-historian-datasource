@@ -149,9 +149,7 @@ All primary tasks go through `make`. Run `make help` to see all targets.
 | `make package` | Build zip + sign plugin (requires GRAFANA_API_KEY) |
 | `make gen_proto` | Regenerate `pkg/proto/arrow.pb.go` from `arrow.proto` |
 | `make version` | Print current version (e.g. `v3.0.0`) |
-| `make version_bump_patch` | Bump patch version, update package.json, commit, tag |
-| `make version_bump_minor` | Bump minor version, update package.json, commit, tag |
-| `make version_bump_major` | Bump major version, update package.json, commit, tag |
+| `make version_<part>_bump set_frontend_version` | Bump the major, minor or patch version in `Makefile` and `package.json`. No commit, no tag |
 
 ### Frontend-only scripts (via pnpm)
 
@@ -305,7 +303,7 @@ Use EventTypePropertiesValuesFilter instead.
 
 ### Version Management
 
-The canonical version is defined in `Makefile` (`major`, `minor`, `patch` variables). The `package.json` version is kept in sync via `make set_frontend_version`. Update versions with `make version_<part>_bump set_frontend_version`, not by hand. The `make version_bump_*` targets also commit and tag locally, and a local tag never matches the merged commit: see [Release Process](#release-process).
+The canonical version is defined in `Makefile` (`major`, `minor`, `patch` variables). The `package.json` version is kept in sync via `make set_frontend_version`. Update versions with `make version_<part>_bump set_frontend_version`, not by hand. Tags go on the merged commit: see [Release Process](#release-process).
 
 ---
 
