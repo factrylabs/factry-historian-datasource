@@ -305,7 +305,7 @@ Use EventTypePropertiesValuesFilter instead.
 
 ### Version Management
 
-The canonical version is defined in `Makefile` (`major`, `minor`, `patch` variables). The `package.json` version is kept in sync via `make set_frontend_version`. Always use the `make version_bump_*` targets to update versions — do not manually edit version numbers in multiple files.
+The canonical version is defined in `Makefile` (`major`, `minor`, `patch` variables). The `package.json` version is kept in sync via `make set_frontend_version`. Update versions with `make version_<part>_bump set_frontend_version`, not by hand. The `make version_bump_*` targets also commit and tag locally, and a local tag never matches the merged commit: see [Release Process](#release-process).
 
 ---
 
@@ -338,7 +338,7 @@ A 5-second TTL in-memory cache for `getResource` metadata requests, which saves 
 
 ### CI (`.github/workflows/ci.yml`)
 
-Runs on push to `main` and PRs to `main`:
+Runs on push to `main` and `release/v*`, and on PRs into them:
 
 1. **Frontend checks:** typecheck → lint → test:ci → build
 2. **Go lint:** golangci-lint v2.10.1
@@ -354,10 +354,11 @@ Runs on push to `main` and PRs to `main`:
 
 Triggered by tags matching `v*`:
 
-1. Build + sign + package plugin
-2. Upload to Factry Portal (uses `FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN` and `FACTRY_PORTAL_PRODUCT_UPDATES_URL` secrets)
-3. Create GitHub draft release
-4. Sync the changelog to Archbee (`archbee-sync` job)
+1. `check-branch`: a `vX.Y.Z` tag must be on `release/vX.Y`, or nothing is built or uploaded. The job runs from the tagged commit, so it catches mistakes; a tag on a commit without it is not checked. A tag with a suffix (`v4.1.1-rc.1`) skips the check: it builds, signs and uploads from any branch. The tag must equal `v` plus the `package.json` version, so it uploads that suffixed version.
+2. Build + sign + package plugin
+3. Upload to Factry Portal (uses `FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN` and `FACTRY_PORTAL_PRODUCT_UPDATES_URL` secrets)
+4. Create GitHub draft release
+5. Sync the changelog to Archbee (`archbee-sync` job)
 
 ### Archbee changelog sync
 
@@ -368,16 +369,56 @@ The `archbee-sync` job publishes the released version to the docs site. It extra
 - Requires the `ARCHBEE_GITHUB_TOKEN` secret, with contents and pull request write access on `factrylabs/archbee`.
 - The job is idempotent: if the page already has a `## <tag>` heading it does nothing.
 
-### Release Process
+### Branches
+
+The datasource uses the release-branch model of historian-server.
+
+- `main` holds the next minor. PRs for unreleased work target `main`.
+- `release/vX.Y` holds one minor: its patches and its tags. It is cut from `main` when the minor is feature-ready. Then `main` is bumped to the next minor.
+- Release tags go only on `release/vX.Y`.
+- The release line is where the Grafana catalog review happens. Review fixes land on `release/vX.Y` and the tag moves onto them, while `main` keeps taking new work.
+- Only the line whose version is newest on grafana.com can ship patches. The plugin validator in the release workflow fails a version that is not above the latest one on grafana.com.
+- A fix for a released bug targets that line's `release/vX.Y`, on a `fix/<ADO id>-<desc>` branch. Then it is merged forward to `main`.
+- Dependency and CVE fixes follow the same rule. Dependabot security PRs only target `main`, so start the fix on the release line yourself. The plugin validator fails a release on any high or critical vulnerability in `pnpm-lock.yaml`.
+- CodeQL (default setup) does not run on PRs into `release/v*`, only on PRs into `main`. A fix on the release line is scanned in its merge-forward PR.
+- Never force-push or rebase `main` or `release/*`. Never merge `main` into a release branch, or a newer line into an older one.
+
+Merge forward on a `merge/` branch cut from the target:
 
 ```bash
-# 1. Update version
-make version_bump_patch   # or minor / major
-# This commits Makefile, package.json, pnpm-lock.yaml and creates a git tag
-
-# 2. Push tag to trigger release workflow
-git push origin main --tags
+git fetch origin
+git switch -c merge/v4.1-into-main origin/main
+git merge --no-ff origin/release/v4.1
+git push -u origin merge/v4.1-into-main   # PR into main
 ```
+
+- Merge these PRs with **Create a merge commit**. "Rebase and merge" gives the commits new SHAs and drops the merge commit. All other PRs use "Rebase and merge".
+- `Makefile`, `package.json` and `CHANGELOG.md` conflict on most merges forward. Keep `main`'s version numbers. `CHANGELOG.md` lists the newest version first, and the draft release takes its first `## ` section, so put the release's entry below any newer `## vX.Y.Z` section on `main`.
+
+### Release Process
+
+A release is one PR with one commit `chore: release vX.Y.Z` into `release/vX.Y`, then a tag on that commit after it merges.
+
+```bash
+git fetch --tags origin
+git switch -c chore/<ADO id>-release-vX.Y.Z origin/release/vX.Y
+make version_patch_bump set_frontend_version   # a minor is already bumped on main
+# Add the "## vX.Y.Z" section with "released: DD/MM/YYYY" to CHANGELOG.md
+git commit -am "chore: release vX.Y.Z"           # PR into release/vX.Y
+```
+
+"Rebase and merge" gives the release commit a new SHA, so tag the merged commit, never a local one:
+
+```bash
+git fetch origin
+git log -1 origin/release/vX.Y                   # must be the release commit
+git tag -a vX.Y.Z origin/release/vX.Y -m vX.Y.Z
+git push origin vX.Y.Z
+```
+
+Then merge `release/vX.Y` forward into `main`.
+
+A new minor: `git push origin origin/main:refs/heads/release/vX.Y`, release it as above without the bump, then bump `main` with `make version_minor_bump set_frontend_version` in a PR.
 
 ---
 

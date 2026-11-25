@@ -10,7 +10,39 @@ on:
 permissions: read-all
 
 jobs:
+  check-branch:
+    name: Check the tag is on its release branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+      - name: Check the tag is on release/vX.Y
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Prerelease and ad-hoc tags may come from any branch.
+          if ! [[ "${TAG}" =~ ^v([0-9]+)\.([0-9]+)\.[0-9]+$ ]]; then
+            echo "${TAG} is not a release tag; skipping the branch check"
+            exit 0
+          fi
+          BRANCH="release/v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          if ! git rev-parse --verify --quiet "refs/remotes/origin/${BRANCH}" >/dev/null; then
+            echo "ERROR: ${BRANCH} does not exist. Create it before tagging ${TAG}."
+            exit 1
+          fi
+          # GITHUB_SHA is what the release job builds; the tag may have moved since the push.
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "refs/remotes/origin/${BRANCH}"; then
+            echo "ERROR: ${TAG} is not on ${BRANCH}. Tag a release on its release branch."
+            exit 1
+          fi
+          echo "${TAG} is on ${BRANCH}"
+
   release:
+    needs: check-branch
     permissions:
       contents: write
       id-token: write
