@@ -32,7 +32,7 @@ jobs:
         id: build
       - name: Upload to Factry Portal
         run: |
-          curl -X POST \
+          curl --fail-with-body -X POST \
             -H "Authorization: Bearer ${{ secrets.FACTRY_PORTAL_PRODUCT_UPDATES_JWT_TOKEN }}" \
             -F "productType=${{steps.build.outputs.plugin-id}}" \
             -F "product=grafana-datasource" \
